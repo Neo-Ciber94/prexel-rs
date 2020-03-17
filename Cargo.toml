@@ -1,0 +1,2 @@
+[workspace]
+members = ["math_engine", "math_eval"]

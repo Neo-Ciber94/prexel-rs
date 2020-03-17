@@ -1,0 +1,9 @@
+[package]
+name = "math_eval"
+version = "0.1.0"
+authors = ["Freddy L P.B <freddy_luis_94@hotmail.com>"]
+edition = "2018"
+
+[dependencies]
+win32console = "0.1.4"
+math_engine = { path = "../math_engine" }
