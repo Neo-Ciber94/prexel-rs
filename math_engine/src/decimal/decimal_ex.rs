@@ -6,6 +6,8 @@ use rust_decimal_macros::*;
 /// Extended math operations for `Decimal`.
 pub trait DecimalExt {
     fn is_integer(&self) -> bool;
+    fn to_radians(self) -> Decimal;
+    fn to_degrees(self) -> Decimal;
     fn checked_pow(self, exponent: Decimal) -> Option<Decimal>;
     fn checked_pow_n(self, exponent: i64) -> Option<Decimal>;
     fn checked_sqrt(self) -> Option<Decimal>;
@@ -19,7 +21,7 @@ pub trait DecimalExt {
     fn tan(self) -> Option<Decimal>;
 }
 
-trait ApproxEq{
+pub trait ApproxEq{
     fn approx_eq(&self, other: &Self, delta: &Self) -> bool;
 }
 
@@ -34,6 +36,16 @@ impl DecimalExt for Decimal {
     #[inline]
     fn is_integer(&self) -> bool {
         self.fract().is_zero()
+    }
+
+    #[inline]
+    fn to_radians(self) -> Decimal {
+        self * (consts::PI / dec!(180))
+    }
+
+    #[inline]
+    fn to_degrees(self) -> Decimal {
+        self * (dec!(180) / consts::PI)
     }
 
     fn checked_pow(self, exponent: Decimal) -> Option<Decimal> {
@@ -56,7 +68,8 @@ impl DecimalExt for Decimal {
 
         // x ^ n = e^(n * ln(x))
         let b = self.checked_ln()?.checked_mul(exponent)?;
-        Some(b.checked_exp()?)
+        let result = b.checked_exp()?;
+        Some(result.round_dp(consts::PRECISION))
     }
 
     fn checked_pow_n(self, mut exponent: i64) -> Option<Decimal> {
@@ -86,7 +99,7 @@ impl DecimalExt for Decimal {
             exponent = exponent >> 1;
         }
 
-        Some(result)
+        Some(result.round_dp(consts::PRECISION))
     }
 
     fn checked_sqrt(self) -> Option<Decimal> {
@@ -109,7 +122,7 @@ impl DecimalExt for Decimal {
             result = consts::HALF.checked_mul(xr1)?;
         }
 
-        Some(result)
+        Some(result.round_dp(consts::PRECISION))
     }
 
     fn checked_cbrt(self) -> Option<Decimal>{
@@ -129,7 +142,7 @@ impl DecimalExt for Decimal {
                 .checked_mul(consts::ONE_FRACT_3)?;
         }
 
-        Some(x)
+        Some(x.round_dp(consts::PRECISION))
     }
 
     fn checked_log(self, base: Decimal) -> Option<Decimal> {
@@ -139,7 +152,8 @@ impl DecimalExt for Decimal {
         }
 
         let b = Self::checked_ln(base)?;
-        Some(a.checked_div(b)?)
+        let result = a.checked_div(b)?;
+        Some(result.round_dp(consts::PRECISION))
     }
 
     fn checked_ln(self) -> Option<Decimal> {
@@ -166,7 +180,7 @@ impl DecimalExt for Decimal {
             let lna = Self::checked_ln(a)?;
             let b = consts::LN_10.checked_mul(n.into())?;
             let result = lna.checked_add(b)?;
-            return Some(result);
+            return Some(result.round_dp(consts::PRECISION));
         }
 
         // See: https://en.wikipedia.org/wiki/Logarithm#Power_series
@@ -185,7 +199,7 @@ impl DecimalExt for Decimal {
             result = result.checked_add(y)?;
         }
 
-        Some(result)
+        Some(result.round_dp(consts::PRECISION))
     }
 
     fn checked_exp(self) -> Option<Decimal> {
@@ -221,7 +235,7 @@ impl DecimalExt for Decimal {
         let div = xx.checked_div(result)?;
         result = consts::ONE.checked_add(div)?;
 
-        Some(result)
+        Some(result.round_dp(consts::PRECISION))
     }
 
     fn checked_factorial(self) -> Option<Decimal> {
@@ -249,7 +263,7 @@ impl DecimalExt for Decimal {
             result *= gamma(n + consts::ONE)?;
         }
 
-        Some(result)
+        Some(result.round_dp(consts::PRECISION))
     }
 
     fn sin(self) -> Decimal {
@@ -282,7 +296,7 @@ impl DecimalExt for Decimal {
             result += factor;
         }
 
-        result
+        result.round_dp(consts::PRECISION)
     }
 
     fn cos(self) -> Decimal {
@@ -307,7 +321,7 @@ impl DecimalExt for Decimal {
             result += factor;
         }
 
-        result
+        result.round_dp(consts::PRECISION)
     }
 
     fn tan(self) -> Option<Decimal> {
@@ -315,7 +329,8 @@ impl DecimalExt for Decimal {
         if cos.is_zero() {
             None
         } else {
-            Some(self.sin() / cos)
+            let result : Decimal = self.sin() / cos;
+            Some(result.round_dp(consts::PRECISION))
         }
     }
 }
@@ -410,7 +425,7 @@ mod tests {
         assert_eq!(Decimal::checked_sqrt(dec!(25)).unwrap(), dec!(5));
         assert_eq!(
             Decimal::checked_sqrt(dec!(2)).unwrap(),
-            dec!(1.4142135623730950488016887242097)
+            dec!(1.41421356237309504880)
         );
     }
 
@@ -434,7 +449,7 @@ mod tests {
         assert_eq!(Decimal::checked_pow(dec!(9), dec!(0.5)).unwrap(), 3.into());
         assert_eq!(
             Decimal::checked_pow(dec!(4), dec!(-0.25)).unwrap(),
-            dec!(0.70710678118654752440084436210485)
+            dec!(0.70710678118654752440)
         );
     }
 
@@ -495,31 +510,33 @@ mod tests {
 
     #[test]
     fn sin_test() {
-        assert_eq!(Decimal::sin(radians(dec!(180))), Decimal::zero());
-        assert_eq!(Decimal::sin(radians(dec!(-180))), Decimal::zero());
-        assert_eq!(Decimal::sin(radians(dec!(90))), dec!(1));
-        assert_eq!(Decimal::sin(radians(dec!(-90))), dec!(-1));
+        assert_eq!(Decimal::sin(dec!(180).to_radians()), Decimal::zero());
+        assert_eq!(Decimal::sin(dec!(-180).to_radians()), Decimal::zero());
+        assert_eq!(Decimal::sin(dec!(90).to_radians()), dec!(1));
+        assert_eq!(Decimal::sin(dec!(-90).to_radians()), dec!(-1));
         assert_approx_eq!(
-            Decimal::sin(radians(dec!(45))),
+            Decimal::sin(dec!(45).to_radians()),
             dec!(0.70710678118654752440084436210485)
         );
     }
 
     #[test]
     fn cos_test() {
-        assert_eq!(Decimal::cos(radians(dec!(90))), Decimal::zero());
-        assert_eq!(Decimal::cos(radians(dec!(0))), Decimal::one());
+        assert_eq!(Decimal::cos(dec!(90).to_radians()), Decimal::zero());
+        assert_eq!(Decimal::cos(dec!(0).to_radians()), Decimal::one());
         assert_approx_eq!(
-            Decimal::cos(radians(dec!(45))),
+            Decimal::cos(dec!(45).to_radians()),
             dec!(0.70710678118654752440084436210485)
         );
         assert_approx_eq!(
-            Decimal::cos(radians(dec!(30))),
+            Decimal::cos(dec!(30).to_radians()),
             dec!(0.86602540378443864676372317075294)
         );
     }
 
-    fn radians(n: Decimal) -> Decimal {
-        n * (consts::PI / dec!(180))
+    #[test]
+    fn tan_test(){
+        assert_eq!(Decimal::tan(dec!(45).to_radians()).unwrap(), Decimal::one());
+        assert_eq!(Decimal::tan(dec!(30).to_radians()).unwrap(), dec!(0.57735026918962576451));
     }
 }

@@ -6,6 +6,7 @@ use crate::num::checked::CheckedNum;
 use crate::ops::checked::*;
 use crate::ops::math::*;
 use crate::utils::ignore_case_string::IgnoreCaseString;
+use crate::ops::math::RandFunction;
 
 pub trait Context<'a, N> {
     fn config(&self) -> &Config;
@@ -305,6 +306,7 @@ impl<'a, N: CheckedNum> DefaultContext<'a, N> {
         context.add_function(TruncateFunction);
         context.add_function(RoundFunction);
         context.add_function(SignFunction);
+        context.add_function(RandFunction);
         context.add_function(SinFunction);
         context.add_function(CosFunction);
         context.add_function(TanFunction);
@@ -329,11 +331,6 @@ impl<'a, N: CheckedNum> DefaultContext<'a, N> {
         context.add_function(ACschFunction);
         context.add_function(ASechFunction);
         context.add_function(ACothFunction);
-        #[cfg(feature = "random")]
-        {
-            use crate::random::RandFunction;
-            context.add_function(RandFunction);
-        }
         context
     }
 }
@@ -500,6 +497,7 @@ pub mod unchecked {
             context.add_function(SqrtFunction);
             context.add_function(LnFunction);
             context.add_function(LogFunction);
+            context.add_function(RandFunction);
             context.add_function(ExpFunction);
             context.add_function(SinFunction);
             context.add_function(CosFunction);

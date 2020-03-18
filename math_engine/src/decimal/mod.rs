@@ -8,7 +8,8 @@ pub mod consts{
     use rust_decimal::Decimal;
 
     pub(crate) const TAYLOR_SERIES_ITERATIONS : u32 = 100;
-    pub(crate) const EPSILON : Decimal = dec!(0.0000000000000000001);
+    pub(crate) const PRECISION : u32 = 20;
+    pub(crate) const EPSILON : Decimal = dec!(0.00000000000000000001);
     
     //////////////////////// Constants ////////////////////////
     /// Euler's number (e)
