@@ -5,7 +5,7 @@ use rust_decimal_macros::*;
 
 /// Extended math operations for `Decimal`.
 pub trait DecimalExt {
-    //DecimalOps, DecimalMath
+    fn is_integer(&self) -> bool;
     fn checked_pow(self, exponent: Decimal) -> Option<Decimal>;
     fn checked_pow_n(self, exponent: i64) -> Option<Decimal>;
     fn checked_sqrt(self) -> Option<Decimal>;
@@ -17,10 +17,25 @@ pub trait DecimalExt {
     fn sin(self) -> Decimal;
     fn cos(self) -> Decimal;
     fn tan(self) -> Option<Decimal>;
-    fn is_integer(&self) -> bool;
+}
+
+trait ApproxEq{
+    fn approx_eq(&self, other: &Self, delta: &Self) -> bool;
+}
+
+impl ApproxEq for Decimal{
+    #[inline]
+    fn approx_eq(&self, other: &Self, delta: &Self) -> bool {
+        (self - other).abs() < *delta
+    }
 }
 
 impl DecimalExt for Decimal {
+    #[inline]
+    fn is_integer(&self) -> bool {
+        self.fract().is_zero()
+    }
+
     fn checked_pow(self, exponent: Decimal) -> Option<Decimal> {
         if exponent.is_integer() {
             return self.checked_pow_n(exponent.to_i64().unwrap());
@@ -111,7 +126,7 @@ impl DecimalExt for Decimal {
             let x2 = consts::TWO.checked_mul(x)?;
             x = self.checked_div(xx)?
                 .checked_add(x2)?
-                .checked_mul(consts::THIRD)?;
+                .checked_mul(consts::ONE_FRACT_3)?;
         }
 
         Some(x)
@@ -120,7 +135,7 @@ impl DecimalExt for Decimal {
     fn checked_log(self, base: Decimal) -> Option<Decimal> {
         let a = Self::checked_ln(self)?;
         if base == consts::TEN {
-            return a.checked_div(consts::LN10_INV);
+            return a.checked_div(consts::LN_10_INV);
         }
 
         let b = Self::checked_ln(base)?;
@@ -149,7 +164,7 @@ impl DecimalExt for Decimal {
             // ln(x) = log(a * 10^n) = ln(a) + n * log(10)
             // B = n * log(10)
             let lna = Self::checked_ln(a)?;
-            let b = consts::LN10.checked_mul(n.into())?;
+            let b = consts::LN_10.checked_mul(n.into())?;
             let result = lna.checked_add(b)?;
             return Some(result);
         }
@@ -238,26 +253,29 @@ impl DecimalExt for Decimal {
     }
 
     fn sin(self) -> Decimal {
-        let x = normalize_rad(self);
+        let radians : Decimal = self % consts::PI_2;
 
-        if x == Decimal::zero() || equals(x.abs(), consts::PI) || equals(x.abs(), consts::PI2) {
+        if radians == Decimal::zero() ||
+            ApproxEq::approx_eq(&radians.abs(), &consts::PI, &consts::EPSILON) ||
+            ApproxEq::approx_eq(&radians.abs(), &consts::PI_2, &consts::EPSILON) {
             return Decimal::zero();
         }
 
-        if equals(x, consts::PI_HALF) {
+        if ApproxEq::approx_eq(&radians, &consts::PI_FRACT_2, &consts::EPSILON) {
             return consts::ONE;
         }
 
-        if equals(x, consts::PI_3HALF) || equals(x.abs(), consts::PI_HALF) {
+        if  ApproxEq::approx_eq(&radians, &consts::PI_3_FRACT_2, &consts::EPSILON) ||
+            ApproxEq::approx_eq(&radians.abs(), &consts::PI_FRACT_2, &consts::EPSILON) {
             return consts::ONE_MINUS;
         }
 
         // Using Taylor Series
         // See: https://en.wikipedia.org/wiki/Taylor_series#Trigonometric_functions
 
-        let xx: Decimal = x * x;
-        let mut factor = x;
-        let mut result = x;
+        let xx: Decimal = radians * radians;
+        let mut factor = radians;
+        let mut result = radians;
 
         for n in 1..consts::TAYLOR_SERIES_ITERATIONS {
             factor *= -xx / Decimal::from_u32((2 * n + 1) * (2 * n)).unwrap();
@@ -268,19 +286,19 @@ impl DecimalExt for Decimal {
     }
 
     fn cos(self) -> Decimal {
-        let x = normalize_rad(self);
+        let radians : Decimal =  self  % consts::PI_2;
 
-        if x.is_zero() {
+        if radians.is_zero() {
             return Decimal::one();
         }
 
-        if equals(x, consts::PI_HALF) {
+        if ApproxEq::approx_eq(&radians, &consts::PI_FRACT_2, &consts::EPSILON) {
             return Decimal::zero();
         }
 
         // Using Taylor Series
         // See: https://en.wikipedia.org/wiki/Taylor_series#Trigonometric_functions
-        let xx: Decimal = x * x;
+        let xx: Decimal = radians * radians;
         let mut factor: Decimal = -xx / consts::TWO;
         let mut result = Decimal::one() + factor;
 
@@ -300,50 +318,9 @@ impl DecimalExt for Decimal {
             Some(self.sin() / cos)
         }
     }
-
-    #[inline]
-    fn is_integer(&self) -> bool {
-        self.scale() == 0
-    }
 }
 
-/// Check if the provided `Decimal` values are equals using the given `error`.
-///
-/// # Example
-/// ```
-/// use rust_decimal_macros::*;
-/// use math_engine::decimal::decimal_math::equals;
-///
-/// let x = dec!(4.000000000000000000001);
-/// let y = dec!(4.0000000);
-/// assert!(equals(x, y));
-/// ```
-#[inline(always)]
-pub fn equals(x: Decimal, y: Decimal) -> bool {
-    (x - y).abs() < consts::EPSILON
-}
-
-#[inline(always)]
-pub fn normalize_rad(radians: Decimal) -> Decimal {
-    radians % consts::PI2
-}
-
-pub fn round(value: Decimal) -> Decimal {
-    if value.is_integer() {
-        return value;
-    }
-
-    //let rounded = value.round_dp_with_strategy(25, RoundingStrategy::BankersRounding);
-    let rounded = value.round_dp(20);
-    let delta: Decimal = value - rounded;
-    if delta.abs() < consts::EPSILON {
-        rounded
-    } else {
-        value
-    }
-}
-
-pub fn gamma(mut x: Decimal) -> Option<Decimal> {
+fn gamma(mut x: Decimal) -> Option<Decimal> {
     //Using Coefficients from: https://mrob.com/pub/ries/lanczos-gamma.html
     const G : Decimal = dec!(4.7421875);
     const P: [Decimal; 15] = [
@@ -393,7 +370,7 @@ mod tests {
     use super::*;
 
     // Equality using an epsilon value
-    macro_rules! decimal_equals{
+    macro_rules! assert_approx_eq {
         ($left:expr, $right:expr, $delta:expr) => ({
         match (&$left, &$right, &$delta) {
             (left_val, right_val, delta_val) => {
@@ -407,8 +384,25 @@ mod tests {
     });
 
         ($left:expr, $right:expr) => ({
-            decimal_equals!($left, $right, consts::EPSILON)
+            assert_approx_eq!($left, $right, consts::EPSILON)
         });
+    }
+
+    macro_rules! decimal{
+        ($value:expr) => {
+            dec!($value) as Decimal
+        }
+    }
+
+    #[test]
+    fn is_integer_test(){
+        assert!(decimal!(10).is_integer());
+        assert!(decimal!(-20).is_integer());
+        assert!(decimal!(5.0).is_integer());
+
+        assert!(!decimal!(15.5).is_integer());
+        assert!(!decimal!(-20.2).is_integer());
+        assert!(!decimal!(5.2).is_integer());
     }
 
     #[test]
@@ -422,8 +416,8 @@ mod tests {
 
     #[test]
     fn checked_cbrt_test(){
-        decimal_equals!(dec!(10).checked_cbrt().unwrap(), dec!(2.1544346900318837217592935665194));
-        decimal_equals!(dec!(-5).checked_cbrt().unwrap(), dec!(-1.7099759466766969893531088725439));
+        assert_approx_eq!(dec!(10).checked_cbrt().unwrap(), dec!(2.1544346900318837217592935665194));
+        assert_approx_eq!(dec!(-5).checked_cbrt().unwrap(), dec!(-1.7099759466766969893531088725439));
     }
 
     #[test]
@@ -449,15 +443,15 @@ mod tests {
         assert_eq!(Decimal::checked_ln(dec!(0)), None);
         assert_eq!(Decimal::checked_ln(dec!(-2)), None);
 
-        decimal_equals!(
+        assert_approx_eq!(
             Decimal::checked_ln(dec!(10)).unwrap(),
             dec!(2.3025850929940456840179914546844)
         );
-        decimal_equals!(
+        assert_approx_eq!(
             Decimal::checked_ln(dec!(9)).unwrap(),
             dec!(2.1972245773362193827904904738451)
         );
-        decimal_equals!(
+        assert_approx_eq!(
             Decimal::checked_ln(dec!(25)).unwrap(),
             dec!(3.2188758248682007492015186664524)
         );
@@ -468,17 +462,17 @@ mod tests {
         assert_eq!(Decimal::checked_exp(dec!(0)).unwrap(), dec!(1));
         assert_eq!(Decimal::checked_exp(dec!(1)).unwrap(), consts::E);
 
-        assert_equals(
+        assert_approx_eq!(
             Decimal::checked_exp(dec!(3)).unwrap(),
-            dec!(20.085536923187667740928529654582),
+            dec!(20.085536923187667740928529654582)
         );
-        assert_equals(
+        assert_approx_eq!(
             Decimal::checked_exp(dec!(-4)).unwrap(),
-            dec!(0.01831563888873418029371802127324),
+            dec!(0.01831563888873418029371802127324)
         );
-        assert_equals(
+        assert_approx_eq!(
             Decimal::checked_exp(dec!(0.5)).unwrap(),
-            dec!(1.6487212707001281468486507878142),
+            dec!(1.6487212707001281468486507878142)
         );
     }
 
@@ -487,12 +481,12 @@ mod tests {
         const ERROR : Decimal = dec!(0.0000000000001);
 
         assert_eq!(Decimal::checked_factorial(dec!(10)).unwrap(), dec!(3628800));
-        decimal_equals!(
+        assert_approx_eq!(
             Decimal::checked_factorial(dec!(0.3)).unwrap(),
             dec!(0.89747069630627718849375495477148),
             ERROR
         );
-        decimal_equals!(
+        assert_approx_eq!(
             Decimal::checked_factorial(dec!(6.5)).unwrap(),
             dec!(1871.254305797788346476077053604),
             ERROR
@@ -505,7 +499,7 @@ mod tests {
         assert_eq!(Decimal::sin(radians(dec!(-180))), Decimal::zero());
         assert_eq!(Decimal::sin(radians(dec!(90))), dec!(1));
         assert_eq!(Decimal::sin(radians(dec!(-90))), dec!(-1));
-        decimal_equals!(
+        assert_approx_eq!(
             Decimal::sin(radians(dec!(45))),
             dec!(0.70710678118654752440084436210485)
         );
@@ -515,11 +509,11 @@ mod tests {
     fn cos_test() {
         assert_eq!(Decimal::cos(radians(dec!(90))), Decimal::zero());
         assert_eq!(Decimal::cos(radians(dec!(0))), Decimal::one());
-        decimal_equals!(
+        assert_approx_eq!(
             Decimal::cos(radians(dec!(45))),
             dec!(0.70710678118654752440084436210485)
         );
-        decimal_equals!(
+        assert_approx_eq!(
             Decimal::cos(radians(dec!(30))),
             dec!(0.86602540378443864676372317075294)
         );
@@ -527,17 +521,5 @@ mod tests {
 
     fn radians(n: Decimal) -> Decimal {
         n * (consts::PI / dec!(180))
-    }
-
-    fn assert_equals(x: Decimal, y: Decimal) {
-        let diff = (y - x).abs();
-        assert!(
-            diff < consts::EPSILON,
-            "Left: {}\nRight: {}\nDelta: {} > {}\n",
-            x,
-            y,
-            diff,
-            consts::EPSILON
-        )
     }
 }

@@ -1,16 +1,18 @@
-use crate::context::{DefaultContext, Config, Context};
 use num_complex::Complex64;
-use ops::*;
 use num_traits::FromPrimitive;
+
+use ops::*;
+
+use crate::context::{Config, Context, DefaultContext};
 use crate::ops::unchecked::*;
 
-impl <'a> DefaultContext<'a, Complex64>{
+impl<'a> DefaultContext<'a, Complex64> {
     #[inline]
-    pub fn new_complex() -> Self{
+    pub fn new_complex() -> Self {
         Self::new_complex_with_config(Config::new().with_complex_number())
     }
 
-    pub fn new_complex_with_config(config: Config) -> Self{
+    pub fn new_complex_with_config(config: Config) -> Self {
         let mut context = DefaultContext::new_with_config(config.with_complex_number());
         context.add_constant("PI", Complex64::from_f64(std::f64::consts::PI).unwrap());
         context.add_constant("E", Complex64::from_f64(std::f64::consts::E).unwrap());
@@ -27,11 +29,12 @@ impl <'a> DefaultContext<'a, Complex64>{
     }
 }
 
-pub mod ops{
-    use crate::function::{BinaryFunction, Precedence, Associativity, Function};
+pub mod ops {
     use num_complex::{Complex, Complex64};
-    use crate::error::*;
     use num_traits::Zero;
+
+    use crate::error::*;
+    use crate::function::{Associativity, BinaryFunction, Function, Precedence};
 
     pub struct PowOperator;
     impl BinaryFunction<Complex64> for PowOperator {
@@ -59,7 +62,7 @@ pub mod ops{
         }
 
         fn call(&self, args: &[Complex64]) -> Result<Complex64> {
-            match args.len(){
+            match args.len() {
                 1 => Ok(args[0].sqrt()),
                 _ => Err(Error::from(ErrorKind::InvalidArgumentCount))
             }
@@ -67,33 +70,33 @@ pub mod ops{
     }
 
     pub struct LogFunction;
-    impl Function<Complex64> for LogFunction{
+    impl Function<Complex64> for LogFunction {
         fn name(&self) -> &str {
             "log"
         }
 
         fn call(&self, args: &[Complex64]) -> Result<Complex64> {
-            match args.len(){
+            match args.len() {
                 1 => Ok(args[0].log(10_f64)),
                 2 => {
-                    match args[1].im{
+                    match args[1].im {
                         n if n.is_zero() => Ok(args[0].log(args[1].re)),
                         _ => Err(Error::new(ErrorKind::InvalidInput, "Expected decimal base"))
                     }
-                },
+                }
                 _ => Err(Error::from(ErrorKind::InvalidArgumentCount))
             }
         }
     }
 
     pub struct LnFunction;
-    impl Function<Complex64> for LnFunction{
+    impl Function<Complex64> for LnFunction {
         fn name(&self) -> &str {
             "ln"
         }
 
         fn call(&self, args: &[Complex64]) -> Result<Complex64> {
-            match args.len(){
+            match args.len() {
                 1 => Ok(args[0].ln()),
                 _ => Err(Error::from(ErrorKind::InvalidArgumentCount))
             }
@@ -101,13 +104,13 @@ pub mod ops{
     }
 
     pub struct ExpFunction;
-    impl Function<Complex64> for ExpFunction{
+    impl Function<Complex64> for ExpFunction {
         fn name(&self) -> &str {
             "exp"
         }
 
         fn call(&self, args: &[Complex64]) -> Result<Complex64> {
-            match args.len(){
+            match args.len() {
                 1 => Ok(args[0].exp()),
                 _ => Err(Error::from(ErrorKind::InvalidArgumentCount))
             }
@@ -115,13 +118,13 @@ pub mod ops{
     }
 
     pub struct SinFunction;
-    impl Function<Complex64> for SinFunction{
+    impl Function<Complex64> for SinFunction {
         fn name(&self) -> &str {
             "sin"
         }
 
         fn call(&self, args: &[Complex64]) -> Result<Complex64> {
-            match args.len(){
+            match args.len() {
                 1 => Ok(args[0].sin()),
                 _ => Err(Error::from(ErrorKind::InvalidArgumentCount))
             }
@@ -129,13 +132,13 @@ pub mod ops{
     }
 
     pub struct CosFunction;
-    impl Function<Complex64> for CosFunction{
+    impl Function<Complex64> for CosFunction {
         fn name(&self) -> &str {
             "cos"
         }
 
         fn call(&self, args: &[Complex64]) -> Result<Complex64> {
-            match args.len(){
+            match args.len() {
                 1 => Ok(args[0].cos()),
                 _ => Err(Error::from(ErrorKind::InvalidArgumentCount))
             }
@@ -143,35 +146,33 @@ pub mod ops{
     }
 
     pub struct TanFunction;
-    impl Function<Complex64> for TanFunction{
+    impl Function<Complex64> for TanFunction {
         fn name(&self) -> &str {
             "tan"
         }
 
         fn call(&self, args: &[Complex64]) -> Result<Complex64> {
-            match args.len(){
+            match args.len() {
                 1 => {
-                    let cos = args[1].cos();
-
-                    if cos.is_zero(){
+                    let result = args[0].tan();
+                    if result.is_infinite() || result.is_nan(){
                         return Err(Error::from(ErrorKind::NAN));
                     }
-
-                    Ok(args[1].sin() / cos)
-                },
+                    Ok(result)
+                }
                 _ => Err(Error::from(ErrorKind::InvalidArgumentCount))
             }
         }
     }
 
     pub struct CscFunction;
-    impl Function<Complex64> for CscFunction{
+    impl Function<Complex64> for CscFunction {
         fn name(&self) -> &str {
             "csc"
         }
 
         fn call(&self, args: &[Complex64]) -> Result<Complex64> {
-            match args.len(){
+            match args.len() {
                 1 => Ok(args[0].sin().inv()),
                 _ => Err(Error::from(ErrorKind::InvalidArgumentCount))
             }
@@ -179,13 +180,13 @@ pub mod ops{
     }
 
     pub struct SecFunction;
-    impl Function<Complex64> for SecFunction{
+    impl Function<Complex64> for SecFunction {
         fn name(&self) -> &str {
             "sec"
         }
 
         fn call(&self, args: &[Complex64]) -> Result<Complex64> {
-            match args.len(){
+            match args.len() {
                 1 => Ok(args[0].cos().inv()),
                 _ => Err(Error::from(ErrorKind::InvalidArgumentCount))
             }
@@ -193,22 +194,20 @@ pub mod ops{
     }
 
     pub struct CotFunction;
-    impl Function<Complex64> for CotFunction{
+    impl Function<Complex64> for CotFunction {
         fn name(&self) -> &str {
             "cot"
         }
 
         fn call(&self, args: &[Complex64]) -> Result<Complex64> {
-            match args.len(){
+            match args.len() {
                 1 => {
-                    let sin = args[1].sin();
-
-                    if sin.is_zero(){
+                    let result = args[0].tan().inv();
+                    if result.is_infinite() || result.is_nan(){
                         return Err(Error::from(ErrorKind::NAN));
                     }
-
-                    Ok(args[1].cos() / sin)
-                },
+                    Ok(result)
+                }
                 _ => Err(Error::from(ErrorKind::InvalidArgumentCount))
             }
         }

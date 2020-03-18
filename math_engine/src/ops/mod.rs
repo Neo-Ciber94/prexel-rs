@@ -138,16 +138,9 @@ pub mod math {
                     if args.len() != 1 {
                         Err(Error::from(ErrorKind::InvalidArgumentCount))
                     } else {
-                        match args[0].to_f64().map(f64::$method_name) {
-                            Some(n) => {
-                                if n.is_nan() || n.is_infinite() {
-                                    return Err(Error::from(ErrorKind::NAN));
-                                } else {
-                                    return N::from_f64(n).ok_or(Error::from(ErrorKind::Overflow));
-                                }
-                            },
-                            None => Err(Error::from(ErrorKind::Overflow)),
-                        }
+                        let result = try_to_float(&args[0])?.$method_name();
+                        N::from_f64(result)
+                            .ok_or(Error::from(ErrorKind::Overflow))
                     }
                 }
             }
@@ -163,16 +156,9 @@ pub mod math {
                     if args.len() != 1 {
                         Err(Error::from(ErrorKind::InvalidArgumentCount))
                     } else {
-                        match args[0].to_f64().map(f64::$method_name) {
-                            Some(n) => {
-                                if n.is_nan() || n.is_infinite() {
-                                    return Err(Error::from(ErrorKind::NAN));
-                                } else {
-                                    return N::from_f64(n).ok_or(Error::from(ErrorKind::Overflow));
-                                }
-                            },
-                            None => Err(Error::from(ErrorKind::Overflow)),
-                        }
+                        let result = try_to_float(&args[0])?.$method_name();
+                        N::from_f64(result)
+                            .ok_or(Error::from(ErrorKind::Overflow))
                     }
                 }
             }
@@ -361,4 +347,19 @@ pub mod math {
     impl_trig_inv!(ACschFunction, asinh, acsch);
     impl_trig_inv!(ASechFunction, acosh, asech);
     impl_trig_inv!(ACothFunction, atanh, acoth);
+
+    #[inline(always)]
+    pub(crate) fn try_to_float<N: ToPrimitive>(n: &N) -> Result<f64>{
+        match n.to_f64(){
+            Some(n) => {
+                if n.is_nan() || n.is_infinite(){
+                    Err(Error::from(ErrorKind::NAN))
+                }
+                else{
+                    Ok(n)
+                }
+            },
+            None => Err(Error::from(ErrorKind::Overflow))
+        }
+    }
 }

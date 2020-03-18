@@ -8,7 +8,11 @@ pub mod error;
 pub mod utils;
 pub mod ops;
 
+#[cfg(feature = "decimal")]
 pub mod decimal;
 
 #[cfg(feature = "complex")]
 pub mod complex;
+
+#[cfg(feature = "random")]
+pub mod random;

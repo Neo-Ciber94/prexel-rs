@@ -329,6 +329,11 @@ impl<'a, N: CheckedNum> DefaultContext<'a, N> {
         context.add_function(ACschFunction);
         context.add_function(ASechFunction);
         context.add_function(ACothFunction);
+        #[cfg(feature = "random")]
+        {
+            use crate::random::RandFunction;
+            context.add_function(RandFunction);
+        }
         context
     }
 }

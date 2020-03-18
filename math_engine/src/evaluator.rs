@@ -67,7 +67,7 @@ impl<'a, C, N> Evaluate<N> for Evaluator<'a, N, C> where C: Context<'a, N>, N: D
     }
 }
 
-pub(crate) fn eval_tokens_raw<'a, N, C>(tokens: &[Token<N>], context: &C) -> Result<N>
+fn eval_tokens_raw<'a, N, C>(tokens: &[Token<N>], context: &C) -> Result<N>
 where
     N: Debug + Clone,
     C: Context<'a, N>,
