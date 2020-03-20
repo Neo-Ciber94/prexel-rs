@@ -1,5 +1,5 @@
 use crate::decimal::consts;
-use rust_decimal::Decimal;
+use rust_decimal::{Decimal, RoundingStrategy};
 use rust_decimal::prelude::{FromPrimitive, One, ToPrimitive, Zero};
 use rust_decimal_macros::*;
 
@@ -8,6 +8,7 @@ pub trait DecimalExt {
     fn is_integer(&self) -> bool;
     fn to_radians(self) -> Decimal;
     fn to_degrees(self) -> Decimal;
+    fn inv(self) -> Decimal;
     fn checked_pow(self, exponent: Decimal) -> Option<Decimal>;
     fn checked_pow_n(self, exponent: i64) -> Option<Decimal>;
     fn checked_sqrt(self) -> Option<Decimal>;
@@ -19,13 +20,17 @@ pub trait DecimalExt {
     fn sin(self) -> Decimal;
     fn cos(self) -> Decimal;
     fn tan(self) -> Option<Decimal>;
+    fn asin(self) -> Option<Decimal>;
+    fn acos(self) -> Option<Decimal>;
+    fn atan(self) -> Decimal;
+    fn atan2(self, other: Decimal) -> Decimal;
 }
 
-pub trait ApproxEq{
+pub trait ApproxEq {
     fn approx_eq(&self, other: &Self, delta: &Self) -> bool;
 }
 
-impl ApproxEq for Decimal{
+impl ApproxEq for Decimal {
     #[inline]
     fn approx_eq(&self, other: &Self, delta: &Self) -> bool {
         (self - other).abs() < *delta
@@ -46,6 +51,11 @@ impl DecimalExt for Decimal {
     #[inline]
     fn to_degrees(self) -> Decimal {
         self * (dec!(180) / consts::PI)
+    }
+
+    #[inline]
+    fn inv(self) -> Decimal {
+        consts::ONE / self
     }
 
     fn checked_pow(self, exponent: Decimal) -> Option<Decimal> {
@@ -69,7 +79,7 @@ impl DecimalExt for Decimal {
         // x ^ n = e^(n * ln(x))
         let b = self.checked_ln()?.checked_mul(exponent)?;
         let result = b.checked_exp()?;
-        Some(result.round_dp(consts::PRECISION))
+        Some(result)
     }
 
     fn checked_pow_n(self, mut exponent: i64) -> Option<Decimal> {
@@ -99,11 +109,13 @@ impl DecimalExt for Decimal {
             exponent = exponent >> 1;
         }
 
-        Some(result.round_dp(consts::PRECISION))
+        Some(result)
     }
 
     fn checked_sqrt(self) -> Option<Decimal> {
-        //return Some(self.checked_pow(decimal.decimal::HALF)?);
+        if self.is_sign_negative(){
+            return None;
+        }
 
         // Using Babylonian Method
         // See: https://en.wikipedia.org/wiki/Methods_of_computing_square_roots#Babylonian_method
@@ -122,10 +134,10 @@ impl DecimalExt for Decimal {
             result = consts::HALF.checked_mul(xr1)?;
         }
 
-        Some(result.round_dp(consts::PRECISION))
+        Some(result)
     }
 
-    fn checked_cbrt(self) -> Option<Decimal>{
+    fn checked_cbrt(self) -> Option<Decimal> {
         if self.is_one() {
             return Some(self);
         }
@@ -134,7 +146,7 @@ impl DecimalExt for Decimal {
 
         // Using Newton's Method
         // See: https://en.wikipedia.org/wiki/Cube_root#Numerical_methods
-        for _ in 0..consts::TAYLOR_SERIES_ITERATIONS{
+        for _ in 0..consts::TAYLOR_SERIES_ITERATIONS {
             let xx = x.checked_mul(x)?;
             let x2 = consts::TWO.checked_mul(x)?;
             x = self.checked_div(xx)?
@@ -142,7 +154,7 @@ impl DecimalExt for Decimal {
                 .checked_mul(consts::ONE_FRACT_3)?;
         }
 
-        Some(x.round_dp(consts::PRECISION))
+        Some(x)
     }
 
     fn checked_log(self, base: Decimal) -> Option<Decimal> {
@@ -153,7 +165,7 @@ impl DecimalExt for Decimal {
 
         let b = Self::checked_ln(base)?;
         let result = a.checked_div(b)?;
-        Some(result.round_dp(consts::PRECISION))
+        Some(result)
     }
 
     fn checked_ln(self) -> Option<Decimal> {
@@ -180,11 +192,11 @@ impl DecimalExt for Decimal {
             let lna = Self::checked_ln(a)?;
             let b = consts::LN_10.checked_mul(n.into())?;
             let result = lna.checked_add(b)?;
-            return Some(result.round_dp(consts::PRECISION));
+            return Some(result);
         }
 
         // See: https://en.wikipedia.org/wiki/Logarithm#Power_series
-        // Error: 0.0000000000000000000000000007
+        // Error: ~0.0000000000000000000000000007
         const ITERATIONS: u32 = consts::TAYLOR_SERIES_ITERATIONS * 10;
         let mut result = Decimal::zero();
 
@@ -199,7 +211,7 @@ impl DecimalExt for Decimal {
             result = result.checked_add(y)?;
         }
 
-        Some(result.round_dp(consts::PRECISION))
+        Some(result)
     }
 
     fn checked_exp(self) -> Option<Decimal> {
@@ -235,7 +247,7 @@ impl DecimalExt for Decimal {
         let div = xx.checked_div(result)?;
         result = consts::ONE.checked_add(div)?;
 
-        Some(result.round_dp(consts::PRECISION))
+        Some(result)
     }
 
     fn checked_factorial(self) -> Option<Decimal> {
@@ -263,11 +275,11 @@ impl DecimalExt for Decimal {
             result *= gamma(n + consts::ONE)?;
         }
 
-        Some(result.round_dp(consts::PRECISION))
+        Some(result)
     }
 
     fn sin(self) -> Decimal {
-        let radians : Decimal = self % consts::PI_2;
+        let radians: Decimal = self % consts::PI_2;
 
         if radians == Decimal::zero() ||
             ApproxEq::approx_eq(&radians.abs(), &consts::PI, &consts::EPSILON) ||
@@ -279,7 +291,7 @@ impl DecimalExt for Decimal {
             return consts::ONE;
         }
 
-        if  ApproxEq::approx_eq(&radians, &consts::PI_3_FRACT_2, &consts::EPSILON) ||
+        if ApproxEq::approx_eq(&radians, &consts::PI_3_FRACT_2, &consts::EPSILON) ||
             ApproxEq::approx_eq(&radians.abs(), &consts::PI_FRACT_2, &consts::EPSILON) {
             return consts::ONE_MINUS;
         }
@@ -296,11 +308,11 @@ impl DecimalExt for Decimal {
             result += factor;
         }
 
-        result.round_dp(consts::PRECISION)
+        result
     }
 
     fn cos(self) -> Decimal {
-        let radians : Decimal =  self  % consts::PI_2;
+        let radians: Decimal = self % consts::PI_2;
 
         if radians.is_zero() {
             return Decimal::one();
@@ -321,7 +333,7 @@ impl DecimalExt for Decimal {
             result += factor;
         }
 
-        result.round_dp(consts::PRECISION)
+        result
     }
 
     fn tan(self) -> Option<Decimal> {
@@ -329,15 +341,130 @@ impl DecimalExt for Decimal {
         if cos.is_zero() {
             None
         } else {
-            let result : Decimal = self.sin() / cos;
+            let result: Decimal = self.sin() / cos;
             Some(result.round_dp(consts::PRECISION))
         }
     }
+
+    fn asin(self) -> Option<Decimal> {
+        if self < consts::ONE_MINUS || self > consts::ONE {
+            None
+        } else {
+            let x2 = self.checked_mul(self)?;
+            let sqrt =  consts::ONE.checked_sub(x2)?.checked_sqrt()?;
+            let sqrt_plus_one = sqrt.checked_add(consts::ONE)?;
+            let result: Decimal = consts::TWO * Decimal::atan(self.checked_div(sqrt_plus_one)?);
+            Some(result)
+        }
+    }
+
+    fn acos(self) -> Option<Decimal> {
+        if self < consts::ONE_MINUS || self > consts::ONE {
+            None
+        } else {
+            let x2 = self.checked_mul(self)?;
+            let one_plus_x = consts::ONE.checked_add(self)?;
+            let sqrt = consts::ONE.checked_sub(x2)?.checked_sqrt()?;
+            let result: Decimal = consts::TWO * Decimal::atan(sqrt.checked_div(one_plus_x)?);
+            //Some(result.round_dp(consts::PRECISION))
+            Some(result)
+        }
+    }
+
+    fn atan(self) -> Decimal {
+        if self.is_zero() {
+            return Decimal::zero();
+        }
+
+        if self.is_one() {
+            return consts::PI_FRACT_4;
+        }
+
+        if self == consts::ONE_MINUS {
+            return -consts::PI_FRACT_4;
+        }
+
+        if self < consts::ONE_MINUS{
+            return -consts::PI_FRACT_2 - Decimal::atan(consts::ONE / self);
+        }
+
+        if self > consts::ONE{
+            return consts::PI_FRACT_2 - Decimal::atan(consts::ONE / self);
+        }
+
+        if cfg!(atan_taylor_series){
+            let mut result = self;
+
+            // Using Taylor's Series
+            // https://en.wikipedia.org/wiki/Taylor_series#Trigonometric_functions
+            for i in 1..consts::TAYLOR_SERIES_ITERATIONS {
+                let n = Decimal::from_u32(i).unwrap();
+                let y: Decimal = n * consts::TWO + consts::ONE;
+                result *= (consts::ONE_MINUS * self.checked_pow(y).unwrap()) / y;
+            }
+
+            //result.round_dp(consts::PRECISION)
+            result
+        }
+        else{
+            cfract_atan(self)
+        }
+    }
+
+    fn atan2(self, x: Decimal) -> Decimal {
+        if self.is_zero() && x.is_zero() {
+            return Decimal::zero();
+        }
+
+        if x.is_zero() {
+            return if self > consts::ZERO {
+                consts::PI_2
+            } else {
+                consts::PI_2_MINUS
+            };
+        }
+
+        // Θ = arctan(y / x)
+        let atan2 = Decimal::atan(self / x);
+        let result = if x > consts::ZERO{
+            atan2
+        }
+        else{
+            if self >= consts::ZERO {
+                atan2 + consts::PI
+            } else {
+                atan2 - consts::PI
+            }
+        };
+
+        result.round_dp(consts::PRECISION)
+    }
+}
+
+fn cfract_atan(value: Decimal) -> Decimal{
+    // Using continued fractions
+    // https://en.wikipedia.org/wiki/Inverse_trigonometric_functions#Continued_fractions_for_arctangent
+    let mut i = consts::TAYLOR_SERIES_ITERATIONS;
+    let mut result : Decimal = consts::TWO * Decimal::from_u32(i).unwrap() - consts::ONE;
+
+    while i > 1{
+        let mut n = Decimal::from_u32(i).unwrap();
+        let z = value * Decimal::from_u32(i - 1).unwrap();
+        let z2 = z * z;
+        let div = z2 / result;
+        // println!("arctan({}), i = {}, result = {}, z = {}, n = {}, prev = {}",
+        //          value, i, result, z, consts::TWO * n - consts::ONE, (consts::TWO * n - consts::THREE));
+        result = div + (consts::TWO * n - consts::THREE);
+        i -= 1;
+    }
+
+    result = value / result;
+    result
 }
 
 fn gamma(mut x: Decimal) -> Option<Decimal> {
     //Using Coefficients from: https://mrob.com/pub/ries/lanczos-gamma.html
-    const G : Decimal = dec!(4.7421875);
+    const G: Decimal = dec!(4.7421875);
     const P: [Decimal; 15] = [
         dec!(0.99999999999999709182),
         dec!(57.156235665862923517),
@@ -403,14 +530,14 @@ mod tests {
         });
     }
 
-    macro_rules! decimal{
+    macro_rules! decimal {
         ($value:expr) => {
             dec!($value) as Decimal
         }
     }
 
     #[test]
-    fn is_integer_test(){
+    fn is_integer_test() {
         assert!(decimal!(10).is_integer());
         assert!(decimal!(-20).is_integer());
         assert!(decimal!(5.0).is_integer());
@@ -423,14 +550,14 @@ mod tests {
     #[test]
     fn checked_sqrt_test() {
         assert_eq!(Decimal::checked_sqrt(dec!(25)).unwrap(), dec!(5));
-        assert_eq!(
+        assert_approx_eq!(
             Decimal::checked_sqrt(dec!(2)).unwrap(),
             dec!(1.41421356237309504880)
         );
     }
 
     #[test]
-    fn checked_cbrt_test(){
+    fn checked_cbrt_test() {
         assert_approx_eq!(dec!(10).checked_cbrt().unwrap(), dec!(2.1544346900318837217592935665194));
         assert_approx_eq!(dec!(-5).checked_cbrt().unwrap(), dec!(-1.7099759466766969893531088725439));
     }
@@ -447,7 +574,7 @@ mod tests {
     #[test]
     fn checked_pow_test() {
         assert_eq!(Decimal::checked_pow(dec!(9), dec!(0.5)).unwrap(), 3.into());
-        assert_eq!(
+        assert_approx_eq!(
             Decimal::checked_pow(dec!(4), dec!(-0.25)).unwrap(),
             dec!(0.70710678118654752440)
         );
@@ -493,7 +620,7 @@ mod tests {
 
     #[test]
     fn checked_factorial_test() {
-        const ERROR : Decimal = dec!(0.0000000000001);
+        const ERROR: Decimal = dec!(0.0000000000001);
 
         assert_eq!(Decimal::checked_factorial(dec!(10)).unwrap(), dec!(3628800));
         assert_approx_eq!(
@@ -535,8 +662,39 @@ mod tests {
     }
 
     #[test]
-    fn tan_test(){
+    fn tan_test() {
         assert_eq!(Decimal::tan(dec!(45).to_radians()).unwrap(), Decimal::one());
         assert_eq!(Decimal::tan(dec!(30).to_radians()).unwrap(), dec!(0.57735026918962576451));
+    }
+
+    #[test]
+    fn asin_test() {
+        assert!(dec!(1).asin().is_some());
+        assert!(dec!(-1).asin().is_some());
+
+        assert!(dec!(2).asin().is_none());
+        assert!(dec!(-2).asin().is_none());
+
+        assert_eq!(dec!(1).asin().unwrap().to_degrees(), dec!(90));
+        assert_eq!(dec!(0.707106781186547524400).asin().unwrap().to_degrees(), dec!(45));
+    }
+
+    #[test]
+    fn acos_test() {
+        assert!(dec!(1).acos().is_some());
+        assert!(dec!(-1).acos().is_some());
+
+        assert!(dec!(2).acos().is_none());
+        assert!(dec!(-2).acos().is_none());
+
+        assert_eq!(dec!(0).acos().unwrap().to_degrees(), dec!(90));
+        assert_eq!(dec!(0.707106781186547524400).acos().unwrap().to_degrees(), dec!(45));
+    }
+
+    #[test]
+    fn atan_test() {
+        assert_eq!(dec!(0).atan().to_degrees(), dec!(0));
+        assert_eq!(dec!(1).atan().to_degrees(), dec!(45));
+        assert_eq!(dec!(-1).atan().to_degrees(), dec!(-45));
     }
 }

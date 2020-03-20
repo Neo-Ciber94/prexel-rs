@@ -2,13 +2,14 @@ pub mod checked;
 pub mod unchecked;
 
 pub mod math {
+    use num_traits::{FromPrimitive, Inv, ToPrimitive, Zero};
+    use rand::random;
+
     use crate::error::*;
     use crate::function::{
         Associativity, BinaryFunction, Function, Notation, Precedence, UnaryFunction,
     };
     use crate::utils::gamma::gamma;
-    use num_traits::{FromPrimitive, Inv, ToPrimitive, Zero};
-    use rand::random;
 
     pub struct UnaryPlus;
     impl<N> UnaryFunction<N> for UnaryPlus {
