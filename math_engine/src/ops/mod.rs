@@ -131,21 +131,7 @@ pub mod math {
 
     macro_rules! forward_func_impl {
         ($func_name:ident, $method_name:ident) => {
-            impl<N: ToPrimitive + FromPrimitive> Function<N> for $func_name {
-                fn name(&self) -> &str {
-                    stringify!($method_name)
-                }
-
-                fn call(&self, args: &[N]) -> Result<N> {
-                    if args.len() != 1 {
-                        Err(Error::from(ErrorKind::InvalidArgumentCount))
-                    } else {
-                        let result = try_to_float(&args[0])?.$method_name();
-                        N::from_f64(result)
-                            .ok_or(Error::from(ErrorKind::Overflow))
-                    }
-                }
-            }
+            forward_func_impl!($func_name, $method_name, $method_name);
         };
 
         ($func_name:ident, $method_name:ident, $name:ident) => {
@@ -277,9 +263,9 @@ pub mod math {
                         match args[0].to_f64().map(f64::to_radians).map(f64::$method_name) {
                             Some(n) => {
                                 if n.is_nan() || n.is_infinite() {
-                                    return Err(Error::from(ErrorKind::NAN));
+                                    Err(Error::from(ErrorKind::NAN))
                                 } else {
-                                    return N::from_f64(n).ok_or(Error::from(ErrorKind::Overflow));
+                                    N::from_f64(n).ok_or(Error::from(ErrorKind::Overflow))
                                 }
                             },
                             None => Err(Error::from(ErrorKind::Overflow)),
@@ -290,7 +276,7 @@ pub mod math {
         };
     }
 
-    macro_rules! impl_trig_inv {
+    macro_rules! impl_trig_rec {
         ($t:ty, $method_name:ident, $name:ident) => {
             impl<N: ToPrimitive + FromPrimitive> Function<N> for $t {
                 fn name(&self) -> &str {
@@ -304,9 +290,9 @@ pub mod math {
                         match args[0].to_f64().map(f64::to_radians).map(f64::$method_name).map(f64::inv){
                             Some(n) => {
                                 if n.is_nan() || n.is_infinite() {
-                                    return Err(Error::from(ErrorKind::NAN));
+                                    Err(Error::from(ErrorKind::NAN))
                                 } else {
-                                    return N::from_f64(n).ok_or(Error::from(ErrorKind::Overflow));
+                                    N::from_f64(n).ok_or(Error::from(ErrorKind::Overflow))
                                 }
                             }
                             None => Err(Error::from(ErrorKind::Overflow)),
@@ -318,64 +304,180 @@ pub mod math {
     }
 
     pub struct SinFunction;
+    impl_trig!(SinFunction, sin);
+
     pub struct CosFunction;
+    impl_trig!(CosFunction, cos);
+
     pub struct TanFunction;
+    impl_trig!(TanFunction, tan);
 
     pub struct CscFunction;
+    impl_trig_rec!(CscFunction, sin, csc);
+
     pub struct SecFunction;
+    impl_trig_rec!(SecFunction, cos, sec);
+
     pub struct CotFunction;
-
-    impl_trig!(SinFunction, sin);
-    impl_trig!(CosFunction, cos);
-    impl_trig!(TanFunction, tan);
-    impl_trig_inv!(CscFunction, sin, csc);
-    impl_trig_inv!(SecFunction, cos, sec);
-    impl_trig_inv!(CotFunction, tan, cot);
-
-    pub struct ASinFunction;
-    pub struct ACosFunction;
-    pub struct ATanFunction;
-
-    pub struct ACscFunction;
-    pub struct ASecFunction;
-    pub struct ACotFunction;
-
-    impl_trig!(ASinFunction, asin);
-    impl_trig!(ACosFunction, acos);
-    impl_trig!(ATanFunction, atan);
-    impl_trig_inv!(ACscFunction, asin, acsc);
-    impl_trig_inv!(ASecFunction, acos, asec);
-    impl_trig_inv!(ACotFunction, atan, acot);
+    impl_trig_rec!(CotFunction, tan, cot);
 
     pub struct SinhFunction;
+    impl_trig!(SinhFunction, sinh);
+
     pub struct CoshFunction;
+    impl_trig!(CoshFunction, cosh);
+
     pub struct TanhFunction;
+    impl_trig!(TanhFunction, tanh);
 
     pub struct CschFunction;
-    pub struct SechFunction;
-    pub struct CothFunction;
+    impl_trig_rec!(CschFunction, sinh, csch);
 
-    impl_trig!(SinhFunction, sinh);
-    impl_trig!(CoshFunction, cosh);
-    impl_trig!(TanhFunction, tanh);
-    impl_trig_inv!(CschFunction, sinh, csch);
-    impl_trig_inv!(SechFunction, cosh, sech);
-    impl_trig_inv!(CothFunction, tanh, coth);
+    pub struct SechFunction;
+    impl_trig_rec!(SechFunction, cosh, sech);
+
+    pub struct CothFunction;
+    impl_trig_rec!(CothFunction, tanh, coth);
+
+    //////////////////// Inverse Trigonometric ////////////////////
+
+    macro_rules! impl_arc_trig {
+        ($t:ty, $method_name:ident) => {
+            impl_arc_trig!($t, $method_name, $method_name);
+        };
+
+        ($t:ty, $method_name:ident, $name:ident) => {
+            impl<N: ToPrimitive + FromPrimitive> Function<N> for $t {
+                fn name(&self) -> &str {
+                    stringify!($name)
+                }
+
+                fn call(&self, args: &[N]) -> Result<N> {
+                    if args.len() != 1 {
+                        Err(Error::from(ErrorKind::InvalidArgumentCount))
+                    } else {
+                        match args[0].to_f64().map(f64::$method_name) {
+                            Some(n) => {
+                                if n.is_nan() || n.is_infinite() {
+                                    Err(Error::from(ErrorKind::NAN))
+                                } else {
+                                    N::from_f64(n).ok_or(Error::from(ErrorKind::Overflow))
+                                }
+                            },
+                            None => Err(Error::from(ErrorKind::Overflow)),
+                        }
+                    }
+                }
+            }
+        };
+    }
+
+    macro_rules! impl_arc_trig_rec {
+        ($t:ty, $method_name:ident) => {
+            impl_arc_trig_rec!($t, $method_name, $method_name);
+        };
+
+        ($t:ty, $method_name:ident, $name:ident) => {
+            impl<N: ToPrimitive + FromPrimitive> Function<N> for $t {
+                fn name(&self) -> &str {
+                    stringify!($name)
+                }
+
+                fn call(&self, args: &[N]) -> Result<N> {
+                    if args.len() != 1 {
+                        Err(Error::from(ErrorKind::InvalidArgumentCount))
+                    } else {
+                        match args[0].to_f64().map(f64::$method_name).map(f64::inv){
+                            Some(n) => {
+                                if n.is_nan() || n.is_infinite() {
+                                    Err(Error::from(ErrorKind::NAN))
+                                } else {
+                                    N::from_f64(n).ok_or(Error::from(ErrorKind::Overflow))
+                                }
+                            }
+                            None => Err(Error::from(ErrorKind::Overflow)),
+                        }
+                    }
+                }
+            }
+        };
+    }
+
+    pub struct ASinFunction;
+    impl_arc_trig!(ASinFunction, asin);
+
+    pub struct ACosFunction;
+    impl_arc_trig!(ACosFunction, acos);
+
+    pub struct ATanFunction;
+    impl<N: ToPrimitive + FromPrimitive> Function<N> for ATanFunction {
+        fn name(&self) -> &str {
+            stringify!( atan )
+        }
+
+        fn call(&self, args: &[N]) -> Result<N> {
+            match args.len(){
+                1 => {
+                    match args[0].to_f64().map(f64::atan) {
+                        Some(n) => {
+                            if n.is_nan() || n.is_infinite() {
+                                Err(Error::from(ErrorKind::NAN))
+                            } else {
+                                N::from_f64(n).ok_or(Error::from(ErrorKind::Overflow))
+                            }
+                        }
+                        None => Err(Error::from(ErrorKind::Overflow)),
+                    }
+                },
+                2 => {
+                    let opy = args[0].to_f64();
+                    let opx = args[1].to_f64();
+
+                    if opy.is_none() || opx.is_none(){
+                        Err(Error::from(ErrorKind::Overflow))
+                    }
+                    else{
+                        let result = opy.unwrap().atan2(opx.unwrap());
+                        if result.is_nan() ||  result.is_infinite(){
+                            Err(Error::from(ErrorKind::NAN))
+                        }
+                        else{
+                            N::from_f64(result)
+                                .ok_or(Error::from(ErrorKind::Overflow))
+                        }
+                    }
+                }
+                _ =>  Err(Error::from(ErrorKind::InvalidArgumentCount))
+            }
+        }
+    }
+
+    pub struct ACscFunction;
+    impl_arc_trig_rec!(ACscFunction, asin, acsc);
+
+    pub struct ASecFunction;
+    impl_arc_trig_rec!(ASecFunction, acos, asec);
+
+    pub struct ACotFunction;
+    impl_arc_trig_rec!(ACotFunction, atan, acot);
 
     pub struct ASinhFunction;
+    impl_arc_trig!(ASinhFunction, asinh);
+
     pub struct ACoshFunction;
+    impl_arc_trig!(ACoshFunction, acosh);
+
     pub struct ATanhFunction;
+    impl_arc_trig!(ATanhFunction, atanh);
 
     pub struct ACschFunction;
-    pub struct ASechFunction;
-    pub struct ACothFunction;
+    impl_arc_trig_rec!(ACschFunction, asinh, acsch);
 
-    impl_trig!(ASinhFunction, asinh);
-    impl_trig!(ACoshFunction, acosh);
-    impl_trig!(ATanhFunction, atanh);
-    impl_trig_inv!(ACschFunction, asinh, acsch);
-    impl_trig_inv!(ASechFunction, acosh, asech);
-    impl_trig_inv!(ACothFunction, atanh, acoth);
+    pub struct ASechFunction;
+    impl_arc_trig_rec!(ASechFunction, acosh, asech);
+
+    pub struct ACothFunction;
+    impl_arc_trig_rec!(ACothFunction, atanh, acoth);
 
     #[inline(always)]
     pub(crate) fn try_to_float<N: ToPrimitive>(n: &N) -> Result<f64>{
