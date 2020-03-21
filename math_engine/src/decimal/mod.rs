@@ -104,6 +104,24 @@ impl <'a> DefaultContext<'a, Decimal>{
         context.add_function(CscFunction);
         context.add_function(SecFunction);
         context.add_function(CotFunction);
+        context.add_function(ASinFunction);
+        context.add_function(ACosFunction);
+        context.add_function(ATanFunction);
+        context.add_function(ACscFunction);
+        context.add_function(ASecFunction);
+        context.add_function(ACotFunction);
+        context.add_function(SinhFunction);
+        context.add_function(CoshFunction);
+        context.add_function(TanhFunction);
+        context.add_function(CschFunction);
+        context.add_function(SechFunction);
+        context.add_function(CothFunction);
+        context.add_function(ASinhFunction);
+        context.add_function(ACoshFunction);
+        context.add_function(ATanhFunction);
+        context.add_function(ACschFunction);
+        context.add_function(ASechFunction);
+        context.add_function(ACothFunction);
         context
     }
 }
@@ -469,7 +487,7 @@ pub mod ops {
         };
     }
 
-    macro_rules! impl_checked_trig_inv {
+    macro_rules! impl_checked_trig_rec {
         ($struct_name:ident, $method_name:ident, $name:ident) => {
             impl Function<Decimal> for $struct_name{
                 #[inline]
@@ -490,7 +508,7 @@ pub mod ops {
         };
 
         ($struct_name:ident, $method_name:ident) => {
-            impl_checked_trig_inv!($struct_name, $method_name, $method_name);
+            impl_checked_trig_rec!($struct_name, $method_name, $method_name);
         };
     }
 
@@ -504,7 +522,7 @@ pub mod ops {
         };
     }
 
-    macro_rules! impl_trig_inv {
+    macro_rules! impl_trig_rec {
         ($struct_name:ident, $method_name:ident, $name:ident) => {
             impl Function<Decimal> for $struct_name{
                 #[inline]
@@ -523,23 +541,144 @@ pub mod ops {
         };
 
         ($struct_name:ident, $method_name:ident) => {
-            impl_trig_inv!($struct_name, $method_name, $method_name);
+            impl_trig_rec!($struct_name, $method_name, $method_name);
         };
     }
 
     pub struct SinFunction;
-    pub struct CosFunction;
-    pub struct TanFunction;
-
-    pub struct CscFunction;
-    pub struct SecFunction;
-    pub struct CotFunction;
-
     impl_trig!(SinFunction, sin);
+
+    pub struct CosFunction;
     impl_trig!(CosFunction, cos);
+
+    pub struct TanFunction;
     impl_checked_trig!(TanFunction, tan);
 
-    impl_trig_inv!(CscFunction, sin, csc);
-    impl_trig_inv!(SecFunction, cos, sec);
-    impl_checked_trig_inv!(CotFunction, tan, cot);
+    pub struct CscFunction;
+    impl_trig_rec!(CscFunction, sin, csc);
+
+    pub struct SecFunction;
+    impl_trig_rec!(SecFunction, cos, sec);
+
+    pub struct CotFunction;
+    impl_checked_trig_rec!(CotFunction, tan, cot);
+
+    //////////////////// Inverse Trigonometric ////////////////////
+    macro_rules! impl_arc_trig_rec {
+        ($struct_name:ident, $method_name:ident, $name:ident) => {
+            impl Function<Decimal> for $struct_name{
+                #[inline]
+                fn name(&self) -> &str {
+                    stringify!($name)
+                }
+
+                #[inline]
+                fn call(&self, args: &[Decimal]) -> Result<Decimal> {
+                    match args.len(){
+                        1 => Ok(args[0].$method_name()),
+                        _ => Err(Error::from(ErrorKind::InvalidArgumentCount))
+                    }
+                }
+            }
+        };
+
+        ($struct_name:ident, $method_name:ident) => {
+            impl_arc_trig_rec!($struct_name, $method_name, $method_name);
+        };
+    }
+
+    macro_rules! impl_checked_arc_trig_rec {
+        ($struct_name:ident, $method_name:ident, $name:ident) => {
+            impl Function<Decimal> for $struct_name{
+                #[inline]
+                fn name(&self) -> &str {
+                    stringify!($name)
+                }
+
+                #[inline]
+                fn call(&self, args: &[Decimal]) -> Result<Decimal> {
+                    match args.len(){
+                        1 => args[0].inv()
+                            .$method_name()
+                            .ok_or(Error::from(ErrorKind::Overflow)),
+                        _ => Err(Error::from(ErrorKind::InvalidArgumentCount))
+                    }
+                }
+            }
+        };
+
+        ($struct_name:ident, $method_name:ident) => {
+            impl_checked_arc_trig_rec!($struct_name, $method_name, $method_name);
+        };
+    }
+
+    pub struct ASinFunction;
+    impl_checked_trig!(ASinFunction, asin);
+
+    pub struct ACosFunction;
+    impl_checked_trig!(ACosFunction, acos);
+
+    pub struct ATanFunction;
+    impl Function<Decimal> for ATanFunction {
+        #[inline]
+        fn name(&self) -> &str {
+            stringify!( atan )
+        }
+
+        #[inline]
+        fn call(&self, args: &[Decimal]) -> Result<Decimal> {
+            match args.len() {
+                1 => Ok(args[0].atan()),
+                2 => Ok(args[0].atan2(args[1])),
+                _ => Err(Error::from(ErrorKind::InvalidArgumentCount))
+            }
+        }
+    }
+
+    pub struct ACscFunction;
+    impl_checked_arc_trig_rec!(ACscFunction, asin, acsc);
+
+    pub struct ASecFunction;
+    impl_checked_arc_trig_rec!(ASecFunction, acos, asec);
+
+    pub struct ACotFunction;
+    impl_arc_trig_rec!(ACotFunction, atan, acot);
+
+    //////////////////// Hyperbolic Trigonometric ////////////////////
+    pub struct SinhFunction;
+    impl_trig!(SinhFunction, sinh);
+
+    pub struct CoshFunction;
+    impl_trig!(CoshFunction, cosh);
+
+    pub struct TanhFunction;
+    impl_trig!(TanhFunction, tanh);
+
+    pub struct CschFunction;
+    impl_trig_rec!(CschFunction, sinh, csch);
+
+    pub struct SechFunction;
+    impl_trig_rec!(SechFunction, cosh, sech);
+
+    pub struct CothFunction;
+    impl_trig_rec!(CothFunction, tanh, coth);
+
+    //////////////////// Inverse Hyperbolic Trigonometric ////////////////////
+    pub struct ASinhFunction;
+    impl_trig!(ASinhFunction, asinh);
+
+    pub struct ACoshFunction;
+    impl_checked_trig!(ACoshFunction, acosh);
+
+    pub struct ATanhFunction;
+    impl_checked_trig!(ATanhFunction, atanh);
+
+    pub struct ACschFunction;
+    impl_arc_trig_rec!(ACschFunction, asinh, acsch);
+
+    pub struct ASechFunction;
+    impl_checked_arc_trig_rec!(ASechFunction, acosh, asech);
+
+    pub struct ACothFunction;
+    impl_checked_arc_trig_rec!(ACothFunction, atanh, acoth);
 }

@@ -2,6 +2,7 @@ use crate::decimal::consts;
 use rust_decimal::Decimal;
 use rust_decimal::prelude::{FromPrimitive, One, ToPrimitive, Zero};
 use rust_decimal_macros::*;
+use std::ops::Neg;
 
 /// Extended math operations for `Decimal`.
 pub trait DecimalExt {
@@ -24,6 +25,12 @@ pub trait DecimalExt {
     fn acos(self) -> Option<Decimal>;
     fn atan(self) -> Decimal;
     fn atan2(self, other: Decimal) -> Decimal;
+    fn sinh(self) -> Decimal;
+    fn cosh(self) -> Decimal;
+    fn tanh(self) -> Decimal;
+    fn asinh(self) -> Decimal;
+    fn acosh(self) -> Option<Decimal>;
+    fn atanh(self) -> Option<Decimal>;
 }
 
 pub trait ApproxEq {
@@ -486,6 +493,55 @@ impl DecimalExt for Decimal {
 
         result
     }
+
+    fn sinh(self) -> Decimal {
+        // formula: sinh(x) = (e^x - e^-x)/2
+        let e0 = self.checked_exp().unwrap();
+        let e1 = self.neg().checked_exp().unwrap();
+        (e0 - e1) / consts::TWO
+    }
+
+    fn cosh(self) -> Decimal {
+        // formula: cosh(x) = (e^x + e^-x)/2
+        let e0 = self.checked_exp().unwrap();
+        let e1 = self.neg().checked_exp().unwrap();
+        (e0 + e1) / consts::TWO
+    }
+
+    fn tanh(self) -> Decimal {
+        self.sinh() / self.cosh()
+    }
+
+    fn asinh(self) -> Decimal {
+        // formula: asinh(x) = ln(x + sqrt(x^2 + 1))
+        let x2 = self * self;
+        Decimal::checked_ln(
+            self + Decimal::checked_sqrt(x2 + consts::ONE).unwrap()
+        ).unwrap()
+    }
+
+    fn acosh(self) -> Option<Decimal> {
+        if self < consts::ONE{
+            return None;
+        }
+
+        // formula: acosh(x) = ln(x + sqrt(x^2 - 1))
+        let x2 = self * self;
+        Decimal::checked_ln(
+            self + Decimal::checked_sqrt(x2 - consts::ONE)?
+        )
+    }
+
+    fn atanh(self) -> Option<Decimal> {
+        if self < consts::ONE_MINUS || self > consts::ONE{
+            return None;
+        }
+
+        // formula: atanh(x) = 0.5 * ln((1 + x)/(1 - x))
+        let x0 = consts::ONE + self;
+        let x1 = consts::ONE - self;
+        Decimal::checked_ln(x0 / x1)?.checked_mul(consts::HALF)
+    }
 }
 
 fn gamma(mut x: Decimal) -> Option<Decimal> {
@@ -735,5 +791,48 @@ mod tests {
         assert_almost_eq(dec!(0).atan().to_degrees(), dec!(0));
         assert_almost_eq(dec!(1).atan().to_degrees(), dec!(45));
         assert_almost_eq(dec!(-1).atan().to_degrees(), dec!(-45));
+    }
+
+    #[test]
+    fn sinh_test(){
+        assert_almost_eq(dec!(2).sinh(), dec!(3.62686040784701876766821));
+        assert_almost_eq(dec!(0).sinh(), dec!(0));
+        assert_almost_eq(dec!(-1).sinh(), dec!(-1.175201193643801456882))
+    }
+
+    #[test]
+    fn cosh_test(){
+        assert_almost_eq(dec!(2).cosh(), dec!(3.7621956910836314595622134));
+        assert_almost_eq(dec!(0).cosh(), dec!(1));
+        assert_almost_eq(dec!(-1).cosh(), dec!(1.543080634815243778477905))
+    }
+
+    #[test]
+    fn tanh_test(){
+        assert_almost_eq(dec!(2).tanh(), dec!(0.9640275800758168839464137));
+        assert_almost_eq(dec!(0).tanh(), dec!(0));
+        assert_almost_eq(dec!(-1).tanh(), dec!(-0.76159415595576488811945))
+    }
+
+    #[test]
+    fn asinh_test(){
+        assert_almost_eq(dec!(1).asinh(), dec!(0.88137358701954302523260932));
+        assert_almost_eq(dec!(0).asinh(), dec!(0));
+        assert_almost_eq(dec!(-1).asinh(), dec!(-0.881373587019543025232609))
+    }
+
+    #[test]
+    fn acosh_test(){
+        assert!(dec!(0).acosh().is_none());
+        assert_almost_eq(dec!(1).acosh().unwrap(), dec!(0));
+        assert_almost_eq_by(dec!(2).acosh().unwrap(), dec!(1.316957896924816708), 10);
+    }
+
+    #[test]
+    fn atanh_test(){
+        assert!(dec!(-2).atanh().is_none());
+        assert!(dec!(2).atanh().is_none());
+        assert_almost_eq(dec!(0).atanh().unwrap(), dec!(0));
+        assert_almost_eq(dec!(0.25).atanh().unwrap(), dec!(0.25541281188299534160275));
     }
 }

@@ -55,20 +55,6 @@ pub mod ops {
         }
     }
 
-    pub struct SqrtFunction;
-    impl Function<Complex64> for SqrtFunction {
-        fn name(&self) -> &str {
-            "sqrt"
-        }
-
-        fn call(&self, args: &[Complex64]) -> Result<Complex64> {
-            match args.len() {
-                1 => Ok(args[0].sqrt()),
-                _ => Err(Error::from(ErrorKind::InvalidArgumentCount))
-            }
-        }
-    }
-
     pub struct LogFunction;
     impl Function<Complex64> for LogFunction {
         fn name(&self) -> &str {
@@ -89,127 +75,134 @@ pub mod ops {
         }
     }
 
-    pub struct LnFunction;
-    impl Function<Complex64> for LnFunction {
-        fn name(&self) -> &str {
-            "ln"
-        }
+    macro_rules! forward_impl_func{
+        ($t:ty, $method_name:ident) => {
+            forward_impl_func!($t, $method_name, $method_name);
+        };
 
-        fn call(&self, args: &[Complex64]) -> Result<Complex64> {
-            match args.len() {
-                1 => Ok(args[0].ln()),
-                _ => Err(Error::from(ErrorKind::InvalidArgumentCount))
+        ($t:ty, $method_name:ident, $name:ident) => {
+            impl Function<Complex64> for $t {
+                fn name(&self) -> &str {
+                    stringify!($name)
+                }
+
+                fn call(&self, args: &[Complex64]) -> Result<Complex64> {
+                    match args.len() {
+                        1 => Ok(args[0].$method_name()),
+                        _ => Err(Error::from(ErrorKind::InvalidArgumentCount))
+                    }
+                }
             }
         }
     }
+
+    macro_rules! forward_impl_func_inv{
+        ($t:ty, $method_name:ident) => {
+            forward_impl_func_inv!($t, $method_name, $method_name);
+        };
+
+        ($t:ty, $method_name:ident, $name:ident) => {
+            impl Function<Complex64> for $t {
+                fn name(&self) -> &str {
+                    stringify!($name)
+                }
+
+                fn call(&self, args: &[Complex64]) -> Result<Complex64> {
+                    match args.len() {
+                        1 => Ok(args[0].$method_name().inv()),
+                        _ => Err(Error::from(ErrorKind::InvalidArgumentCount))
+                    }
+                }
+            }
+        }
+    }
+
+    pub struct SqrtFunction;
+    forward_impl_func!(SqrtFunction, sqrt);
+
+    pub struct LnFunction;
+    forward_impl_func!(LnFunction, ln);
 
     pub struct ExpFunction;
-    impl Function<Complex64> for ExpFunction {
-        fn name(&self) -> &str {
-            "exp"
-        }
+    forward_impl_func!(ExpFunction, exp);
 
-        fn call(&self, args: &[Complex64]) -> Result<Complex64> {
-            match args.len() {
-                1 => Ok(args[0].exp()),
-                _ => Err(Error::from(ErrorKind::InvalidArgumentCount))
-            }
-        }
-    }
+    //////////////////// Trigonometric ////////////////////
 
     pub struct SinFunction;
-    impl Function<Complex64> for SinFunction {
-        fn name(&self) -> &str {
-            "sin"
-        }
-
-        fn call(&self, args: &[Complex64]) -> Result<Complex64> {
-            match args.len() {
-                1 => Ok(args[0].sin()),
-                _ => Err(Error::from(ErrorKind::InvalidArgumentCount))
-            }
-        }
-    }
+    forward_impl_func!(SinFunction, sin);
 
     pub struct CosFunction;
-    impl Function<Complex64> for CosFunction {
-        fn name(&self) -> &str {
-            "cos"
-        }
-
-        fn call(&self, args: &[Complex64]) -> Result<Complex64> {
-            match args.len() {
-                1 => Ok(args[0].cos()),
-                _ => Err(Error::from(ErrorKind::InvalidArgumentCount))
-            }
-        }
-    }
+    forward_impl_func!(CosFunction, cos);
 
     pub struct TanFunction;
-    impl Function<Complex64> for TanFunction {
-        fn name(&self) -> &str {
-            "tan"
-        }
-
-        fn call(&self, args: &[Complex64]) -> Result<Complex64> {
-            match args.len() {
-                1 => {
-                    let result = args[0].tan();
-                    if result.is_infinite() || result.is_nan(){
-                        return Err(Error::from(ErrorKind::NAN));
-                    }
-                    Ok(result)
-                }
-                _ => Err(Error::from(ErrorKind::InvalidArgumentCount))
-            }
-        }
-    }
+    forward_impl_func!(TanFunction, tan);
 
     pub struct CscFunction;
-    impl Function<Complex64> for CscFunction {
-        fn name(&self) -> &str {
-            "csc"
-        }
-
-        fn call(&self, args: &[Complex64]) -> Result<Complex64> {
-            match args.len() {
-                1 => Ok(args[0].sin().inv()),
-                _ => Err(Error::from(ErrorKind::InvalidArgumentCount))
-            }
-        }
-    }
+    forward_impl_func_inv!(CscFunction, sin, csc);
 
     pub struct SecFunction;
-    impl Function<Complex64> for SecFunction {
-        fn name(&self) -> &str {
-            "sec"
-        }
-
-        fn call(&self, args: &[Complex64]) -> Result<Complex64> {
-            match args.len() {
-                1 => Ok(args[0].cos().inv()),
-                _ => Err(Error::from(ErrorKind::InvalidArgumentCount))
-            }
-        }
-    }
+    forward_impl_func_inv!(SecFunction, cos, sec);
 
     pub struct CotFunction;
-    impl Function<Complex64> for CotFunction {
-        fn name(&self) -> &str {
-            "cot"
-        }
+    forward_impl_func_inv!(CotFunction, tan, cot);
 
-        fn call(&self, args: &[Complex64]) -> Result<Complex64> {
-            match args.len() {
-                1 => {
-                    let result = args[0].tan().inv();
-                    if result.is_infinite() || result.is_nan(){
-                        return Err(Error::from(ErrorKind::NAN));
-                    }
-                    Ok(result)
-                }
-                _ => Err(Error::from(ErrorKind::InvalidArgumentCount))
-            }
-        }
-    }
+    //////////////////// Inverse Trigonometric ////////////////////
+
+    pub struct ASinFunction;
+    forward_impl_func!(ASinFunction, asin);
+
+    pub struct ACosFunction;
+    forward_impl_func!(ACosFunction, acos);
+
+    pub struct ATanFunction;
+    forward_impl_func!(ATanFunction, atan);
+
+    pub struct ACscFunction;
+    forward_impl_func_inv!(ACscFunction, asin, acsc);
+
+    pub struct ASecFunction;
+    forward_impl_func_inv!(ASecFunction, acos, asec);
+
+    pub struct ACotFunction;
+    forward_impl_func_inv!(ACotFunction, atan, acot);
+
+    //////////////////// Hyperbolic Trigonometric ////////////////////
+
+    pub struct SinhFunction;
+    forward_impl_func!(SinhFunction, sinh);
+
+    pub struct CoshFunction;
+    forward_impl_func!(CoshFunction, cosh);
+
+    pub struct TanhFunction;
+    forward_impl_func!(TanhFunction, tanh);
+
+    pub struct CschFunction;
+    forward_impl_func_inv!(CschFunction, sinh, csch);
+
+    pub struct SechFunction;
+    forward_impl_func_inv!(SechFunction, cosh, sech);
+
+    pub struct CothFunction;
+    forward_impl_func_inv!(CothFunction, tanh, coth);
+
+    //////////////////// Hyperbolic Inverse Trigonometric ////////////////////
+
+    pub struct ASinhFunction;
+    forward_impl_func!(ASinhFunction, asinh);
+
+    pub struct ACoshFunction;
+    forward_impl_func!(ACoshFunction, acosh);
+
+    pub struct ATanhFunction;
+    forward_impl_func!(ATanhFunction, atanh);
+
+    pub struct ACschFunction;
+    forward_impl_func_inv!(ACschFunction, asinh, acsch);
+
+    pub struct ASechFunction;
+    forward_impl_func_inv!(ASechFunction, acosh, asech);
+
+    pub struct ACothFunction;
+    forward_impl_func_inv!(ACothFunction, atanh, acoth);
 }

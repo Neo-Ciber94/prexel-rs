@@ -387,7 +387,7 @@ pub mod math {
                     if args.len() != 1 {
                         Err(Error::from(ErrorKind::InvalidArgumentCount))
                     } else {
-                        match args[0].to_f64().map(f64::$method_name).map(f64::inv){
+                        match args[0].to_f64().map(f64::inv).map(f64::$method_name){
                             Some(n) => {
                                 if n.is_nan() || n.is_infinite() {
                                     Err(Error::from(ErrorKind::NAN))
