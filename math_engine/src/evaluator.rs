@@ -10,8 +10,10 @@ use crate::num::checked::CheckedNum;
 
 /// A trait for evaluate an expression of `Token`.
 pub trait Evaluate<N> {
+    /// The result of the evaluation.
+    type Output;
     /// Evaluates the expression provided as `Token`s.
-    fn eval_tokens(&self, tokens: &[Token<N>]) -> Result<N>;
+    fn eval_tokens(&self, tokens: &[Token<N>]) -> Self::Output;
 }
 
 /// Represents the default `MathEvaluator`.
@@ -56,18 +58,21 @@ impl<'a, N, C> Evaluator<'a, N, C> where C: Context<'a, N>, N: FromStr + Debug +
         let context = self.context();
         let tokenizer = Tokenizer::with_context(context);
         let tokens = Tokenize::tokenize(&tokenizer, expression)?;
-        eval_tokens_raw(&tokens, context)
+        rpn_eval(&tokens, context)
     }
 }
 
 impl<'a, C, N> Evaluate<N> for Evaluator<'a, N, C> where C: Context<'a, N>, N: Debug + Clone {
+    type Output = Result<N>;
     #[inline]
-    fn eval_tokens(&self, tokens: &[Token<N>]) -> Result<N> {
-        eval_tokens_raw(tokens, self.context())
+    fn eval_tokens(&self, tokens: &[Token<N>]) -> Self::Output {
+        rpn_eval(tokens, self.context())
     }
 }
 
-fn eval_tokens_raw<'a, N, C>(tokens: &[Token<N>], context: &C) -> Result<N>
+/// Evaluate an array of tokens in `Reverse Polish Notation`.
+/// see: `https://en.wikipedia.org/wiki/Reverse_Polish_notation`
+pub fn rpn_eval<'a, N, C>(tokens: &[Token<N>], context: &C) -> Result<N>
 where
     N: Debug + Clone,
     C: Context<'a, N>,
