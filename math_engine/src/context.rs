@@ -163,7 +163,7 @@ impl<'a, N> DefaultContext<'a, N> {
         &self.unary_functions
     }
 
-    fn add_function_as<F: Function<N> + 'a>(&mut self, name: &str, func: F) {
+    pub fn add_function_as<F: Function<N> + 'a>(&mut self, func: F, name: &str) {
         let function_name = IgnoreCaseString::from(name);
         match self.functions.contains_key(&function_name){
             true => panic!("A function named '{}' already exists", function_name),
@@ -171,7 +171,7 @@ impl<'a, N> DefaultContext<'a, N> {
         };
     }
 
-    fn add_binary_function_as<F: BinaryFunction<N> + 'a>(&mut self, name: &str, func: F) {
+    pub fn add_binary_function_as<F: BinaryFunction<N> + 'a>(&mut self, func: F, name: &str) {
         let function_name = IgnoreCaseString::from(name);
         match self.binary_functions.contains_key(&function_name){
             true => panic!("A binary function named '{}' already exists", function_name),
@@ -179,7 +179,7 @@ impl<'a, N> DefaultContext<'a, N> {
         };
     }
 
-    fn add_unary_function_as<F: UnaryFunction<N> + 'a>(&mut self, name: &str, func: F) {
+    pub fn add_unary_function_as<F: UnaryFunction<N> + 'a>(&mut self, func: F, name: &str) {
         let function_name = IgnoreCaseString::from(name);
         match self.unary_functions.contains_key(&function_name){
             true => panic!("An unary function named '{}' already exists", function_name),
@@ -195,17 +195,20 @@ impl<'a, N> Context<'a, N> for DefaultContext<'a, N> {
 
     #[inline]
     fn add_function<F: Function<N> + 'a>(&mut self, func: F) {
-        self.add_function_as(&func.name().to_string(), func)
+        let name = func.name().to_string();
+        self.add_function_as(func, &name)
     }
 
     #[inline]
     fn add_binary_function<F: BinaryFunction<N> + 'a>(&mut self, func: F) {
-        self.add_binary_function_as(&func.name().to_string(), func)
+        let name = func.name().to_string();
+        self.add_binary_function_as(func, &name)
     }
 
     #[inline]
     fn add_unary_function<F: UnaryFunction<N> + 'a>(&mut self, func: F) {
-        self.add_unary_function_as(&func.name().to_string(), func)
+        let name = func.name().to_string();
+        self.add_unary_function_as(func, &name)
     }
 
     #[inline]

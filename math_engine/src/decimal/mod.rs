@@ -6,7 +6,7 @@ use crate::context::{Config, Context, DefaultContext};
 use crate::decimal::ops::*;
 use crate::ops::math::{MaxFunction, MinFunction, RandFunction, UnaryPlus};
 
-pub mod decimal_ex;
+pub mod decimal_ext;
 
 /// A set of Decimal constants.
 pub mod consts {
@@ -131,7 +131,7 @@ pub mod ops {
     use rust_decimal::Decimal;
 
     use crate::decimal::consts;
-    use crate::decimal::decimal_ex::DecimalExt;
+    use crate::decimal::decimal_ext::DecimalExt;
     use crate::error::*;
     use crate::function::{
         Associativity, BinaryFunction, Function, InfixFunction, Notation, Precedence, UnaryFunction,
