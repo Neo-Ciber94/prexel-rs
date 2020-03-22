@@ -1,14 +1,7 @@
-pub use rust_decimal;
-use rust_decimal::Decimal;
-pub use rust_decimal_macros::*;
-
-use crate::context::{Config, Context, DefaultContext};
-use crate::decimal::ops::*;
-use crate::ops::math::{MaxFunction, MinFunction, RandFunction, UnaryPlus};
+pub type Decimal = rust_decimal::Decimal;
 
 pub mod decimal_ext;
 
-/// A set of Decimal constants.
 pub mod consts {
     use rust_decimal::Decimal;
     use rust_decimal_macros::*;
@@ -67,63 +60,6 @@ pub mod consts {
     pub const THREE: Decimal = dec!(3);
     /// 10
     pub const TEN: Decimal = dec!(10);
-}
-
-impl <'a> DefaultContext<'a, Decimal>{
-    #[inline]
-    pub fn new_decimal() -> Self{
-        Self::new_decimal_with_config(Config::new())
-    }
-
-    pub fn new_decimal_with_config(config: Config) -> Self{
-        let mut context = Self::new_with_config(config);
-        context.add_constant("PI", consts::PI);
-        context.add_constant("E", consts::E);
-        context.add_binary_function(AddOperator);
-        context.add_binary_function(SubOperator);
-        context.add_binary_function(MulOperator);
-        context.add_binary_function(DivOperator);
-        context.add_binary_function(PowOperator);
-        context.add_binary_function(ModOperator);
-        context.add_unary_function(UnaryPlus);
-        context.add_unary_function(UnaryMinus);
-        context.add_unary_function(Factorial);
-        context.add_function(SumFunction);
-        context.add_function(AvgFunction);
-        context.add_function(ProdFunction);
-        context.add_function(MaxFunction);
-        context.add_function(MinFunction);
-        context.add_function(SqrtFunction);
-        context.add_function(LnFunction);
-        context.add_function(LogFunction);
-        context.add_function(RandFunction);
-        context.add_function(ExpFunction);
-        context.add_function(SinFunction);
-        context.add_function(CosFunction);
-        context.add_function(TanFunction);
-        context.add_function(CscFunction);
-        context.add_function(SecFunction);
-        context.add_function(CotFunction);
-        context.add_function(ASinFunction);
-        context.add_function(ACosFunction);
-        context.add_function(ATanFunction);
-        context.add_function(ACscFunction);
-        context.add_function(ASecFunction);
-        context.add_function(ACotFunction);
-        context.add_function(SinhFunction);
-        context.add_function(CoshFunction);
-        context.add_function(TanhFunction);
-        context.add_function(CschFunction);
-        context.add_function(SechFunction);
-        context.add_function(CothFunction);
-        context.add_function(ASinhFunction);
-        context.add_function(ACoshFunction);
-        context.add_function(ATanhFunction);
-        context.add_function(ACschFunction);
-        context.add_function(ASechFunction);
-        context.add_function(ACothFunction);
-        context
-    }
 }
 
 pub mod ops {
@@ -681,4 +617,69 @@ pub mod ops {
 
     pub struct ACothFunction;
     impl_checked_arc_trig_rec!(ACothFunction, atanh, acoth);
+}
+
+pub mod context{
+    use crate::context::{DefaultContext, Config, Context};
+    use rust_decimal::Decimal;
+    use crate::decimal::ops::*;
+    use crate::ops::math::{MaxFunction, MinFunction, RandFunction, UnaryPlus};
+    use crate::decimal::consts;
+
+    impl <'a> DefaultContext<'a, Decimal>{
+        #[inline]
+        pub fn new_decimal() -> Self{
+            Self::new_decimal_with_config(Config::new())
+        }
+
+        pub fn new_decimal_with_config(config: Config) -> Self{
+            let mut context = Self::new_with_config(config);
+            context.add_constant("PI", consts::PI);
+            context.add_constant("E", consts::E);
+            context.add_binary_function(AddOperator);
+            context.add_binary_function(SubOperator);
+            context.add_binary_function(MulOperator);
+            context.add_binary_function(DivOperator);
+            context.add_binary_function(PowOperator);
+            context.add_binary_function(ModOperator);
+            context.add_unary_function(UnaryPlus);
+            context.add_unary_function(UnaryMinus);
+            context.add_unary_function(Factorial);
+            context.add_function(SumFunction);
+            context.add_function(AvgFunction);
+            context.add_function(ProdFunction);
+            context.add_function(MaxFunction);
+            context.add_function(MinFunction);
+            context.add_function(SqrtFunction);
+            context.add_function(LnFunction);
+            context.add_function(LogFunction);
+            context.add_function(RandFunction);
+            context.add_function(ExpFunction);
+            context.add_function(SinFunction);
+            context.add_function(CosFunction);
+            context.add_function(TanFunction);
+            context.add_function(CscFunction);
+            context.add_function(SecFunction);
+            context.add_function(CotFunction);
+            context.add_function(ASinFunction);
+            context.add_function(ACosFunction);
+            context.add_function(ATanFunction);
+            context.add_function(ACscFunction);
+            context.add_function(ASecFunction);
+            context.add_function(ACotFunction);
+            context.add_function(SinhFunction);
+            context.add_function(CoshFunction);
+            context.add_function(TanhFunction);
+            context.add_function(CschFunction);
+            context.add_function(SechFunction);
+            context.add_function(CothFunction);
+            context.add_function(ASinhFunction);
+            context.add_function(ACoshFunction);
+            context.add_function(ATanhFunction);
+            context.add_function(ACschFunction);
+            context.add_function(ASechFunction);
+            context.add_function(ACothFunction);
+            context
+        }
+    }
 }

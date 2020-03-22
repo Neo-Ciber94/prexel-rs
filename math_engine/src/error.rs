@@ -25,7 +25,7 @@ pub struct Custom{
 }
 
 /// A list of general errors.
-#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Debug, Hash, Eq, PartialEq)]
 pub enum ErrorKind{
     /// The value overflow.
     Overflow,

@@ -1,33 +1,4 @@
-use num_complex::Complex64;
-use num_traits::FromPrimitive;
-
-use ops::*;
-
-use crate::context::{Config, Context, DefaultContext};
-use crate::ops::unchecked::*;
-
-impl<'a> DefaultContext<'a, Complex64> {
-    #[inline]
-    pub fn new_complex() -> Self {
-        Self::new_complex_with_config(Config::new().with_complex_number())
-    }
-
-    pub fn new_complex_with_config(config: Config) -> Self {
-        let mut context = DefaultContext::new_with_config(config.with_complex_number());
-        context.add_constant("PI", Complex64::from_f64(std::f64::consts::PI).unwrap());
-        context.add_constant("E", Complex64::from_f64(std::f64::consts::E).unwrap());
-        context.add_constant("i", Complex64::i());
-        context.add_binary_function(AddOperator);
-        context.add_binary_function(SubOperator);
-        context.add_binary_function(MulOperator);
-        context.add_binary_function(DivOperator);
-        context.add_binary_function(ModOperator);
-        context.add_binary_function(PowOperator);
-        context.add_function(SumFunction);
-        context.add_function(ProdFunction);
-        context
-    }
-}
+pub type Complex64 = num_complex::Complex64;
 
 pub mod ops {
     use num_complex::{Complex, Complex64};
@@ -205,4 +176,38 @@ pub mod ops {
 
     pub struct ACothFunction;
     forward_impl_func_inv!(ACothFunction, atanh, acoth);
+}
+
+pub mod context{
+    use num_complex::Complex64;
+    use num_traits::FromPrimitive;
+
+    use ops::*;
+
+    use crate::context::{Config, Context, DefaultContext};
+    use crate::ops::unchecked::*;
+    use crate::complex::ops::PowOperator;
+
+    impl<'a> DefaultContext<'a, Complex64> {
+        #[inline]
+        pub fn new_complex() -> Self {
+            Self::new_complex_with_config(Config::new().with_complex_number())
+        }
+
+        pub fn new_complex_with_config(config: Config) -> Self {
+            let mut context = DefaultContext::new_with_config(config.with_complex_number());
+            context.add_constant("PI", Complex64::from_f64(std::f64::consts::PI).unwrap());
+            context.add_constant("E", Complex64::from_f64(std::f64::consts::E).unwrap());
+            context.add_constant("i", Complex64::i());
+            context.add_binary_function(AddOperator);
+            context.add_binary_function(SubOperator);
+            context.add_binary_function(MulOperator);
+            context.add_binary_function(DivOperator);
+            context.add_binary_function(ModOperator);
+            context.add_binary_function(PowOperator);
+            context.add_function(SumFunction);
+            context.add_function(ProdFunction);
+            context
+        }
+    }
 }

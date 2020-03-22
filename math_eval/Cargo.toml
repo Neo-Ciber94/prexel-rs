@@ -6,4 +6,4 @@ edition = "2018"
 
 [dependencies]
 win32console = "0.1.4"
-math_engine = { path = "../math_engine" }
+math_engine = { path = "../math_engine" , features = ["decimal"]}
