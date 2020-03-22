@@ -23,7 +23,7 @@ impl <'a, N> Tokenizer<'a, N, DefaultContext<'a, N>> where N: CheckedNum + 'stat
     #[inline]
     pub fn new() -> Self{
         Tokenizer {
-            context: DefaultContext::instance(),
+            context: unsafe { DefaultContext::instance() },
             _marker: PhantomData
         }
     }

@@ -71,13 +71,14 @@ impl<'a, C, N> Evaluate<N> for Evaluator<'a, N, C> where C: Context<'a, N>, N: D
 }
 
 /// Evaluate an array of tokens in `Reverse Polish Notation`.
-/// see: `https://en.wikipedia.org/wiki/Reverse_Polish_notation`
+///
+/// See: `https://en.wikipedia.org/wiki/Reverse_Polish_notation`
 pub fn rpn_eval<'a, N, C>(tokens: &[Token<N>], context: &C) -> Result<N>
 where
     N: Debug + Clone,
     C: Context<'a, N>,
 {
-    let rpn = helper::infix_to_rpn(tokens, context)?;
+    let rpn = shunting_yard::infix_to_rpn(tokens, context)?;
     let mut values: Vec<N> = Vec::new();
     let mut arg_count: Option<u32> = None;
 
@@ -86,7 +87,7 @@ where
             Number(n) => values.push(n.clone()),
             Variable(name) => {
                 let n = context
-                    .get_variable(name.as_str())
+                    .get_variable(&name)
                     .ok_or(Error::new(
                         ErrorKind::InvalidInput,
                         format!("Variable `{}` not found", name),
@@ -97,7 +98,7 @@ where
             }
             Constant(name) => {
                 let n = context
-                    .get_constant(name.as_str())
+                    .get_constant(&name)
                     .ok_or(Error::new(
                         ErrorKind::InvalidInput,
                         format!("Constant `{}` not found", name),
@@ -134,7 +135,7 @@ where
                 }
             }
             InfixFunction(name) => {
-                let func = context.get_binary_function(name).ok_or(Error::new(
+                let func = context.get_binary_function(&name).ok_or(Error::new(
                     ErrorKind::InvalidInput,
                     format!("Infix function `{}` not found", name),
                 ))?;
@@ -176,7 +177,7 @@ where
                 }
             }
             Function(name) => {
-                let func = context.get_function(name).ok_or(Error::new(
+                let func = context.get_function(&name).ok_or(Error::new(
                     ErrorKind::InvalidInput,
                     format!("Function `{}` not found", name),
                 ))?;
@@ -224,7 +225,12 @@ where
     }
 }
 
-pub mod helper {
+#[inline(always)]
+pub fn infix_to_rpn<'a, N: Clone + Debug>(tokens: &[Token<N>], context: &impl Context<'a, N>) -> Result<Vec<Token<N>>>{
+    shunting_yard::infix_to_rpn(tokens, context)
+}
+
+mod shunting_yard { //shunting_yard
     use crate::context::Context;
     use crate::error::{Error, ErrorKind, Result};
     use crate::function::{Associativity, Notation};

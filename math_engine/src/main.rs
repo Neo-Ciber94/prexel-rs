@@ -3,6 +3,5 @@ fn main(){
 
 }
 
-// MathEval command
-// eval --[options] [args; ...]
-// options: --complex/c , --run/r
+// function_name(args, ..) = expression
+// Add(x1, x2) = x1 + x2

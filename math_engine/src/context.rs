@@ -19,9 +19,9 @@ pub trait Context<'a, N> {
 
     fn add_constant(&mut self, name: &str, value: N);
 
-    fn get_variable(&self, name: &str) -> Option<&N>;
-
     fn set_variable(&mut self, name: &str, value: N) -> Option<N>;
+
+    fn get_variable(&self, name: &str) -> Option<&N>;
 
     fn get_constant(&self, name: &str) -> Option<&N>;
 
@@ -163,6 +163,7 @@ impl<'a, N> DefaultContext<'a, N> {
         &self.unary_functions
     }
 
+    #[inline]
     pub fn add_function_as<F: Function<N> + 'a>(&mut self, func: F, name: &str) {
         let function_name = IgnoreCaseString::from(name);
         match self.functions.contains_key(&function_name){
@@ -171,6 +172,7 @@ impl<'a, N> DefaultContext<'a, N> {
         };
     }
 
+    #[inline]
     pub fn add_binary_function_as<F: BinaryFunction<N> + 'a>(&mut self, func: F, name: &str) {
         let function_name = IgnoreCaseString::from(name);
         match self.binary_functions.contains_key(&function_name){
@@ -179,6 +181,7 @@ impl<'a, N> DefaultContext<'a, N> {
         };
     }
 
+    #[inline]
     pub fn add_unary_function_as<F: UnaryFunction<N> + 'a>(&mut self, func: F, name: &str) {
         let function_name = IgnoreCaseString::from(name);
         match self.unary_functions.contains_key(&function_name){
@@ -189,45 +192,59 @@ impl<'a, N> DefaultContext<'a, N> {
 }
 
 impl<'a, N> Context<'a, N> for DefaultContext<'a, N> {
+    #[inline]
     fn config(&self) -> &Config {
         &self.config
     }
 
     #[inline]
     fn add_function<F: Function<N> + 'a>(&mut self, func: F) {
+        validator::check_function_name(func.name(), validator::Kind::Function);
         let name = func.name().to_string();
         self.add_function_as(func, &name)
     }
 
     #[inline]
     fn add_binary_function<F: BinaryFunction<N> + 'a>(&mut self, func: F) {
+        validator::check_function_name(
+            func.name(),
+                   if func.name().len() > 1 {
+                       validator::Kind::Function
+                   }
+                   else {
+                       validator::Kind::Operator
+                   }
+        );
         let name = func.name().to_string();
         self.add_binary_function_as(func, &name)
     }
 
     #[inline]
     fn add_unary_function<F: UnaryFunction<N> + 'a>(&mut self, func: F) {
+        validator::check_function_name(func.name(), validator::Kind::Operator);
         let name = func.name().to_string();
         self.add_unary_function_as(func, &name)
     }
 
     #[inline]
     fn add_constant(&mut self, name: &str, value: N) {
+        validator::check_variable_name(name);
         self.constants.insert(IgnoreCaseString::from(name), value);
     }
 
     #[inline]
-    fn get_variable(&self, name: &str) -> Option<&N> {
-        self.variables.get(IgnoreCaseString::from(name).borrow())
-    }
-
-    #[inline]
     fn set_variable(&mut self, name: &str, value: N) -> Option<N> {
+        validator::check_variable_name(name);
         let string = IgnoreCaseString::from(name);
         match self.constants.contains_key(&string){
             true => panic!("Invalid variable name, a constant named '{}' already exists", string.clone()),
             false => self.variables.insert(string, value)
         }
+    }
+
+    #[inline]
+    fn get_variable(&self, name: &str) -> Option<&N> {
+        self.variables.get(IgnoreCaseString::from(name).borrow())
     }
 
     #[inline]
@@ -252,24 +269,22 @@ impl<'a, N> Context<'a, N> for DefaultContext<'a, N> {
 }
 
 impl<'a, N: CheckedNum> DefaultContext<'a, N> {
-    pub fn instance() -> &'static DefaultContext<'a, N>{
+    pub unsafe fn instance() -> &'static DefaultContext<'a, N>{
         use crate::utils::lazy::Lazy;
         use crate::utils::untyped::Untyped;;
         use std::any::TypeId;;
 
         static mut CACHE : Lazy<HashMap<TypeId, Untyped>> = Lazy::new(|| HashMap::new());
 
-        let id = TypeId::of::<N>();
-        unsafe{
-            match (*CACHE).get(&id){
-                Some(p) => {
-                    p.cast::<DefaultContext<'a, N>>()
-                },
-                None => {
-                    let context = Box::leak(Box::new(DefaultContext::new_checked()));
-                    CACHE.insert(id, Untyped::new(context));
-                    context
-                }
+        let type_id = TypeId::of::<N>();
+        match (*CACHE).get(&type_id){
+            Some(p) => {
+                p.cast::<DefaultContext<'a, N>>()
+            },
+            None => {
+                let context = Box::leak(Box::new(DefaultContext::new_checked()));
+                CACHE.insert(type_id, Untyped::new(context));
+                context
             }
         }
     }
@@ -355,7 +370,7 @@ impl GroupingSymbol {
     }
 }
 
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Config {
     implicit_mul: bool,
     complex_number: bool,
@@ -393,75 +408,30 @@ impl Config {
         self
     }
 
+    #[inline]
     pub fn implicit_mul(&self) -> bool {
         self.implicit_mul
     }
 
+    #[inline]
     pub fn complex_number(&self) -> bool {
         self.complex_number
     }
 
+    #[inline]
     pub fn get_group_symbol(&self, symbol: char) -> Option<&GroupingSymbol> {
         self.grouping.get(&symbol)
     }
 }
 
 impl Default for Config{
+    #[inline]
     fn default() -> Self {
         Config{
             implicit_mul: false,
             complex_number: false,
             grouping: Default::default()
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn default_context_test() {
-        let context: DefaultContext<f64> = DefaultContext::new_checked();
-
-        let a = context.get_constant("E").unwrap();
-        let b = context.get_constant("e").unwrap();
-        assert_eq!(a, b);
-
-        assert!(context.get_constant("Pi").is_some());
-        assert!(context.get_binary_function("+").is_some());
-        assert!(context.get_binary_function("-").is_some());
-        assert!(context.get_binary_function("/").is_some());
-        assert!(context.get_binary_function("*").is_some());
-
-        assert!(context.get_function("SUM").is_some());
-        assert!(context.get_function("AvG").is_some());
-        assert!(context.get_function("Max").is_some());
-        assert!(context.get_function("min").is_some());
-    }
-
-    #[test]
-    fn config_test() {
-        let config = Config::default()
-            .with_group_symbol('(', ')')
-            .with_group_symbol('[', ']');
-
-        assert_eq!(
-            config.get_group_symbol('(').unwrap(),
-            &GroupingSymbol::new('(', ')')
-        );
-        assert_eq!(
-            config.get_group_symbol(')').unwrap(),
-            &GroupingSymbol::new('(', ')')
-        );
-        assert_eq!(
-            config.get_group_symbol('[').unwrap(),
-            &GroupingSymbol::new('[', ']')
-        );
-        assert_eq!(
-            config.get_group_symbol(']').unwrap(),
-            &GroupingSymbol::new('[', ']')
-        );
     }
 }
 
@@ -528,5 +498,94 @@ pub mod unchecked {
             context.add_function(ACothFunction);
             context
         }
+    }
+}
+
+#[cfg(debug_assertions)]
+mod validator{
+    pub enum Kind{
+        /// Validates a function
+        Function,
+        /// Validates an operator
+        Operator
+    }
+
+    pub fn check_function_name(name: &str, kind: Kind){
+        debug_assert!(!name.is_empty(),
+                      "function and operators names cannot be empty");
+
+        match kind{
+            Kind::Function => {
+                debug_assert!(name.len() > 1, "function names must have more than 1 character: `{}`", name);
+                debug_assert!(name.chars().all(char::is_alphanumeric),
+                              "function names must only include letters and numbers: `{}`", name);
+
+                debug_assert!(name.chars().nth(0).unwrap().is_alphabetic(),
+                              "function names must start with a letter: `{}`", name);
+            },
+            Kind::Operator => {
+                debug_assert!(name.len() == 1, "operators must have an 1 character: `{}`", name);
+                debug_assert!(name.chars().nth(0).unwrap().is_ascii_punctuation(),
+                              "operators names must be a symbol: `{}`", name)
+            },
+        }
+    }
+
+    pub fn check_variable_name(name: &str){
+        debug_assert!(!name.is_empty(),
+                      "variables and constants names cannot be empty");
+        debug_assert!(name.chars().all(char::is_alphanumeric),
+                      "variables and constants names must only include letters and numbers: `{}`", name);
+        debug_assert!(name.chars().nth(0).unwrap().is_alphabetic(),
+                      "variables and constants names must start with a letter: `{}`", name);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn default_context_test() {
+        let context: DefaultContext<f64> = DefaultContext::new_checked();
+
+        let a = context.get_constant("E").unwrap();
+        let b = context.get_constant("e").unwrap();
+        assert_eq!(a, b);
+
+        assert!(context.get_constant("Pi").is_some());
+        assert!(context.get_binary_function("+").is_some());
+        assert!(context.get_binary_function("-").is_some());
+        assert!(context.get_binary_function("/").is_some());
+        assert!(context.get_binary_function("*").is_some());
+
+        assert!(context.get_function("SUM").is_some());
+        assert!(context.get_function("AvG").is_some());
+        assert!(context.get_function("Max").is_some());
+        assert!(context.get_function("min").is_some());
+    }
+
+    #[test]
+    fn config_test() {
+        let config = Config::default()
+            .with_group_symbol('(', ')')
+            .with_group_symbol('[', ']');
+
+        assert_eq!(
+            config.get_group_symbol('(').unwrap(),
+            &GroupingSymbol::new('(', ')')
+        );
+        assert_eq!(
+            config.get_group_symbol(')').unwrap(),
+            &GroupingSymbol::new('(', ')')
+        );
+        assert_eq!(
+            config.get_group_symbol('[').unwrap(),
+            &GroupingSymbol::new('[', ']')
+        );
+        assert_eq!(
+            config.get_group_symbol(']').unwrap(),
+            &GroupingSymbol::new('[', ']')
+        );
     }
 }
