@@ -1,2 +1,2 @@
 [workspace]
-members = ["math_engine", "math_eval"]
+members = ["math_engine", "eval"]

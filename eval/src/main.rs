@@ -40,9 +40,9 @@ fn eval(expression: &str){
 }
 
 mod evaluator {
-    use math_eval::console;
-    use math_eval::console::keycode::*;
-    use math_eval::console::console_color::{ConsoleColor, Color};
+    use eval::console;
+    use eval::console::keycode::*;
+    use eval::console::console_color::{ConsoleColor, Color};
     use math_engine::evaluator::Evaluator;
     use math_engine::context::{Context, Config, DefaultContext};
     use math_engine::error::{Result, Error, ErrorKind};

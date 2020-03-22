@@ -1,5 +1,5 @@
 [package]
-name = "math_eval"
+name = "eval"
 version = "0.1.0"
 authors = ["Freddy L P.B <freddy_luis_94@hotmail.com>"]
 edition = "2018"
