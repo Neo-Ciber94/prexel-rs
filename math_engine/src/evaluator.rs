@@ -1,12 +1,13 @@
-use crate::context::{Context, DefaultContext};
-use crate::error::{Error, ErrorKind, Result};
-use crate::token::Token;
-use crate::token::Token::*;
-use crate::tokenizer::{Tokenize, Tokenizer};
 use std::fmt::Debug;
 use std::marker::PhantomData;
 use std::str::FromStr;
+
+use crate::context::{Context, DefaultContext};
+use crate::error::{Error, ErrorKind, Result};
 use crate::num::checked::CheckedNum;
+use crate::token::Token;
+use crate::token::Token::*;
+use crate::tokenizer::{Tokenize, Tokenizer};
 
 /// A trait for evaluate an expression of `Token`.
 pub trait Evaluate<N> {
@@ -16,13 +17,15 @@ pub trait Evaluate<N> {
     fn eval_tokens(&self, tokens: &[Token<N>]) -> Self::Output;
 }
 
-/// Represents the default `MathEvaluator`.
+/// Represents the default `Evaluator`.
 pub struct Evaluator<'a, N, C: Context<'a, N> = DefaultContext<'a, N>> {
+    /// The context used for evaluation.
     context: C,
     _marker: &'a PhantomData<N>,
 }
 
 impl<'a, N: CheckedNum> Evaluator<'a, N, DefaultContext<'a, N>> {
+    /// Constructs a new `Evaluator` using the checked `DefaultContext`.
     #[inline]
     pub fn new() -> Self {
         Evaluator {
@@ -33,6 +36,7 @@ impl<'a, N: CheckedNum> Evaluator<'a, N, DefaultContext<'a, N>> {
 }
 
 impl<'a, N, C> Evaluator<'a, N, C> where C: Context<'a, N> {
+    /// Constructs a new `Evaluator` using the specified `Context`.
     #[inline]
     pub fn with_context(context: C) -> Self {
         Evaluator {
@@ -41,11 +45,13 @@ impl<'a, N, C> Evaluator<'a, N, C> where C: Context<'a, N> {
         }
     }
 
+    /// Gets a reference to the `Context` used by this evaluator.
     #[inline]
     pub fn context(&self) -> &C {
         &self.context
     }
 
+    /// Gets a mutable reference to the `Context` used by this evaluator.
     #[inline]
     pub fn mut_context(&mut self) -> &mut C {
         &mut self.context
@@ -53,6 +59,21 @@ impl<'a, N, C> Evaluator<'a, N, C> where C: Context<'a, N> {
 }
 
 impl<'a, N, C> Evaluator<'a, N, C> where C: Context<'a, N>, N: FromStr + Debug + Clone {
+    /// Evaluates the given `str` expression.
+    ///
+    /// # Example
+    /// ```
+    /// use math_engine::evaluator::Evaluator;
+    ///
+    /// let evaluator : Evaluator<f64> = Evaluator::new();
+    /// match evaluator.eval("3 + 2 * 5"){
+    ///     Ok(n) => {
+    ///         assert_eq!(n, 13_f64);
+    ///         println!("Result: {}", n);
+    ///      },
+    ///     Err(e) => println!("{}", e)
+    /// }
+    /// ```
     #[inline]
     pub fn eval(&'a self, expression: &str) -> Result<N> {
         let context = self.context();
@@ -70,7 +91,11 @@ impl<'a, C, N> Evaluate<N> for Evaluator<'a, N, C> where C: Context<'a, N>, N: D
     }
 }
 
-/// Evaluate an array of tokens in `Reverse Polish Notation`.
+/// Evaluates an array of tokens in `Reverse Polish Notation`.
+///
+/// # Arguments
+/// - token: The tokens of the expression to convert.
+/// - context: the context which contains the variables, constants and functions.
 ///
 /// See: `https://en.wikipedia.org/wiki/Reverse_Polish_notation`
 pub fn rpn_eval<'a, N, C>(tokens: &[Token<N>], context: &C) -> Result<N>
@@ -78,6 +103,7 @@ where
     N: Debug + Clone,
     C: Context<'a, N>,
 {
+    // Converts the array of tokens to RPN.
     let rpn = shunting_yard::infix_to_rpn(tokens, context)?;
     let mut values: Vec<N> = Vec::new();
     let mut arg_count: Option<u32> = None;
@@ -108,14 +134,16 @@ where
                 values.push(n);
             }
             ArgCount(n) => {
-                assert_eq!(arg_count, None);
+                debug_assert_eq!(arg_count, None);
                 arg_count = Some(*n);
             }
             UnaryOperator(c) => {
                 let mut buf = [0u8; 4];
+                let name = c.encode_utf8(&mut buf);
+
                 let func =
                     context
-                        .get_unary_function(c.encode_utf8(&mut buf))
+                        .get_unary_function(name)
                         .ok_or(Error::new(
                             ErrorKind::InvalidInput,
                             format!("Unary operator `{}` not found", c),
@@ -155,17 +183,19 @@ where
             }
             BinaryOperator(c) => {
                 let mut buf = [0u8; 4];
+                let name = c.encode_utf8(&mut buf);
+
                 let func =
                     context
-                        .get_binary_function(c.encode_utf8(&mut buf))
+                        .get_binary_function(name)
                         .ok_or(Error::new(
                             ErrorKind::InvalidInput,
                             format!("Binary operator `{}` not found", c),
                         ))?;
 
                 match (values.pop(), values.pop()) {
-                    (Some(right), Some(left)) => {
-                        let result = func.call(left, right)?;
+                    (Some(x), Some(y)) => {
+                        let result = func.call(y, x)?;
                         values.push(result);
                     }
                     _ => {
@@ -177,12 +207,14 @@ where
                 }
             }
             Function(name) => {
-                let func = context.get_function(&name).ok_or(Error::new(
+                let func = context.get_function(&name)
+                    .ok_or(Error::new(
                     ErrorKind::InvalidInput,
                     format!("Function `{}` not found", name),
                 ))?;
 
-                let n = arg_count.ok_or(Error::new(
+                let n = arg_count.
+                    ok_or(Error::new(
                     ErrorKind::InvalidInput,
                     format!(
                         "Cannot evaluate function `{}`, unknown number of arguments",
@@ -218,6 +250,7 @@ where
         }
     }
 
+    // If there is a single value left, that is the result
     if values.len() == 1 {
         Ok(values[0].clone())
     } else {
@@ -225,27 +258,50 @@ where
     }
 }
 
+/// Converts the given array of tokens to reverse polish notation.
+///
+/// # Arguments
+/// - token: The tokens of the expression to convert.
+/// - context: the context which contains the variables, constants and functions.
+///
+/// # Example
+/// ```
+/// use math_engine::token::Token::*;
+/// use math_engine::evaluator;
+/// use math_engine::context::DefaultContext;
+///
+/// let tokens = [Number(5), BinaryOperator('+'), Number(2)];
+/// let context = DefaultContext::new_checked();
+/// let rpn = evaluator::infix_to_rpn(&tokens, &context).unwrap();
+///
+/// assert_eq!(&rpn, &[Number(5), Number(2), BinaryOperator('+')]);
+/// ```
 #[inline(always)]
-pub fn infix_to_rpn<'a, N: Clone + Debug>(tokens: &[Token<N>], context: &impl Context<'a, N>) -> Result<Vec<Token<N>>>{
+pub fn infix_to_rpn<'a, N, C>(tokens: &[Token<N>], context: &C) -> Result<Vec<Token<N>>>
+    where N: Clone + Debug, C: Context<'a, N> {
     shunting_yard::infix_to_rpn(tokens, context)
 }
 
-mod shunting_yard { //shunting_yard
+mod shunting_yard {
+    use std::fmt::Debug;
+
     use crate::context::Context;
     use crate::error::{Error, ErrorKind, Result};
     use crate::function::{Associativity, Notation};
     use crate::token::Token;
     use crate::token::Token::BinaryOperator;
-    use std::fmt::Debug;
 
     /// Converts an `infix` notation expression to `rpn` (Reverse Polish Notation) using
-    /// the shunting yard algorithm.
-    ///
-    /// See: https://en.wikipedia.org/wiki/Shunting-yard_algorithm
-    pub fn infix_to_rpn<'a, N: Clone + Debug>(
-        tokens: &[Token<N>],
-        context: &impl Context<'a, N>,
-    ) -> Result<Vec<Token<N>>> {
+        /// the shunting yard algorithm.
+        ///
+        /// # Arguments
+        /// - token: The tokens of the expression to convert.
+        /// - context: the context which contains the variables, constants and functions.
+        ///
+        /// See: https://en.wikipedia.org/wiki/Shunting-yard_algorithm
+    pub fn infix_to_rpn<'a, N, C>(tokens: &[Token<N>], context: &C, ) -> Result<Vec<Token<N>>>
+        where N: Clone + Debug,
+              C: Context<'a, N> {
         let mut output = Vec::new();
         let mut operators = Vec::new();
         let mut arg_count: Vec<u32> = Vec::new();
@@ -264,10 +320,10 @@ mod shunting_yard { //shunting_yard
                         &mut operators,
                         token,
                         c.encode_utf8(&mut buf),
-                    );
+                    )?;
                 }
                 Token::InfixFunction(name) => {
-                    push_binary_function(context, &mut output, &mut operators, token, name)
+                    push_binary_function(context, &mut output, &mut operators, token, name)?
                 }
                 Token::UnaryOperator(c) => {
                     push_unary_function(context, &mut output, &mut operators, token, c)?
@@ -400,8 +456,12 @@ mod shunting_yard { //shunting_yard
         operators: &mut Vec<Token<N>>,
         token: &Token<N>,
         name: &str,
-    ) -> () {
-        let cur_operator = context.get_binary_function(name).unwrap();
+    ) -> Result<()> {
+        let operator = context.get_binary_function(name)
+            .ok_or(
+                Error::new(ErrorKind::InvalidInput,
+                format!("Binary function `{}` not found", name)
+            ))?;
 
         while let Some(t) = operators.last() {
             match t {
@@ -428,8 +488,8 @@ mod shunting_yard { //shunting_yard
 
                 match top_operator {
                     Some(top) => {
-                        if (top.precedence() > cur_operator.precedence())
-                            || (top.precedence() == cur_operator.precedence()
+                        if (top.precedence() > operator.precedence())
+                            || (top.precedence() == operator.precedence()
                                 && top.associativity() == Associativity::Left)
                         {
                             output.push(operators.pop().unwrap());
@@ -445,6 +505,7 @@ mod shunting_yard { //shunting_yard
         }
 
         operators.push(token.clone());
+        Ok(())
     }
 
     fn push_grouping_close<'a, N: Clone + Debug>(
@@ -497,7 +558,6 @@ mod shunting_yard { //shunting_yard
         operators: &mut Vec<Token<N>>,
         arg_count: &mut Vec<u32>,
     ) -> Result<()> {
-        //*arg_count.last_mut().unwrap() += 1;
         match arg_count.last_mut() {
             None => {
                 return Err(Error::new(
@@ -530,9 +590,10 @@ mod shunting_yard { //shunting_yard
 
     #[cfg(test)]
     mod tests {
-        use super::*;
         use crate::context::{Config, DefaultContext};
         use crate::token::Token::*;
+
+        use super::*;
 
         #[test]
         fn unary_ops_test1() {
@@ -774,8 +835,8 @@ mod shunting_yard { //shunting_yard
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::context::Config;
+    use super::*;
 
     #[test]
     fn evaluate_test() {

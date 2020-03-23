@@ -633,7 +633,7 @@ pub mod context{
         }
 
         pub fn new_decimal_with_config(config: Config) -> Self{
-            let mut context = Self::new_with_config(config);
+            let mut context = Self::empty_with_config(config);
             context.add_constant("PI", consts::PI);
             context.add_constant("E", consts::E);
             context.add_binary_function(AddOperator);

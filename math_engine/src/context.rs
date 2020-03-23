@@ -8,27 +8,39 @@ use crate::ops::math::*;
 use crate::utils::ignore_case_string::IgnoreCaseString;
 use crate::ops::math::RandFunction;
 
+/// Trait that provides the variables, constants and functions used for evaluate an expression.
 pub trait Context<'a, N> {
+    /// Gets the configuration of the context.
     fn config(&self) -> &Config;
 
+    /// Adds a function to the context.
     fn add_function<F: Function<N> + 'a>(&mut self, func: F);
 
+    /// Adds a binary function to the context.
     fn add_binary_function<F: BinaryFunction<N> + 'a>(&mut self, func: F);
 
+    /// Adds an unary function to the context.
     fn add_unary_function<F: UnaryFunction<N> + 'a>(&mut self, func: F);
 
+    /// Adds a constant value to the context.
     fn add_constant(&mut self, name: &str, value: N);
 
+    /// Adds or set the value of a variable in the context.
     fn set_variable(&mut self, name: &str, value: N) -> Option<N>;
 
+    /// Gets the value of a variable in the context.
     fn get_variable(&self, name: &str) -> Option<&N>;
 
+    /// Gets the value of a constant in the context.
     fn get_constant(&self, name: &str) -> Option<&N>;
 
+    /// Gets a function with the given name.
     fn get_function(&self, name: &str) -> Option<&Box<dyn Function<N> + 'a>>;
 
+    /// Gets a binary function with the given name.
     fn get_binary_function(&self, name: &str) -> Option<&Box<dyn BinaryFunction<N> + 'a>>;
 
+    /// Gets an unary function with the given name.
     fn get_unary_function(&self, name: &str) -> Option<&Box<dyn UnaryFunction<N> + 'a>>;
 
     /// Checks if exists a variable with the given name.
@@ -77,8 +89,7 @@ pub trait Context<'a, N> {
     }
 }
 
-/// Provides a default implementation of the `MathContext`,
-/// which can be create providing all the variables, constants and functions of the context.
+/// Provides a default implementation of a math `Context`.
 pub struct DefaultContext<'a, N> {
     /// The variables.
     variables: HashMap<IgnoreCaseString, N>,
@@ -95,24 +106,7 @@ pub struct DefaultContext<'a, N> {
 }
 
 impl<'a, N> DefaultContext<'a, N> {
-    #[inline]
-    pub fn new() -> Self{
-        Self::new_with_config(Config::new())
-    }
-
-    #[inline]
-    pub fn new_with_config(config: Config) -> Self {
-        DefaultContext {
-            variables: Default::default(),
-            constants: Default::default(),
-            functions: Default::default(),
-            binary_functions: Default::default(),
-            unary_functions: Default::default(),
-            config,
-        }
-    }
-
-    /// Creates a new empty `Context`.
+    /// Constructs a new `Context` with no variables, constants or functions.
     #[inline]
     pub fn empty() -> Self {
         DefaultContext {
@@ -121,11 +115,12 @@ impl<'a, N> DefaultContext<'a, N> {
             functions: Default::default(),
             binary_functions: Default::default(),
             unary_functions: Default::default(),
-            config: Config::default(),
+            config: Config::new(),
         }
     }
 
-    /// Creates a new empty `Context` using the given `Config`.
+    /// Constructs a new `Context` with no variables, constants or functions, using the
+    /// specified `Config`.
     #[inline]
     pub fn empty_with_config(config: Config) -> Self {
         DefaultContext {
@@ -297,7 +292,7 @@ impl<'a, N: CheckedNum> DefaultContext<'a, N> {
 
     /// Creates a new `Context` with the default functions and constants using the specified `Config`.
     pub fn new_checked_with_config(config: Config) -> Self {
-        let mut context = Self::new_with_config(config);
+        let mut context = Self::empty_with_config(config);
         context.add_constant("PI", N::from_f64(std::f64::consts::PI).unwrap());
         context.add_constant("E", N::from_f64(std::f64::consts::E).unwrap());
         context.add_binary_function(AddOperator);
@@ -450,7 +445,7 @@ pub mod unchecked {
 
         /// Creates a new `Context` with the default functions and constants using the specified `Config`.
         pub fn new_unchecked_with_config(config: Config) -> Self {
-            let mut context = Self::new_with_config(config);
+            let mut context = Self::empty_with_config(config);
             context.add_constant("PI", N::from_f64(std::f64::consts::PI).unwrap());
             context.add_constant("E", N::from_f64(std::f64::consts::E).unwrap());
             context.add_binary_function(AddOperator);
