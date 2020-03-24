@@ -66,6 +66,15 @@ impl ErrorKind{
     }
 }
 
+impl Eq for Error{}
+
+impl PartialEq for Error{
+    #[inline]
+    fn eq(&self, other: &Self) -> bool {
+        self.kind() == other.kind()
+    }
+}
+
 impl Debug for Detail{
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match *self{

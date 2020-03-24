@@ -7,6 +7,7 @@ use crate::ops::checked::*;
 use crate::ops::math::*;
 use crate::utils::ignore_case_string::IgnoreCaseString;
 use crate::ops::math::RandFunction;
+use std::rc::Rc;
 
 /// Trait that provides the variables, constants and functions used for evaluate an expression.
 pub trait Context<'a, N> {
@@ -35,13 +36,13 @@ pub trait Context<'a, N> {
     fn get_constant(&self, name: &str) -> Option<&N>;
 
     /// Gets a function with the given name.
-    fn get_function(&self, name: &str) -> Option<&Box<dyn Function<N> + 'a>>;
+    fn get_function(&self, name: &str) -> Option<&Rc<dyn Function<N> + 'a>>;
 
     /// Gets a binary function with the given name.
-    fn get_binary_function(&self, name: &str) -> Option<&Box<dyn BinaryFunction<N> + 'a>>;
+    fn get_binary_function(&self, name: &str) -> Option<&Rc<dyn BinaryFunction<N> + 'a>>;
 
     /// Gets an unary function with the given name.
-    fn get_unary_function(&self, name: &str) -> Option<&Box<dyn UnaryFunction<N> + 'a>>;
+    fn get_unary_function(&self, name: &str) -> Option<&Rc<dyn UnaryFunction<N> + 'a>>;
 
     /// Checks if exists a variable with the given name.
     #[inline]
@@ -90,17 +91,18 @@ pub trait Context<'a, N> {
 }
 
 /// Provides a default implementation of a math `Context`.
+#[derive(Clone)]
 pub struct DefaultContext<'a, N> {
     /// The variables.
     variables: HashMap<IgnoreCaseString, N>,
     /// The constants.
     constants: HashMap<IgnoreCaseString, N>,
     /// The functions.
-    functions: HashMap<IgnoreCaseString, Box<dyn Function<N> + 'a>>,
+    functions: HashMap<IgnoreCaseString, Rc<dyn Function<N> + 'a>>,
     /// The binary functions.
-    binary_functions: HashMap<IgnoreCaseString, Box<dyn BinaryFunction<N> + 'a>>,
+    binary_functions: HashMap<IgnoreCaseString, Rc<dyn BinaryFunction<N> + 'a>>,
     /// The unary functions.
-    unary_functions: HashMap<IgnoreCaseString, Box<dyn UnaryFunction<N> + 'a>>,
+    unary_functions: HashMap<IgnoreCaseString, Rc<dyn UnaryFunction<N> + 'a>>,
     /// Additional information about this context
     config: Config,
 }
@@ -144,17 +146,17 @@ impl<'a, N> DefaultContext<'a, N> {
     }
 
     #[inline]
-    pub fn functions(&self) -> &HashMap<IgnoreCaseString, Box<dyn Function<N> + 'a>> {
+    pub fn functions(&self) -> &HashMap<IgnoreCaseString, Rc<dyn Function<N> + 'a>> {
         &self.functions
     }
 
     #[inline]
-    pub fn binary_functions(&self) -> &HashMap<IgnoreCaseString, Box<dyn BinaryFunction<N> + 'a>> {
+    pub fn binary_functions(&self) -> &HashMap<IgnoreCaseString, Rc<dyn BinaryFunction<N> + 'a>> {
         &self.binary_functions
     }
 
     #[inline]
-    pub fn unary_functions(&self) -> &HashMap<IgnoreCaseString, Box<dyn UnaryFunction<N> + 'a>> {
+    pub fn unary_functions(&self) -> &HashMap<IgnoreCaseString, Rc<dyn UnaryFunction<N> + 'a>> {
         &self.unary_functions
     }
 
@@ -163,7 +165,7 @@ impl<'a, N> DefaultContext<'a, N> {
         let function_name = IgnoreCaseString::from(name);
         match self.functions.contains_key(&function_name){
             true => panic!("A function named '{}' already exists", function_name),
-            false => self.functions.insert(function_name, Box::new(func))
+            false => self.functions.insert(function_name, Rc::new(func))
         };
     }
 
@@ -172,7 +174,7 @@ impl<'a, N> DefaultContext<'a, N> {
         let function_name = IgnoreCaseString::from(name);
         match self.binary_functions.contains_key(&function_name){
             true => panic!("A binary function named '{}' already exists", function_name),
-            false => self.binary_functions.insert(function_name, Box::new(func))
+            false => self.binary_functions.insert(function_name, Rc::new(func))
         };
     }
 
@@ -181,7 +183,7 @@ impl<'a, N> DefaultContext<'a, N> {
         let function_name = IgnoreCaseString::from(name);
         match self.unary_functions.contains_key(&function_name){
             true => panic!("An unary function named '{}' already exists", function_name),
-            false => self.unary_functions.insert(function_name, Box::new(func))
+            false => self.unary_functions.insert(function_name, Rc::new(func))
         };
     }
 }
@@ -248,17 +250,17 @@ impl<'a, N> Context<'a, N> for DefaultContext<'a, N> {
     }
 
     #[inline]
-    fn get_function(&self, name: &str) -> Option<&Box<dyn Function<N> + 'a>> {
+    fn get_function(&self, name: &str) -> Option<&Rc<dyn Function<N> + 'a>> {
         self.functions.get(&IgnoreCaseString::from(name))
     }
 
     #[inline]
-    fn get_binary_function(&self, name: &str) -> Option<&Box<dyn BinaryFunction<N> + 'a>> {
+    fn get_binary_function(&self, name: &str) -> Option<&Rc<dyn BinaryFunction<N> + 'a>> {
         self.binary_functions.get(&IgnoreCaseString::from(name))
     }
 
     #[inline]
-    fn get_unary_function(&self, name: &str) -> Option<&Box<dyn UnaryFunction<N> + 'a>> {
+    fn get_unary_function(&self, name: &str) -> Option<&Rc<dyn UnaryFunction<N> + 'a>> {
         self.unary_functions.get(&IgnoreCaseString::from(name))
     }
 }

@@ -18,6 +18,7 @@ pub trait Evaluate<N> {
 }
 
 /// Represents the default `Evaluator`.
+#[derive(Clone)]
 pub struct Evaluator<'a, N, C: Context<'a, N> = DefaultContext<'a, N>> {
     /// The context used for evaluation.
     context: C,
