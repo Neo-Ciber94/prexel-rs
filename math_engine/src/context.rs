@@ -1,13 +1,13 @@
 use std::borrow::Borrow;
 use std::collections::HashMap;
+use std::rc::Rc;
 
 use crate::function::{BinaryFunction, Function, UnaryFunction};
 use crate::num::checked::CheckedNum;
-use crate::ops::checked::*;
+use crate::num::unchecked::UncheckedNum;
 use crate::ops::math::*;
-use crate::utils::ignore_case_string::IgnoreCaseString;
 use crate::ops::math::RandFunction;
-use std::rc::Rc;
+use crate::utils::ignore_case_string::IgnoreCaseString;
 
 /// Trait that provides the variables, constants and functions used for evaluate an expression.
 pub trait Context<'a, N> {
@@ -163,27 +163,27 @@ impl<'a, N> DefaultContext<'a, N> {
     #[inline]
     pub fn add_function_as<F: Function<N> + 'a>(&mut self, func: F, name: &str) {
         let function_name = IgnoreCaseString::from(name);
-        match self.functions.contains_key(&function_name){
+        match self.functions.contains_key(&function_name) {
             true => panic!("A function named '{}' already exists", function_name),
-            false => self.functions.insert(function_name, Rc::new(func))
+            false => self.functions.insert(function_name, Rc::new(func)),
         };
     }
 
     #[inline]
     pub fn add_binary_function_as<F: BinaryFunction<N> + 'a>(&mut self, func: F, name: &str) {
         let function_name = IgnoreCaseString::from(name);
-        match self.binary_functions.contains_key(&function_name){
+        match self.binary_functions.contains_key(&function_name) {
             true => panic!("A binary function named '{}' already exists", function_name),
-            false => self.binary_functions.insert(function_name, Rc::new(func))
+            false => self.binary_functions.insert(function_name, Rc::new(func)),
         };
     }
 
     #[inline]
     pub fn add_unary_function_as<F: UnaryFunction<N> + 'a>(&mut self, func: F, name: &str) {
         let function_name = IgnoreCaseString::from(name);
-        match self.unary_functions.contains_key(&function_name){
+        match self.unary_functions.contains_key(&function_name) {
             true => panic!("An unary function named '{}' already exists", function_name),
-            false => self.unary_functions.insert(function_name, Rc::new(func))
+            false => self.unary_functions.insert(function_name, Rc::new(func)),
         };
     }
 }
@@ -205,12 +205,11 @@ impl<'a, N> Context<'a, N> for DefaultContext<'a, N> {
     fn add_binary_function<F: BinaryFunction<N> + 'a>(&mut self, func: F) {
         validator::check_function_name(
             func.name(),
-                   if func.name().len() > 1 {
-                       validator::Kind::Function
-                   }
-                   else {
-                       validator::Kind::Operator
-                   }
+            if func.name().len() > 1 {
+                validator::Kind::Function
+            } else {
+                validator::Kind::Operator
+            },
         );
         let name = func.name().to_string();
         self.add_binary_function_as(func, &name)
@@ -233,9 +232,12 @@ impl<'a, N> Context<'a, N> for DefaultContext<'a, N> {
     fn set_variable(&mut self, name: &str, value: N) -> Option<N> {
         validator::check_variable_name(name);
         let string = IgnoreCaseString::from(name);
-        match self.constants.contains_key(&string){
-            true => panic!("Invalid variable name, a constant named '{}' already exists", string.clone()),
-            false => self.variables.insert(string, value)
+        match self.constants.contains_key(&string) {
+            true => panic!(
+                "Invalid variable name, a constant named '{}' already exists",
+                string.clone()
+            ),
+            false => self.variables.insert(string, value),
         }
     }
 
@@ -266,18 +268,16 @@ impl<'a, N> Context<'a, N> for DefaultContext<'a, N> {
 }
 
 impl<'a, N: CheckedNum> DefaultContext<'a, N> {
-    pub unsafe fn instance() -> &'static DefaultContext<'a, N>{
+    pub unsafe fn instance() -> &'static DefaultContext<'a, N> {
         use crate::utils::lazy::Lazy;
-        use crate::utils::untyped::Untyped;;
+        use crate::utils::untyped::Untyped;
         use std::any::TypeId;;
 
-        static mut CACHE : Lazy<HashMap<TypeId, Untyped>> = Lazy::new(|| HashMap::new());
+        static mut CACHE: Lazy<HashMap<TypeId, Untyped>> = Lazy::new(|| HashMap::new());
 
         let type_id = TypeId::of::<N>();
-        match (*CACHE).get(&type_id){
-            Some(p) => {
-                p.cast::<DefaultContext<'a, N>>()
-            },
+        match (*CACHE).get(&type_id) {
+            Some(p) => p.cast::<DefaultContext<'a, N>>(),
             None => {
                 let context = Box::leak(Box::new(DefaultContext::new_checked()));
                 CACHE.insert(type_id, Untyped::new(context));
@@ -294,6 +294,8 @@ impl<'a, N: CheckedNum> DefaultContext<'a, N> {
 
     /// Creates a new `Context` with the default functions and constants using the specified `Config`.
     pub fn new_checked_with_config(config: Config) -> Self {
+        use crate::ops::checked::*;
+
         let mut context = Self::empty_with_config(config);
         context.add_constant("PI", N::from_f64(std::f64::consts::PI).unwrap());
         context.add_constant("E", N::from_f64(std::f64::consts::E).unwrap());
@@ -350,20 +352,64 @@ impl<'a, N: CheckedNum> DefaultContext<'a, N> {
     }
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
-pub struct GroupingSymbol {
-    pub group_open: char,
-    pub group_close: char,
-}
-
-impl GroupingSymbol {
+impl<'a, N: UncheckedNum> DefaultContext<'a, N> {
+    /// Creates a new `Context` with the default functions and constants.
     #[inline]
-    pub fn new(group_open: char, group_close: char) -> Self {
-        assert_ne!(group_open, group_close);
-        GroupingSymbol {
-            group_open,
-            group_close,
-        }
+    pub fn new_unchecked() -> Self {
+        Self::new_unchecked_with_config(Config::new())
+    }
+
+    /// Creates a new `Context` with the default functions and constants using the specified `Config`.
+    pub fn new_unchecked_with_config(config: Config) -> Self {
+        use crate::ops::unchecked::*;
+
+        let mut context = Self::empty_with_config(config);
+        context.add_constant("PI", N::from_f64(std::f64::consts::PI).unwrap());
+        context.add_constant("E", N::from_f64(std::f64::consts::E).unwrap());
+        context.add_binary_function(AddOperator);
+        context.add_binary_function(SubOperator);
+        context.add_binary_function(MulOperator);
+        context.add_binary_function(DivOperator);
+        context.add_binary_function(PowOperator);
+        context.add_binary_function(ModOperator);
+        context.add_unary_function(UnaryPlus);
+        context.add_unary_function(UnaryMinus);
+        context.add_unary_function(Factorial);
+        context.add_function(SumFunction);
+        context.add_function(AvgFunction);
+        context.add_function(ProdFunction);
+        context.add_function(MaxFunction);
+        context.add_function(MinFunction);
+        context.add_function(SqrtFunction);
+        context.add_function(LnFunction);
+        context.add_function(LogFunction);
+        context.add_function(RandFunction);
+        context.add_function(ExpFunction);
+        context.add_function(SinFunction);
+        context.add_function(CosFunction);
+        context.add_function(TanFunction);
+        context.add_function(CscFunction);
+        context.add_function(SecFunction);
+        context.add_function(CotFunction);
+        context.add_function(ASinFunction);
+        context.add_function(ACosFunction);
+        context.add_function(ATanFunction);
+        context.add_function(ACscFunction);
+        context.add_function(ASecFunction);
+        context.add_function(ACotFunction);
+        context.add_function(SinhFunction);
+        context.add_function(CoshFunction);
+        context.add_function(TanhFunction);
+        context.add_function(CschFunction);
+        context.add_function(SechFunction);
+        context.add_function(CothFunction);
+        context.add_function(ASinhFunction);
+        context.add_function(ACoshFunction);
+        context.add_function(ATanhFunction);
+        context.add_function(ACschFunction);
+        context.add_function(ASechFunction);
+        context.add_function(ACothFunction);
+        context
     }
 }
 
@@ -377,8 +423,7 @@ pub struct Config {
 impl Config {
     #[inline]
     pub fn new() -> Self {
-        Config::default()
-            .with_group_symbol('(', ')')
+        Config::default().with_group_symbol('(', ')')
     }
 
     #[inline]
@@ -421,120 +466,98 @@ impl Config {
     }
 }
 
-impl Default for Config{
+impl Default for Config {
     #[inline]
     fn default() -> Self {
-        Config{
+        Config {
             implicit_mul: false,
             complex_number: false,
-            grouping: Default::default()
+            grouping: Default::default(),
         }
     }
 }
 
-pub mod unchecked {
-    use crate::context::{Config, Context, DefaultContext};
-    use crate::num::unchecked::UncheckedNum;
-    use crate::ops::math::*;
-    use crate::ops::unchecked::*;
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+pub struct GroupingSymbol {
+    pub group_open: char,
+    pub group_close: char,
+}
 
-    impl <'a, N> DefaultContext<'a, N> where N : UncheckedNum{
-        /// Creates a new `Context` with the default functions and constants.
-        #[inline]
-        pub fn new_unchecked() -> Self {
-            Self::new_unchecked_with_config(Config::new())
-        }
-
-        /// Creates a new `Context` with the default functions and constants using the specified `Config`.
-        pub fn new_unchecked_with_config(config: Config) -> Self {
-            let mut context = Self::empty_with_config(config);
-            context.add_constant("PI", N::from_f64(std::f64::consts::PI).unwrap());
-            context.add_constant("E", N::from_f64(std::f64::consts::E).unwrap());
-            context.add_binary_function(AddOperator);
-            context.add_binary_function(SubOperator);
-            context.add_binary_function(MulOperator);
-            context.add_binary_function(DivOperator);
-            context.add_binary_function(PowOperator);
-            context.add_binary_function(ModOperator);
-            context.add_unary_function(UnaryPlus);
-            context.add_unary_function(UnaryMinus);
-            context.add_unary_function(Factorial);
-            context.add_function(SumFunction);
-            context.add_function(AvgFunction);
-            context.add_function(ProdFunction);
-            context.add_function(MaxFunction);
-            context.add_function(MinFunction);
-            context.add_function(SqrtFunction);
-            context.add_function(LnFunction);
-            context.add_function(LogFunction);
-            context.add_function(RandFunction);
-            context.add_function(ExpFunction);
-            context.add_function(SinFunction);
-            context.add_function(CosFunction);
-            context.add_function(TanFunction);
-            context.add_function(CscFunction);
-            context.add_function(SecFunction);
-            context.add_function(CotFunction);
-            context.add_function(ASinFunction);
-            context.add_function(ACosFunction);
-            context.add_function(ATanFunction);
-            context.add_function(ACscFunction);
-            context.add_function(ASecFunction);
-            context.add_function(ACotFunction);
-            context.add_function(SinhFunction);
-            context.add_function(CoshFunction);
-            context.add_function(TanhFunction);
-            context.add_function(CschFunction);
-            context.add_function(SechFunction);
-            context.add_function(CothFunction);
-            context.add_function(ASinhFunction);
-            context.add_function(ACoshFunction);
-            context.add_function(ATanhFunction);
-            context.add_function(ACschFunction);
-            context.add_function(ASechFunction);
-            context.add_function(ACothFunction);
-            context
+impl GroupingSymbol {
+    #[inline]
+    pub fn new(group_open: char, group_close: char) -> Self {
+        assert_ne!(group_open, group_close);
+        GroupingSymbol {
+            group_open,
+            group_close,
         }
     }
 }
 
 #[cfg(debug_assertions)]
-mod validator{
-    pub enum Kind{
+mod validator {
+    pub enum Kind {
         /// Validates a function
         Function,
         /// Validates an operator
-        Operator
+        Operator,
     }
 
-    pub fn check_function_name(name: &str, kind: Kind){
-        debug_assert!(!name.is_empty(),
-                      "function and operators names cannot be empty");
+    pub fn check_function_name(name: &str, kind: Kind) {
+        debug_assert!(
+            !name.is_empty(),
+            "function and operators names cannot be empty"
+        );
 
-        match kind{
+        match kind {
             Kind::Function => {
-                debug_assert!(name.len() > 1, "function names must have more than 1 character: `{}`", name);
-                debug_assert!(name.chars().all(char::is_alphanumeric),
-                              "function names must only include letters and numbers: `{}`", name);
+                debug_assert!(
+                    name.len() > 1,
+                    "function names must have more than 1 character: `{}`",
+                    name
+                );
+                debug_assert!(
+                    name.chars().all(char::is_alphanumeric),
+                    "function names must only include letters and numbers: `{}`",
+                    name
+                );
 
-                debug_assert!(name.chars().nth(0).unwrap().is_alphabetic(),
-                              "function names must start with a letter: `{}`", name);
-            },
+                debug_assert!(
+                    name.chars().nth(0).unwrap().is_alphabetic(),
+                    "function names must start with a letter: `{}`",
+                    name
+                );
+            }
             Kind::Operator => {
-                debug_assert!(name.len() == 1, "operators must have an 1 character: `{}`", name);
-                debug_assert!(name.chars().nth(0).unwrap().is_ascii_punctuation(),
-                              "operators names must be a symbol: `{}`", name)
-            },
+                debug_assert!(
+                    name.len() == 1,
+                    "operators must have an 1 character: `{}`",
+                    name
+                );
+                debug_assert!(
+                    name.chars().nth(0).unwrap().is_ascii_punctuation(),
+                    "operators names must be a symbol: `{}`",
+                    name
+                )
+            }
         }
     }
 
-    pub fn check_variable_name(name: &str){
-        debug_assert!(!name.is_empty(),
-                      "variables and constants names cannot be empty");
-        debug_assert!(name.chars().all(char::is_alphanumeric),
-                      "variables and constants names must only include letters and numbers: `{}`", name);
-        debug_assert!(name.chars().nth(0).unwrap().is_alphabetic(),
-                      "variables and constants names must start with a letter: `{}`", name);
+    pub fn check_variable_name(name: &str) {
+        debug_assert!(
+            !name.is_empty(),
+            "variables and constants names cannot be empty"
+        );
+        debug_assert!(
+            name.chars().all(char::is_alphanumeric),
+            "variables and constants names must only include letters and numbers: `{}`",
+            name
+        );
+        debug_assert!(
+            name.chars().nth(0).unwrap().is_alphabetic(),
+            "variables and constants names must start with a letter: `{}`",
+            name
+        );
     }
 }
 

@@ -6,7 +6,7 @@ use math_engine::function::Function;
 use math_engine::error::{Error, ErrorKind};
 use math_engine::tokenizer::{Tokenizer, Tokenize};
 use math_engine::token::Token::*;
-use math_engine::context::Context;
+use math_engine::context::{Context, DefaultContext};
 use math_engine::token::Token;
 
 pub struct CustomFunction<'a, T> where T: Display + Debug + Clone + FromStr{
@@ -19,7 +19,7 @@ pub struct CustomFunction<'a, T> where T: Display + Debug + Clone + FromStr{
 
 impl<'a, T> CustomFunction<'a, T> where T: Display + Debug + Clone + FromStr{
     #[inline]
-    pub fn new(function_name: String, params: Vec<String>, body: String, evaluator: Evaluator<'a, T>) -> Self{
+    pub fn with_evaluator(function_name: String, params: Vec<String>, body: String, evaluator: Evaluator<'a, T>) -> Self{
         CustomFunction{
             function_name,
             params,
@@ -52,8 +52,8 @@ impl<'a, T> CustomFunction<'a, T> where T: Display + Debug + Clone + FromStr{
             return Err(ParseFunctionError::from(FunctionErrorKind::InvalidFormat));
         }
 
-        let func = parts[0];
-        let body = parts[1];
+        let func = parts[0]; // Contains the function name and params
+        let body = parts[1]; // Contains the function body
 
         if let (Some(paren_open), Some(paren_close)) = (func.find("("), func.find(")")){
             let function_name = func[..paren_open].to_string();
@@ -75,7 +75,7 @@ impl<'a, T> CustomFunction<'a, T> where T: Display + Debug + Clone + FromStr{
             };
 
             Self::check_function_body(&evaluator, &params, body)?;
-            Ok(CustomFunction::new(function_name, params, body.to_string(), evaluator))
+            Ok(CustomFunction::with_evaluator(function_name, params, body.to_string(), evaluator))
         }
         else{
             Err(ParseFunctionError::from(FunctionErrorKind::InvalidFormat))
@@ -247,7 +247,7 @@ mod tests{
     #[test]
     fn call_test(){
         let evaluator : Evaluator<f64> = Evaluator::new();
-        let func = CustomFunction::new(
+        let func = CustomFunction::with_evaluator(
           "Plus".to_string(),
             vec!["x".to_string(), "y".to_string()],
             "x + y".to_string(),
