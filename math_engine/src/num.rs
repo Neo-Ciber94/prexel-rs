@@ -1,53 +1,35 @@
-use std::ops::{Add, Div, Mul, Rem, Sub, Neg};
-use std::str::FromStr;
-use std::fmt::{Debug, Display};
 
-pub trait NumOps<Rhs = Self, Output = Self>: Sized
-    + Add<Rhs, Output = Output>
-    + Sub<Rhs, Output = Output>
-    + Mul<Rhs, Output = Output>
-    + Div<Rhs, Output = Output>
-    + Rem<Rhs, Output = Output>
-    + Neg<Output = Output>
-{
-}
-
-impl<T> NumOps for T where
-    T: Add<T, Output = T>
-        + Sub<T, Output = T>
-        + Mul<T, Output = T>
-        + Div<T, Output = T>
-        + Rem<T, Output = T>
-        + Neg<Output = T>
-{
-}
-
-pub trait Num : NumOps + FromStr + PartialOrd + Debug + Display + Clone + Default{}
-
+/// Provides traits for implements a checked numeric types.
 pub mod checked {
-    use num_traits::{FromPrimitive, Signed, ToPrimitive};
+    use num_traits::{FromPrimitive, ToPrimitive, Zero, One};
     use std::fmt::{Debug, Display};
     use std::ops::{Add, Div, Mul, Neg, Rem, Sub};
     use std::str::FromStr;
 
-    /// Represents operations that returns `None` on overflow/underflow.
-    pub trait CheckedNumOps:
-        CheckedAdd + CheckedSub + CheckedMul + CheckedDiv + CheckedRem + CheckedNeg
+    /// A base trait for numeric types, provides `0` and `1` values,
+/// comparisons, conversions from and to string, and checked numeric operations.
+///
+/// This trait is implemented for all the types that implements the traits.
+    pub trait CheckedNum: CheckedNumOps
+    + Zero
+    + One
+    + PartialOrd
+    + ToPrimitive
+    + FromPrimitive
+    + FromStr
+    + Clone
+    + Debug
+    + Display
     {
     }
 
-    impl<T: Sized> CheckedNumOps for T where
-        T: CheckedAdd + CheckedSub + CheckedMul + CheckedDiv + CheckedRem + CheckedNeg
-    {
-    }
-
-    /// Represents a number to be used in an operation.
-    pub trait CheckedNum:
-        Signed
+    impl<T: Sized> CheckedNum for T where
+        T: CheckedNumOps
+        + Zero
+        + One
         + PartialOrd
-        + CheckedNumOps
-        + ToPrimitive
         + FromPrimitive
+        + ToPrimitive
         + FromStr
         + Clone
         + Debug
@@ -55,16 +37,16 @@ pub mod checked {
     {
     }
 
-    impl<T: Sized> CheckedNum for T where
-        T: Signed
-            + CheckedNumOps
-            + PartialOrd
-            + FromPrimitive
-            + ToPrimitive
-            + FromStr
-            + Clone
-            + Debug
-            + Display
+    /// Traits for basic checked numeric operations that returns `None` on overflow.
+    ///
+    /// This trait is implemented for all the types that implements the traits.
+    pub trait CheckedNumOps:
+        CheckedAdd + CheckedSub + CheckedMul + CheckedDiv + CheckedRem + CheckedNeg
+    {
+    }
+
+    impl<T: Sized> CheckedNumOps for T where
+        T: CheckedAdd + CheckedSub + CheckedMul + CheckedDiv + CheckedRem + CheckedNeg
     {
     }
 
@@ -269,12 +251,16 @@ pub mod checked {
     unsafe_impl_checked_ops!(f32, f64);
 }
 
+/// Provides traits for implements a unchecked numeric types.
 pub mod unchecked {
     use num_traits::{FromPrimitive, One, ToPrimitive, Zero};
-    use std::fmt::Debug;
+    use std::fmt::{Debug, Display};
     use std::ops::{Add, Div, Mul, Neg, Rem, Sub};
     use std::str::FromStr;
 
+    /// Traits for basic unchecked numeric operations.
+    ///
+    /// This trait is implemented for all the types that implements the traits.
     pub trait UncheckedNum:
         UncheckedNumOps
         + Zero
@@ -284,6 +270,7 @@ pub mod unchecked {
         + ToPrimitive
         + FromPrimitive
         + Clone
+        + Display
         + Debug
     {
     }
@@ -297,10 +284,14 @@ pub mod unchecked {
             + ToPrimitive
             + FromPrimitive
             + Clone
+            + Display
             + Debug
     {
     }
 
+    /// Traits for basic unchecked numeric operations.
+    ///
+    /// This trait is implemented for all the types that implements the traits.
     pub trait UncheckedNumOps:
         Sized
         + Add<Self, Output = Self>

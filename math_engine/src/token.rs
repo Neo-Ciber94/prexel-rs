@@ -69,6 +69,7 @@ impl <N : Debug> Debug for Token<N>{
 }
 
 impl <N> Token<N> {
+    /// Checks if the token is a number.
     #[inline]
     pub fn is_number(&self) -> bool {
         match self{
@@ -77,6 +78,7 @@ impl <N> Token<N> {
         }
     }
 
+    /// Checks if the token is a variable.
     #[inline]
     pub fn is_variable(&self) -> bool {
         match self{
@@ -85,6 +87,7 @@ impl <N> Token<N> {
         }
     }
 
+    /// Checks if the token is a constant.
     #[inline]
     pub fn is_constant(&self) -> bool {
         match self{
@@ -93,6 +96,7 @@ impl <N> Token<N> {
         }
     }
 
+    /// Checks if the token is a function.
     #[inline]
     pub fn is_function(&self) -> bool {
         match self{
@@ -101,6 +105,16 @@ impl <N> Token<N> {
         }
     }
 
+    /// Checks if the token is an infix operator.
+    #[inline]
+    pub fn is_infix_function(&self) -> bool {
+        match self{
+            Token::InfixFunction(_) => true,
+            _ => false
+        }
+    }
+
+    /// Checks if the token is an unary operator.
     #[inline]
     pub fn is_unary_operator(&self) -> bool {
         match self{
@@ -109,6 +123,7 @@ impl <N> Token<N> {
         }
     }
 
+    /// Checks if the token is a binary operator.
     #[inline]
     pub fn is_binary_operator(&self) -> bool {
         match self{
@@ -117,14 +132,10 @@ impl <N> Token<N> {
         }
     }
 
-    #[inline]
-    pub fn is_infix_operator(&self) -> bool {
-        match self{
-            Token::InfixFunction(_) => true,
-            _ => false
-        }
-    }
-
+    /// Checks if the token represents an argument count.
+    ///
+    /// # Remarks
+    /// This is used internally to insert the argument count of a function.
     #[inline]
     pub fn is_arg_count(&self) -> bool {
         match self{
@@ -133,6 +144,7 @@ impl <N> Token<N> {
         }
     }
 
+    /// Checks if the token is a grouping open.
     #[inline]
     pub fn is_grouping_open(&self) -> bool {
         match self{
@@ -141,6 +153,7 @@ impl <N> Token<N> {
         }
     }
 
+    /// Checks if the token is a grouping close.
     #[inline]
     pub fn is_grouping_close(&self) -> bool {
         match self{
@@ -149,6 +162,7 @@ impl <N> Token<N> {
         }
     }
 
+    /// Checks if the token is a comma.
     #[inline]
     pub fn is_comma(&self) -> bool {
         match self{
@@ -157,6 +171,11 @@ impl <N> Token<N> {
         }
     }
 
+    /// Checks if the token is an unknown value.
+    ///
+    /// # Remarks
+    /// A token is considered unknown if is not a number and its value
+    /// cannot be found in the context used for tokenize an expression.
     #[inline]
     pub fn is_unknown(&self) -> bool {
         match self{

@@ -14,12 +14,25 @@ pub trait Tokenize<N>{
 }
 
 /// The default `Tokenizer`.
+///
+/// # Example
+/// ```
+/// use math_engine::tokenizer::{Tokenizer, Tokenize};
+/// use math_engine::token::Token::*;
+///
+/// let t = Tokenizer::new();
+/// let tokens = t.tokenize("2 + 3");
+/// assert_eq!(&[Number(2_i32), BinaryOperator('+'), Number(2_i32)], &tokens);
+/// ```
 pub struct Tokenizer<'a, N, C = DefaultContext<'a, N>> where C: Context<'a, N> {
+    /// The context which contains the variables, constants and functions used
+    /// for tokenize and expression.
     context: &'a C,
     _marker: PhantomData<N>
 }
 
 impl <'a, N> Tokenizer<'a, N, DefaultContext<'a, N>> where N: CheckedNum + 'static{
+    /// Constructs a new `Tokenizer` using the default checked context.
     #[inline]
     pub fn new() -> Self{
         Tokenizer {
@@ -30,6 +43,7 @@ impl <'a, N> Tokenizer<'a, N, DefaultContext<'a, N>> where N: CheckedNum + 'stat
 }
 
 impl <'a, N, C> Tokenizer<'a, N, C> where C: Context<'a, N>, N: FromStr {
+    /// Constructs a new `Tokenizer` with the given `Context`.
     #[inline]
     pub fn with_context(context: &'a C) -> Self{
         Tokenizer {
@@ -49,20 +63,27 @@ impl <'a, N, C> Tokenize<N> for Tokenizer<'a, N, C> where C: Context<'a, N>, N :
             return Err(Error::new(ErrorKind::InvalidExpression, "Expression is empty"));
         }
 
+        // `Vec` used for fast access indexing, Iterator.nth(..) could be O(N)
         let raw_tokens = STRING_TOKENIZER.get_tokens(expression);
+        // Actual iterator over the string tokens.
         let mut iter = raw_tokens.iter().peekable();
+        // Stores the tokens to return.
         let mut tokens = Vec::new();
+        // Current position of the iterator, used for check previous elements.
         let mut pos = 0;
+        // Context that contains the variables, constants and functions.
         let context = self.context;
 
         while let Some(string) = iter.next(){
             if is_number(string){
+                // `complex_number` is enable in the context, check for the next digit,
+                // if is the imaginary unit append it to the current number.
                 if context.config().complex_number(){
                     match iter.peek(){
                         Some(s) if *s == "i" => {
-                            let mut temp = string.clone();
+                            let mut temp = (*s).clone();
                             let im = iter.next().unwrap();
-                            temp.push_str(im);
+                            temp.push_str(&im);
 
                             let n = N::from_str(&temp).ok().expect(&format!("Failed on convert `{}` to a number", temp));
                             tokens.push(Token::Number(n));
@@ -96,8 +117,7 @@ impl <'a, N, C> Tokenize<N> for Tokenizer<'a, N, C> where C: Context<'a, N>, N :
                     tokens.push(Token::UnaryOperator(operator));
                 }
                 else{
-                    //debug_assert!(prev.is_some() && next.is_some(), "Binary operations need 2 operands: {:?} {:?} {:?}", prev, string, next);
-
+                    // If the operator is not unary, could be binary so need 2 operands.
                     if prev.is_none() || next.is_none(){
                         return Err(Error::new(
                             ErrorKind::InvalidExpression,
@@ -105,6 +125,8 @@ impl <'a, N, C> Tokenize<N> for Tokenizer<'a, N, C> where C: Context<'a, N>, N :
                         );
                     }
 
+                    // If the current string value length is 1 we assume is a symbol
+                    // for a binary operator, otherwise is an infix function.
                     if string.len() == 1 {
                         let operator = string.chars().nth(0).unwrap();
                         tokens.push(Token::BinaryOperator(operator));
@@ -118,8 +140,11 @@ impl <'a, N, C> Tokenize<N> for Tokenizer<'a, N, C> where C: Context<'a, N>, N :
                 tokens.push(Token::Comma);
             }
             else if string == WHITESPACE{
+                // Ignore whitespaces
             }
             else if string.len() == 1{
+                // If string token length is 1 and its not considered a binary operator, unary operator
+                // or a function we check if is a grouping symbol in the context `Config`.
                 let c = string.chars().nth(0).unwrap();
                 if let Some(symbol) = context.config().get_group_symbol(c){
                     if c == symbol.group_open{
@@ -130,6 +155,7 @@ impl <'a, N, C> Tokenize<N> for Tokenizer<'a, N, C> where C: Context<'a, N>, N :
                     }
                 }
                 else{
+                    // Hurts my soul repeat this code twice, a `goto` expression could be better
                     tokens.push(Token::Unknown(string.clone()));
                 }
             }

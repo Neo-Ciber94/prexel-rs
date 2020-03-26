@@ -9,7 +9,7 @@ use crate::ops::math::*;
 use crate::ops::math::RandFunction;
 use crate::utils::ignore_case_string::IgnoreCaseString;
 
-/// Trait that provides the variables, constants and functions used for evaluate an expression.
+/// Trait to provides the variables, constants and functions used for evaluate an expression.
 pub trait Context<'a, N> {
     /// Gets the configuration of the context.
     fn config(&self) -> &Config;
@@ -135,31 +135,50 @@ impl<'a, N> DefaultContext<'a, N> {
         }
     }
 
+    /// Gets a reference to the variable values of this context.
     #[inline]
     pub fn variables(&self) -> &HashMap<IgnoreCaseString, N> {
         &self.variables
     }
 
+    /// Gets a reference to the constant values of this context.
     #[inline]
     pub fn constants(&self) -> &HashMap<IgnoreCaseString, N> {
         &self.constants
     }
 
+    /// Gets a reference to the functions of this context.
     #[inline]
     pub fn functions(&self) -> &HashMap<IgnoreCaseString, Rc<dyn Function<N> + 'a>> {
         &self.functions
     }
 
+    /// Gets a reference to the binary functions of this context.
     #[inline]
     pub fn binary_functions(&self) -> &HashMap<IgnoreCaseString, Rc<dyn BinaryFunction<N> + 'a>> {
         &self.binary_functions
     }
 
+    /// Gets a reference to the unary functions of this context.
     #[inline]
     pub fn unary_functions(&self) -> &HashMap<IgnoreCaseString, Rc<dyn UnaryFunction<N> + 'a>> {
         &self.unary_functions
     }
 
+    /// Adds the specified function to the context using the given name.
+    ///
+    /// # Remarks
+    /// - This allows to use a function with an alias.
+    ///
+    /// # Examples
+    /// ```
+    /// use math_engine::context::{DefaultContext, Context};
+    /// use math_engine::ops::math::MaxFunction;
+    ///
+    /// let mut context = DefaultContext::empty();
+    /// context.add_function(MaxFunction);
+    /// context.add_function_as(MaxFunction, "Maximum");
+    /// ```
     #[inline]
     pub fn add_function_as<F: Function<N> + 'a>(&mut self, func: F, name: &str) {
         let function_name = IgnoreCaseString::from(name);
@@ -169,6 +188,21 @@ impl<'a, N> DefaultContext<'a, N> {
         };
     }
 
+
+    /// Adds the specified binary function to the context using the given name.
+    ///
+    /// # Remarks
+    /// - This allows to use a binary function with an alias.
+    ///
+    /// # Examples
+    /// ```
+    /// use math_engine::context::{DefaultContext, Context};
+    /// use math_engine::ops::unchecked::AddOperator;
+    ///
+    /// let mut context = DefaultContext::empty();
+    /// context.add_binary_function(AddOperator);
+    /// context.add_binary_function_as(AddOperator, "Plus");
+    /// ```
     #[inline]
     pub fn add_binary_function_as<F: BinaryFunction<N> + 'a>(&mut self, func: F, name: &str) {
         let function_name = IgnoreCaseString::from(name);
@@ -178,6 +212,10 @@ impl<'a, N> DefaultContext<'a, N> {
         };
     }
 
+    /// Adds the specified unary function to the context using the given name.
+    ///
+    /// # Remarks
+    /// - This allows to use an unary function with an alias.
     #[inline]
     pub fn add_unary_function_as<F: UnaryFunction<N> + 'a>(&mut self, func: F, name: &str) {
         let function_name = IgnoreCaseString::from(name);
@@ -268,14 +306,15 @@ impl<'a, N> Context<'a, N> for DefaultContext<'a, N> {
 }
 
 impl<'a, N: CheckedNum> DefaultContext<'a, N> {
+    /// Gets an instance of a `DefaultContext`.
     pub unsafe fn instance() -> &'static DefaultContext<'a, N> {
         use crate::utils::lazy::Lazy;
         use crate::utils::untyped::Untyped;
         use std::any::TypeId;;
 
         static mut CACHE: Lazy<HashMap<TypeId, Untyped>> = Lazy::new(|| HashMap::new());
-
         let type_id = TypeId::of::<N>();
+
         match (*CACHE).get(&type_id) {
             Some(p) => p.cast::<DefaultContext<'a, N>>(),
             None => {
@@ -286,13 +325,21 @@ impl<'a, N: CheckedNum> DefaultContext<'a, N> {
         }
     }
 
-    /// Creates a new `Context` with the default functions and constants.
+    /// Constructs a new `Context` with checked functions.
+    ///
+    /// # Remarks
+    /// Some functions may cause overflow exceptions, the functions of this context
+    /// ensures will return an error instead of throws an exception.
     #[inline]
     pub fn new_checked() -> Self {
         Self::new_checked_with_config(Config::new())
     }
 
-    /// Creates a new `Context` with the default functions and constants using the specified `Config`.
+    /// Constructs a new `Context` using the given `Config` with checked functions.
+    ///
+    /// # Remarks
+    /// Some functions may cause overflow exceptions, the functions of this context
+    /// ensures will return an error instead of throws an exception.
     pub fn new_checked_with_config(config: Config) -> Self {
         use crate::ops::checked::*;
 
@@ -353,13 +400,19 @@ impl<'a, N: CheckedNum> DefaultContext<'a, N> {
 }
 
 impl<'a, N: UncheckedNum> DefaultContext<'a, N> {
-    /// Creates a new `Context` with the default functions and constants.
+    /// Constructs a new `Context` with unchecked functions.
+    ///
+    /// # Remarks
+    /// Functions of this context may panic when the value overflows.
     #[inline]
     pub fn new_unchecked() -> Self {
         Self::new_unchecked_with_config(Config::new())
     }
 
-    /// Creates a new `Context` with the default functions and constants using the specified `Config`.
+    /// Constructs a new `Context` using the given `Config` with unchecked functions.
+    ///
+    /// # Remarks
+    /// Functions of this context may panic when the value overflows.
     pub fn new_unchecked_with_config(config: Config) -> Self {
         use crate::ops::unchecked::*;
 
@@ -413,31 +466,58 @@ impl<'a, N: UncheckedNum> DefaultContext<'a, N> {
     }
 }
 
+/// Represents the configuration used by a `Context`.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Config {
+    /// Allow implicit multiplication.
     implicit_mul: bool,
+    /// Allow complex numbers.
     complex_number: bool,
+    /// Stores the grouping symbols as: `(`, `)`, `[`, `]`.
     grouping: HashMap<char, GroupingSymbol>,
 }
 
 impl Config {
+    /// Constructs a new `Config` using the default grouping symbol: `(`, `)`,
+    /// if is need an empty `Config` use `Default` instead.
     #[inline]
     pub fn new() -> Self {
         Config::default().with_group_symbol('(', ')')
     }
 
+    /// Enables implicit multiplication for this `Config`.
     #[inline]
     pub fn with_implicit_mul(mut self) -> Config {
         self.implicit_mul = true;
         self
     }
 
+    /// Enables complex number usage for this `Config`.
+    ///
+    /// # Remarks
+    /// [`Tokenizer`] checks for this value when parsing expressions.
+    ///
+    /// [`Tokenizer`]: ../tokenizer/struct.Tokenizer.html
     #[inline]
     pub fn with_complex_number(mut self) -> Config {
         self.complex_number = true;
         self
     }
 
+    /// Adds a pair of grouping symbols to this `Config`.
+    ///
+    /// # Panics
+    /// If the config already contains the given symbol.
+    ///
+    /// # Example
+    /// ```
+    /// use math_engine::context::Config;
+    ///
+    /// // `Default` allows to create an empty config
+    /// let mut config = Config::default()
+    ///     .with_group_symbol('(', ')')
+    ///     .with_group_symbol('[', ']');
+    /// ```
     pub fn with_group_symbol(mut self, open_group: char, close_group: char) -> Config {
         let grouping = &mut self.grouping;
         let grouping_symbol = GroupingSymbol::new(open_group, close_group);
@@ -450,16 +530,27 @@ impl Config {
         self
     }
 
+    /// Enables implicit multiplication in this `Config`.
     #[inline]
     pub fn implicit_mul(&self) -> bool {
         self.implicit_mul
     }
 
+    /// Enables complex numbers usage in this `Config`.
     #[inline]
     pub fn complex_number(&self) -> bool {
         self.complex_number
     }
 
+    /// Gets a grouping symbol pair from this `Config`.
+    ///
+    /// # Examples
+    /// ```
+    /// use math_engine::context::Config;
+    ///
+    /// let mut config = Config::new().with_group_symbol('[', ']');
+    /// assert_eq!(('(', ')'), config.get_group_symbol('(').unwrap().as_tuple());
+    /// ```
     #[inline]
     pub fn get_group_symbol(&self, symbol: char) -> Option<&GroupingSymbol> {
         self.grouping.get(&symbol)
@@ -477,13 +568,17 @@ impl Default for Config {
     }
 }
 
+/// Represents a grouping symbol.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct GroupingSymbol {
+    /// The open symbol of teh grouping.
     pub group_open: char,
+    /// The close symbol of teh grouping.
     pub group_close: char,
 }
 
 impl GroupingSymbol {
+    /// Constructs a new `GroupingSymbol`.
     #[inline]
     pub fn new(group_open: char, group_close: char) -> Self {
         assert_ne!(group_open, group_close);
@@ -491,6 +586,12 @@ impl GroupingSymbol {
             group_open,
             group_close,
         }
+    }
+
+    /// Gets the open and close `char` symbols of this grouping.
+    #[inline]
+    pub fn as_tuple(&self) -> (char, char){
+        (self.group_open, self.group_close)
     }
 }
 

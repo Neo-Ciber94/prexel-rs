@@ -12,7 +12,7 @@ pub enum Associativity { Left, Right }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum Notation { Prefix, Postfix }
 
-/// Represents a function that may take a variable number of arguments.
+/// A trait for a function that take a variable number of arguments.
 pub trait Function<N>{
     /// Gets the name of the function.
     fn name(&self) -> &str;
@@ -20,7 +20,7 @@ pub trait Function<N>{
     fn call(&self, args: &[N]) -> Result<N>;
 }
 
-/// Represents a function that takes 2 arguments.
+/// A trait for a function that takes 2 arguments.
 pub trait BinaryFunction<N>{
     /// Gets the name of the function.
     fn name(&self) -> &str;
@@ -32,7 +32,7 @@ pub trait BinaryFunction<N>{
     fn call(&self, left: N, right: N) -> Result<N>;
 }
 
-/// Represents a function that takes 1 argument.
+/// A trait a function that takes 1 argument.
 pub trait UnaryFunction<N>{
     /// Gets the name of the function.
     fn name(&self) -> &str;
@@ -42,7 +42,7 @@ pub trait UnaryFunction<N>{
     fn call(&self, value: N) -> Result<N>;
 }
 
-/// Represents a function that takes 2 arguments which call be used as an infix operator.
+/// A trait for a function that takes 2 arguments.
 pub trait InfixFunction<N> : BinaryFunction<N>{
 }
 
@@ -53,7 +53,7 @@ impl Precedence{
     pub const HIGH : Precedence = Precedence::from(3);
     pub const VERY_HIGH : Precedence = Precedence::from(4);
 
-    /// Creates a `Precedence` from the given value.
+    /// Constructs a `Precedence` from the given value.
     #[inline]
     pub const fn from(value: u32) -> Self {
         Precedence(value)
