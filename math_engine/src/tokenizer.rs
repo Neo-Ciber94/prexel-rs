@@ -1,15 +1,17 @@
-use crate::token::Token;
-use crate::context::{DefaultContext, Context};
-use crate::utils::string_tokenizer::{StringTokenizer, TokenizeKind};
-use crate::function::Notation;
-use crate::Result;
-use crate::error::{Error, ErrorKind};
-use crate::num::checked::CheckedNum;
 use std::marker::PhantomData;
 use std::str::FromStr;
 
+use crate::context::{Context, DefaultContext};
+use crate::error::{Error, ErrorKind};
+use crate::function::Notation;
+use crate::num::checked::CheckedNum;
+use crate::Result;
+use crate::token::Token;
+use crate::utils::option_ext::OptionStrExt;
+use crate::utils::string_tokenizer::{StringTokenizer, TokenizeKind};
+
 /// Provides a way to retrieve the tokens of an expression.
-pub trait Tokenize<N>{
+pub trait Tokenize<N> {
     /// Gets the tokens of the specified expression.
     fn tokenize(&self, expression: &str) -> Result<Vec<Token<N>>>;
 }
@@ -25,43 +27,60 @@ pub trait Tokenize<N>{
 /// let tokens = t.tokenize("2 + 3").unwrap();
 /// assert_eq!(&[Number(2_i32), BinaryOperator('+'), Number(3_i32)], tokens.as_slice());
 /// ```
-pub struct Tokenizer<'a, N, C = DefaultContext<'a, N>> where C: Context<'a, N> {
+pub struct Tokenizer<'a, N, C = DefaultContext<'a, N>>
+where
+    C: Context<'a, N>,
+{
     /// The context which contains the variables, constants and functions used
     /// for tokenize and expression.
     context: &'a C,
-    _marker: PhantomData<N>
+    _marker: PhantomData<N>,
 }
 
-impl <'a, N> Tokenizer<'a, N, DefaultContext<'a, N>> where N: CheckedNum + 'static{
+impl<'a, N> Tokenizer<'a, N, DefaultContext<'a, N>>
+where
+    N: CheckedNum + 'static,
+{
     /// Constructs a new `Tokenizer` using the default checked context.
     #[inline]
-    pub fn new() -> Self{
+    pub fn new() -> Self {
         Tokenizer {
             context: unsafe { DefaultContext::instance() },
-            _marker: PhantomData
+            _marker: PhantomData,
         }
     }
 }
 
-impl <'a, N, C> Tokenizer<'a, N, C> where C: Context<'a, N>, N: FromStr {
+impl<'a, N, C> Tokenizer<'a, N, C>
+where
+    C: Context<'a, N>,
+    N: FromStr,
+{
     /// Constructs a new `Tokenizer` with the given `Context`.
     #[inline]
-    pub fn with_context(context: &'a C) -> Self{
+    pub fn with_context(context: &'a C) -> Self {
         Tokenizer {
             context,
-            _marker: PhantomData
+            _marker: PhantomData,
         }
     }
 }
 
-impl <'a, N, C> Tokenize<N> for Tokenizer<'a, N, C> where C: Context<'a, N>, N : FromStr {
+impl<'a, N, C> Tokenize<N> for Tokenizer<'a, N, C>
+where
+    C: Context<'a, N>,
+    N: FromStr,
+{
     fn tokenize(&self, expression: &str) -> Result<Vec<Token<N>>> {
-        const STRING_TOKENIZER : StringTokenizer = StringTokenizer::new(TokenizeKind::RemoveWhiteSpaces);
-        const COMMA : &str = ",";
-        const WHITESPACE : &str = " ";
+        const STRING_TOKENIZER: StringTokenizer = StringTokenizer::new(TokenizeKind::RemoveWhiteSpaces);
+        const COMMA: &str = ",";
+        const WHITESPACE: &str = " ";
 
-        if expression.is_empty(){
-            return Err(Error::new(ErrorKind::InvalidExpression, "Expression is empty"));
+        if expression.is_empty() {
+            return Err(Error::new(
+                ErrorKind::InvalidExpression,
+                "Expression is empty",
+            ));
         }
 
         // `Vec` used for fast access indexing, Iterator.nth(..) could be O(N)
@@ -75,55 +94,71 @@ impl <'a, N, C> Tokenize<N> for Tokenizer<'a, N, C> where C: Context<'a, N>, N :
         // Context that contains the variables, constants and functions.
         let context = self.context;
 
-        while let Some(string) = iter.next(){
-            if is_number(string){
-                // `complex_number` is enable in the context, check for the next digit,
+        while let Some(string) = iter.next() {
+            if is_number(string) {
+                // `complex_number` is enable in the context, check the next value and
                 // if is the imaginary unit append it to the current number.
-                if context.config().complex_number(){
-                    match iter.peek(){
-                        Some(s) if *s == "i" => {
-                            let mut temp = (*s).clone();
-                            let im = iter.next().unwrap();
-                            temp.push_str(&im);
+                if context.config().complex_number()
+                    && iter.peek().map(|s|*s).contains_str("i")
+                {
+                    let mut temp = (*iter.peek().unwrap()).clone();
+                    let im = iter.next().unwrap();
+                    temp.push_str(im);
 
-                            let n = N::from_str(&temp).ok().expect(&format!("Failed on convert `{}` to a number", temp));
-                            tokens.push(Token::Number(n));
-                        },
-                        _ => {
-                            let n = N::from_str(string).ok().expect(&format!("Failed on convert `{}` to a number", string));
-                            tokens.push(Token::Number(n));
-                        }
-                    }
-                }
-                else{
-                    let n = N::from_str(string).ok().expect(&format!("Failed on convert `{}` to a number", string));
+                    let n = N::from_str(&temp).map_err(|_| {
+                        Error::new(
+                            ErrorKind::InvalidInput,
+                            format!("Failed to convert `{}` to type `{}`.",
+                                    temp,
+                                    std::any::type_name::<N>()
+                            ),
+                        )
+                    })?;
                     tokens.push(Token::Number(n));
                 }
-            }
-            else if context.is_variable(string){
+                else {
+                    let n = N::from_str(string).map_err(|_| {
+                        Error::new(
+                            ErrorKind::InvalidInput,
+                            format!("Failed to convert `{}` to type `{}`.",
+                                string,
+                                std::any::type_name::<N>()
+                            ),
+                        )
+                    })?;
+                    tokens.push(Token::Number(n));
+                }
+            } else if context.is_variable(string) {
                 tokens.push(Token::Variable(string.clone()));
-            }
-            else if context.is_constant(string){
+            } else if context.is_constant(string) {
                 tokens.push(Token::Constant(string.clone()));
-            }
-            else if context.is_function(string) {
+            } else if context.is_function(string) {
                 tokens.push(Token::Function(string.clone()));
-            }
-            else if context.is_binary_function(string) || context.is_unary_function(string) {
-                let prev = if pos == 0 { None } else { Some(raw_tokens[pos - 1].as_str()) };
-                let next = if pos == raw_tokens.len() - 1 { None } else { Some(raw_tokens[pos].as_str()) };
+            } else if context.is_binary_function(string) || context.is_unary_function(string) {
+                let prev = if pos == 0 {
+                    None
+                } else {
+                    Some(raw_tokens[pos - 1].as_str())
+                };
+                let next = if pos == raw_tokens.len() - 1 {
+                    None
+                } else {
+                    Some(raw_tokens[pos].as_str())
+                };
 
-                if is_unary(prev, string, next, context){
+                if is_unary(prev, string, next, context) {
                     let operator = string.chars().next().unwrap();
                     tokens.push(Token::UnaryOperator(operator));
-                }
-                else{
+                } else {
                     // If the operator is not unary, could be binary so need 2 operands.
-                    if prev.is_none() || next.is_none(){
+                    if prev.is_none() || next.is_none() {
                         return Err(Error::new(
                             ErrorKind::InvalidExpression,
-                            format!("Binary operations need 2 operands: {:?} {} {:?}", prev, string, next))
-                        );
+                            format!(
+                                "Binary operations need 2 operands: {:?} {} {:?}",
+                                prev, string, next
+                            ),
+                        ));
                     }
 
                     // If the current string value length is 1 we assume is a symbol
@@ -131,36 +166,29 @@ impl <'a, N, C> Tokenize<N> for Tokenizer<'a, N, C> where C: Context<'a, N>, N :
                     if string.len() == 1 {
                         let operator = string.chars().next().unwrap();
                         tokens.push(Token::BinaryOperator(operator));
-                    }
-                    else{
+                    } else {
                         tokens.push(Token::InfixFunction(string.clone()));
                     }
                 }
-            }
-            else if string == COMMA{
+            } else if string == COMMA {
                 tokens.push(Token::Comma);
-            }
-            else if string == WHITESPACE{
+            } else if string == WHITESPACE {
                 // Ignore whitespaces
-            }
-            else if string.len() == 1{
+            } else if string.len() == 1 {
                 // If string token length is 1 and its not considered a binary operator, unary operator
                 // or a function we check if is a grouping symbol in the context `Config`.
                 let c = string.chars().nth(0).unwrap();
-                if let Some(symbol) = context.config().get_group_symbol(c){
-                    if c == symbol.group_open{
+                if let Some(symbol) = context.config().get_group_symbol(c) {
+                    if c == symbol.group_open {
                         tokens.push(Token::GroupingOpen(c));
-                    }
-                    else{
+                    } else {
                         tokens.push(Token::GroupingClose(c));
                     }
-                }
-                else{
-                    // Hurts my soul repeat this code twice, a `goto` expression could be better
+                } else {
+                    // TODO: repeated code
                     tokens.push(Token::Unknown(string.clone()));
                 }
-            }
-            else{
+            } else {
                 tokens.push(Token::Unknown(string.clone()));
             }
 
@@ -171,27 +199,38 @@ impl <'a, N, C> Tokenize<N> for Tokenizer<'a, N, C> where C: Context<'a, N>, N :
     }
 }
 
-fn is_unary<'a, N>(prev: Option<&str>, cur: &str, next: Option<&str>, context: &impl Context<'a, N>) -> bool{
-    if let Some(op) = context.get_unary_function(cur){
+fn is_unary<'a, N>(
+    prev: Option<&str>,
+    cur: &str,
+    next: Option<&str>,
+    context: &impl Context<'a, N>,
+) -> bool {
+    if let Some(op) = context.get_unary_function(cur) {
         if op.notation() == Notation::Postfix {
-            prev.map_or(
-                false,
-                |s| s == ")" || is_number(s) || context.is_constant(s) || context.is_variable(s)
-            )
-        }
-        else{
-            if next.is_none(){ // 10-, (24)+
+            prev.map_or(false, |s| {
+                s == ")" || is_number(s) || context.is_constant(s) || context.is_variable(s)
+            })
+        } else {
+            if next.is_none() {
+                // 10-, (24)+
                 return false;
             }
 
-            if let Some(prev_str) = prev{
+            if let Some(prev_str) = prev {
                 // 10+, 2+(2), (4)-10
-                if prev_str == ")" || prev_str == "]" || is_number(prev_str) || context.is_variable(prev_str) || context.is_constant(prev_str){
+                if prev_str == ")"
+                    || prev_str == "]"
+                    || is_number(prev_str)
+                    || context.is_variable(prev_str)
+                    || context.is_constant(prev_str)
+                {
                     return false;
                 }
 
                 // 10! - 2
-                if context.is_unary_function(&prev_str[..1]) && !context.is_binary_function(&prev_str[..1]){
+                if context.is_unary_function(&prev_str[..1])
+                    && !context.is_binary_function(&prev_str[..1])
+                {
                     return false;
                 }
 
@@ -202,19 +241,18 @@ fn is_unary<'a, N>(prev: Option<&str>, cur: &str, next: Option<&str>, context: &
                 } else {
                     true
                 }
-            }
-            else{ // -10, +(25)
+            } else {
+                // -10, +(25)
                 true
             }
         }
-    }
-    else{
+    } else {
         false
     }
 }
 
 fn is_number(value: &str) -> bool {
-    if value == "0"{
+    if value == "0" {
         return true;
     }
 
@@ -226,7 +264,7 @@ fn is_number(value: &str) -> bool {
     let is_signed = value.starts_with('+') || value.starts_with('-');
     let mut iterator = value.chars().enumerate();
 
-    if is_signed && value.len() == 1{
+    if is_signed && value.len() == 1 {
         return false;
     }
 
@@ -234,40 +272,39 @@ fn is_number(value: &str) -> bool {
         iterator.next();
     }
 
-    for item in iterator{
+    for item in iterator {
         match item {
             (n, '0') => {
-                let starts_with_zero = if is_signed{
+                let starts_with_zero = if is_signed {
                     value[1..].starts_with('0')
-                }
-                else{
+                } else {
                     value.starts_with('0')
                 };
 
-                if !has_decimal_point && starts_with_zero && n > 0 { //+00, 00
-                    if let Some(c) = value.chars().nth(n - 1){
-                        if c == '0'{
+                if !has_decimal_point && starts_with_zero && n > 0 {
+                    //+00, 00
+                    if let Some(c) = value.chars().nth(n - 1) {
+                        if c == '0' {
                             return false;
                         }
                     }
                 }
-            },
-            (_, '1'..='9') => {},
+            }
+            (_, '1'..='9') => {}
             (n, '.') if n < value.len() - 1 => {
-                if  !is_signed || n > 1{
-                    if has_decimal_point{
+                if !is_signed || n > 1 {
+                    if has_decimal_point {
                         return false;
-                    }
-                    else{
+                    } else {
                         has_decimal_point = true;
                     }
-                }
-                else{
+                } else {
                     return false;
                 }
-
-            },
-            _ => { return false; }
+            }
+            _ => {
+                return false;
+            }
         }
     }
 
@@ -275,11 +312,11 @@ fn is_number(value: &str) -> bool {
 }
 
 #[cfg(test)]
-mod tests{
+mod tests {
     use super::*;
 
     #[test]
-    fn is_number_test(){
+    fn is_number_test() {
         assert!(is_number("0"));
         assert!(is_number("6"));
         assert!(is_number("700"));
@@ -309,8 +346,8 @@ mod tests{
     }
 
     #[test]
-    fn is_unary_test(){
-        let context: &DefaultContext<i64 >= &DefaultContext::new_checked();
+    fn is_unary_test() {
+        let context: &DefaultContext<i64> = &DefaultContext::new_checked();
         assert!(is_unary(None, "-", Some("5"), context));
         assert!(is_unary(None, "-", Some("Pi"), context));
         assert!(is_unary(Some("("), "-", Some("5"), context));
@@ -330,39 +367,56 @@ mod tests{
     }
 
     #[test]
-    fn tokenize_test(){
-        let context: &DefaultContext<i64 >= &DefaultContext::new_checked();
-        let tokenizer : Tokenizer<i64> = Tokenizer::with_context(context);
-        assert_eq!(&tokenizer.tokenize("2 + 3").unwrap(), &[
-            Token::Number(2),
-            Token::BinaryOperator('+'),
-            Token::Number(3)]);
+    fn tokenize_test() {
+        let context: &DefaultContext<i64> = &DefaultContext::new_checked();
+        let tokenizer: Tokenizer<i64> = Tokenizer::with_context(context);
+        assert_eq!(
+            &tokenizer.tokenize("2 + 3").unwrap(),
+            &[
+                Token::Number(2),
+                Token::BinaryOperator('+'),
+                Token::Number(3)
+            ]
+        );
 
-        assert_eq!(&tokenizer.tokenize("5 * Sin(pi)").unwrap(), &[
-            Token::Number(5),
-            Token::BinaryOperator('*'),
-            Token::Function(String::from("Sin")),
-            Token::GroupingOpen('('),
-            Token::Constant(String::from("pi")),
-            Token::GroupingClose(')')]);
+        assert_eq!(
+            &tokenizer.tokenize("5 * Sin(pi)").unwrap(),
+            &[
+                Token::Number(5),
+                Token::BinaryOperator('*'),
+                Token::Function(String::from("Sin")),
+                Token::GroupingOpen('('),
+                Token::Constant(String::from("pi")),
+                Token::GroupingClose(')')
+            ]
+        );
 
-        assert_eq!(&tokenizer.tokenize("10/2 mod 3^2").unwrap(), &[
-            Token::Number(10),
-            Token::BinaryOperator('/'),
-            Token::Number(2),
-            Token::InfixFunction(String::from("mod")),
-            Token::Number(3),
-            Token::BinaryOperator('^'),
-            Token::Number(2)]);
+        assert_eq!(
+            &tokenizer.tokenize("10/2 mod 3^2").unwrap(),
+            &[
+                Token::Number(10),
+                Token::BinaryOperator('/'),
+                Token::Number(2),
+                Token::InfixFunction(String::from("mod")),
+                Token::Number(3),
+                Token::BinaryOperator('^'),
+                Token::Number(2)
+            ]
+        );
 
-        assert_eq!(&tokenizer.tokenize("10! + 2").unwrap(), &[
-            Token::Number(10),
-            Token::UnaryOperator('!'),
-            Token::BinaryOperator('+'),
-            Token::Number(2)]);
+        assert_eq!(
+            &tokenizer.tokenize("10! + 2").unwrap(),
+            &[
+                Token::Number(10),
+                Token::UnaryOperator('!'),
+                Token::BinaryOperator('+'),
+                Token::Number(2)
+            ]
+        );
 
-        assert_eq!(&tokenizer.tokenize("600!").unwrap(), &[
-            Token::Number(600),
-            Token::UnaryOperator('!')]);
+        assert_eq!(
+            &tokenizer.tokenize("600!").unwrap(),
+            &[Token::Number(600), Token::UnaryOperator('!')]
+        );
     }
 }

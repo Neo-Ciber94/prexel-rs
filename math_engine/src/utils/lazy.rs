@@ -32,6 +32,7 @@ pub struct Lazy<T, F = fn() -> T> {
 }
 
 unsafe impl<T, F> Sync for Lazy<T, F> {}
+
 unsafe impl<T, F> Send for Lazy<T, F> {}
 
 impl<T, F> Lazy<T, F> {
