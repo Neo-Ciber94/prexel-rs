@@ -1,7 +1,10 @@
-use crate::function::{BinaryFunction, UnaryFunction, Function, Associativity, Precedence, Notation};
+use std::ops::{Add, Div, Mul, Neg, Rem, Sub};
+
+use num_traits::{FromPrimitive, Zero};
+
+use crate::Result;
 use crate::error::*;
-use num_traits::{Zero, FromPrimitive};
-use std::ops::{Add, Sub, Mul, Div, Rem, Neg};
+use crate::function::{Associativity, BinaryFunction, Function, Notation, Precedence, UnaryFunction};
 
 pub struct AddOperator;
 impl <N: Add<N, Output = N>> BinaryFunction<N> for AddOperator{

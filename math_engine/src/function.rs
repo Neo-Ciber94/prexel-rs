@@ -1,4 +1,4 @@
-use crate::error::{Result};
+use crate::Result;
 
 /// A trait for a function that take a variable number of arguments.
 pub trait Function<N>{

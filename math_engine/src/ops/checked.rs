@@ -1,5 +1,6 @@
 use num_traits::{FromPrimitive, Zero};
 
+use crate::Result;
 use crate::error::*;
 use crate::num::checked::{CheckedAdd, CheckedDiv, CheckedMul, CheckedNeg, CheckedRem, CheckedSub};
 use crate::function::{BinaryFunction, UnaryFunction, Function, Precedence, Associativity, Notation};

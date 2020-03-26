@@ -5,6 +5,7 @@ pub mod ops {
     use num_traits::Zero;
 
     use crate::error::*;
+    use crate::Result;
     use crate::function::{Associativity, BinaryFunction, Function, Precedence};
 
     pub struct PowOperator;

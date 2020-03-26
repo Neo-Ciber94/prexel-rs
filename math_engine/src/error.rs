@@ -1,9 +1,6 @@
 use std::result;
 use std::fmt::{Display, Formatter, Debug};
 
-/// A convenient error type.
-pub type Result<T> = result::Result<T, Error>;
-
 /// Represents an error.
 #[derive(Debug)]
 pub struct Error{
@@ -56,16 +53,16 @@ pub enum ErrorKind{
 impl ErrorKind{
     pub fn as_str(&self) -> &'static str{
         match *self{
-            ErrorKind::Overflow => "Value has overflow",
-            ErrorKind::Zero => "Value is zero",
-            ErrorKind::NAN => "Value is 'Not a Number'",
-            ErrorKind::InvalidInput => "Invalid input",
-            ErrorKind::InvalidArgumentCount => "Invalid number of arguments",
-            ErrorKind::DivisionByZero => "Cannot divide by zero",
-            ErrorKind::NegativeValue => "Value is negative",
-            ErrorKind::PositiveValue => "Value is positive",
-            ErrorKind::InvalidExpression => "Invalid expression",
-            ErrorKind::Other => "Other error",
+            ErrorKind::Overflow => "value has overflow",
+            ErrorKind::Zero => "value is zero",
+            ErrorKind::NAN => "value is 'not a number'",
+            ErrorKind::InvalidInput => "invalid input",
+            ErrorKind::InvalidArgumentCount => "invalid number of arguments",
+            ErrorKind::DivisionByZero => "cannot divide by zero",
+            ErrorKind::NegativeValue => "value is negative",
+            ErrorKind::PositiveValue => "value is positive",
+            ErrorKind::InvalidExpression => "invalid expression",
+            ErrorKind::Other => "other error",
         }
     }
 }

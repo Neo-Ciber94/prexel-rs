@@ -5,6 +5,7 @@ pub mod math {
     use num_traits::{FromPrimitive, Inv, ToPrimitive, Zero};
     use rand::random;
 
+    use crate::Result;
     use crate::error::*;
     use crate::function::{
         Associativity, BinaryFunction, Function, Notation, Precedence, UnaryFunction,

@@ -3,7 +3,8 @@ use std::marker::PhantomData;
 use std::str::FromStr;
 
 use crate::context::{Context, DefaultContext};
-use crate::error::{Error, ErrorKind, Result};
+use crate::Result;
+use crate::error::{Error, ErrorKind};
 use crate::num::checked::CheckedNum;
 use crate::token::Token;
 use crate::token::Token::*;
@@ -295,7 +296,8 @@ mod shunting_yard {
     use std::fmt::Debug;
 
     use crate::context::Context;
-    use crate::error::{Error, ErrorKind, Result};
+    use crate::Result;
+    use crate::error::{Error, ErrorKind};
     use crate::function::{Associativity, Notation};
     use crate::token::Token;
     use crate::token::Token::BinaryOperator;

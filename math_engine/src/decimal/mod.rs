@@ -69,6 +69,7 @@ pub mod ops {
     use crate::decimal::consts;
     use crate::decimal::decimal_ext::DecimalExt;
     use crate::error::*;
+    use crate::Result;
     use crate::function::{
         Associativity, BinaryFunction, Function, Notation, Precedence, UnaryFunction,
     };
