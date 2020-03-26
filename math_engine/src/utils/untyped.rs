@@ -29,6 +29,9 @@ impl <'a> Untyped<'a>{
     }
 
     /// Constructs a pointer using the given.
+    ///
+    /// # Safety
+    /// No null checking.
     #[inline]
     pub const unsafe fn new_unchecked<T>(ptr: *mut T) -> Untyped<'a>{
         Untyped {
@@ -45,7 +48,7 @@ impl <'a> Untyped<'a>{
 
     /// Cast this pointer to the given type and get a reference to it.
     ///
-    /// # Remarks
+    /// # Safety
     /// If the target type size is greater than the pointed value the result is undefined behaviour.
     ///
     /// # Example
@@ -63,7 +66,7 @@ impl <'a> Untyped<'a>{
 
     /// Cast this pointer to the given type and get a mutable reference to it.
     ///
-    /// # Remarks
+    /// # Safety
     /// If the target type size is greater than the pointed value the result is undefined behaviour.
     ///
     /// # Example

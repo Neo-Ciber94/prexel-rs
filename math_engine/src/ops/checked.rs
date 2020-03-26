@@ -137,14 +137,14 @@ impl<N: Zero + PartialOrd + CheckedNeg + Clone> Function<N> for AbsFunction {
     fn call(&self, args: &[N]) -> Result<N> {
         if args.len() != 1 {
             Err(Error::from(ErrorKind::InvalidArgumentCount))
-        } else {
-            if args[0] >= N::zero() {
-                Ok(args[0].clone())
-            } else {
-                args[0]
-                    .checked_neg()
-                    .ok_or(Error::from(ErrorKind::Overflow))
-            }
+        }
+        else if args[0] >= N::zero() {
+            Ok(args[0].clone())
+        }
+        else {
+            args[0]
+                .checked_neg()
+                .ok_or(Error::from(ErrorKind::Overflow))
         }
     }
 }

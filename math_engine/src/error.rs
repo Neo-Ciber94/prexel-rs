@@ -1,4 +1,3 @@
-use std::result;
 use std::fmt::{Display, Formatter, Debug};
 
 /// Represents an error.

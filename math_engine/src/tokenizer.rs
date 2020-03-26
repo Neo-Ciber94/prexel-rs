@@ -21,9 +21,9 @@ pub trait Tokenize<N>{
 /// use math_engine::tokenizer::{Tokenizer, Tokenize};
 /// use math_engine::token::Token::*;
 ///
-/// let t = Tokenizer::new();
-/// let tokens = t.tokenize("2 + 3");
-/// assert_eq!(&[Number(2_i32), BinaryOperator('+'), Number(2_i32)], &tokens);
+/// let t : Tokenizer<i32> = Tokenizer::new();
+/// let tokens = t.tokenize("2 + 3").unwrap();
+/// assert_eq!(&[Number(2_i32), BinaryOperator('+'), Number(3_i32)], tokens.as_slice());
 /// ```
 pub struct Tokenizer<'a, N, C = DefaultContext<'a, N>> where C: Context<'a, N> {
     /// The context which contains the variables, constants and functions used
@@ -114,7 +114,7 @@ impl <'a, N, C> Tokenize<N> for Tokenizer<'a, N, C> where C: Context<'a, N>, N :
                 let next = if pos == raw_tokens.len() - 1 { None } else { Some(raw_tokens[pos].as_str()) };
 
                 if is_unary(prev, string, next, context){
-                    let operator = string.chars().nth(0).unwrap();
+                    let operator = string.chars().next().unwrap();
                     tokens.push(Token::UnaryOperator(operator));
                 }
                 else{
@@ -129,7 +129,7 @@ impl <'a, N, C> Tokenize<N> for Tokenizer<'a, N, C> where C: Context<'a, N>, N :
                     // If the current string value length is 1 we assume is a symbol
                     // for a binary operator, otherwise is an infix function.
                     if string.len() == 1 {
-                        let operator = string.chars().nth(0).unwrap();
+                        let operator = string.chars().next().unwrap();
                         tokens.push(Token::BinaryOperator(operator));
                     }
                     else{
@@ -184,12 +184,7 @@ fn is_unary<'a, N>(prev: Option<&str>, cur: &str, next: Option<&str>, context: &
                 return false;
             }
 
-            if prev.is_none(){ // -10, +(25)
-                true
-            }
-            else{
-                let prev_str = prev.unwrap();
-
+            if let Some(prev_str) = prev{
                 // 10+, 2+(2), (4)-10
                 if prev_str == ")" || prev_str == "]" || is_number(prev_str) || context.is_variable(prev_str) || context.is_constant(prev_str){
                     return false;
@@ -201,12 +196,15 @@ fn is_unary<'a, N>(prev: Option<&str>, cur: &str, next: Option<&str>, context: &
                 }
 
                 // +-, (-, !+
-                return if prev_str.len() == 1 {
+                if prev_str.len() == 1 {
                     let c = prev_str.chars().last().unwrap();
                     c.is_ascii_punctuation()
                 } else {
                     true
                 }
+            }
+            else{ // -10, +(25)
+                true
             }
         }
     }
@@ -220,12 +218,12 @@ fn is_number(value: &str) -> bool {
         return true;
     }
 
-    if value.len() == 0{
+    if value.is_empty() {
         return false;
     }
 
     let mut has_decimal_point = false;
-    let is_signed = value.starts_with("+") || value.starts_with("-");
+    let is_signed = value.starts_with('+') || value.starts_with('-');
     let mut iterator = value.chars().enumerate();
 
     if is_signed && value.len() == 1{
@@ -256,7 +254,7 @@ fn is_number(value: &str) -> bool {
             },
             (_, '1'..='9') => {},
             (n, '.') if n < value.len() - 1 => {
-                if (is_signed && n > 1) || !is_signed{
+                if  !is_signed || n > 1{
                     if has_decimal_point{
                         return false;
                     }

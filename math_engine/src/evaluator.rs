@@ -337,7 +337,7 @@ mod shunting_yard {
                     push_binary_function(context, &mut output, &mut operators, token, name)?
                 }
                 Token::UnaryOperator(c) => {
-                    push_unary_function(context, &mut output, &mut operators, token, c)?
+                    push_unary_function(context, &mut output, &mut operators, token, *c)?
                 }
                 Token::Function(_) => {
                     arg_count.push(0);
@@ -405,21 +405,17 @@ mod shunting_yard {
         output: &mut Vec<Token<N>>,
         operators: &mut Vec<Token<N>>,
         token: &Token<N>,
-    ) -> () {
+    ) {
         output.push(token.clone());
-        match operators.last() {
-            Some(t) => match t {
-                Token::UnaryOperator(c) => {
-                    let mut buf = [0u8; 4];
-                    let name = c.encode_utf8(&mut buf);
+        if let Some(t) = operators.last() {
+            if let Token::UnaryOperator(c) = t {
+                let mut buf = [0u8; 4];
+                let name = c.encode_utf8(&mut buf);
 
-                    if let Some(_) = context.get_unary_function(name) {
-                        output.push(operators.pop().unwrap());
-                    }
+                if context.get_unary_function(name).is_some() {
+                    output.push(operators.pop().unwrap());
                 }
-                _ => {}
-            },
-            _ => {}
+            }
         }
     }
 
@@ -428,7 +424,7 @@ mod shunting_yard {
         output: &mut Vec<Token<N>>,
         operators: &mut Vec<Token<N>>,
         token: &Token<N>,
-        c: &char,
+        c: char,
     ) -> Result<()> {
         let mut buf = [0u8; 4];
         let name = c.encode_utf8(&mut buf);
@@ -441,7 +437,7 @@ mod shunting_yard {
                 }
                 Notation::Postfix => {
                     // 5!
-                    if output.len() > 0 {
+                    if !output.is_empty() {
                         output.push(token.clone())
                     } else {
                         return Err(Error::new(
@@ -475,11 +471,8 @@ mod shunting_yard {
             ))?;
 
         while let Some(t) = operators.last() {
-            match t {
-                Token::GroupingOpen(_) => {
-                    break;
-                }
-                _ => {}
+            if let Token::GroupingOpen(_) = t {
+                break;
             }
 
             if t.is_function() {
@@ -529,19 +522,17 @@ mod shunting_yard {
         let mut is_group_open = false;
         while let Some(t) = operators.pop() {
             match t {
+                // TODO: Is this nested mess readable? FIXME
                 Token::GroupingOpen(c) => {
                     if let Some(grouping) = context.config().get_group_symbol(c) {
                         if grouping.group_close == group_close {
                             is_group_open = true;
-                            if arg_count.len() > 0 {
+                            if !arg_count.is_empty() {
                                 if let Some(top) = operators.last() {
-                                    match top {
-                                        Token::Function(_) => {
-                                            let count = arg_count.pop().unwrap() + 1;
-                                            output.push(Token::ArgCount(count));
-                                            output.push(operators.pop().unwrap());
-                                        }
-                                        _ => {}
+                                    if let Token::Function(_) = top {
+                                        let count = arg_count.pop().unwrap() + 1;
+                                        output.push(Token::ArgCount(count));
+                                        output.push(operators.pop().unwrap());
                                     }
                                 }
                             }

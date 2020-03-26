@@ -134,7 +134,7 @@ impl DecimalExt for Decimal {
             }
 
             base = base.checked_mul(base)?;
-            exponent = exponent >> 1;
+            exponent >>= 1;
         }
 
         Some(result)
@@ -208,7 +208,7 @@ impl DecimalExt for Decimal {
         // See: https://en.wikipedia.org/wiki/Natural_logarithm#Numerical_value
         if self >= Decimal::one() {
             let mut n = 0u32;
-            let mut a = self.clone();
+            let mut a = self;
 
             while a > Decimal::one() {
                 a = a.checked_div(consts::TEN)?;
@@ -295,7 +295,7 @@ impl DecimalExt for Decimal {
                 .map(|d| d.round_dp(MAX_DECIMAL_PLACES));
         }
 
-        let mut result = self.clone();
+        let mut result = self;
         let mut n = self - Decimal::one();
 
         while n > Decimal::zero() {
@@ -480,18 +480,15 @@ impl DecimalExt for Decimal {
 
         // Θ = arctan(y / x)
         let atan2 = Decimal::atan(self / x);
-        let result = if x > consts::ZERO{
+
+        if x > consts::ZERO{
             atan2
         }
-        else{
-            if self >= consts::ZERO {
-                atan2 + consts::PI
-            } else {
-                atan2 - consts::PI
-            }
-        };
-
-        result
+        else if self >= consts::ZERO {
+            atan2 + consts::PI
+        } else {
+            atan2 - consts::PI
+        }
     }
 
     fn sinh(self) -> Decimal {
@@ -575,8 +572,8 @@ fn gamma(mut x: Decimal) -> Option<Decimal> {
         x -= Decimal::one();
 
         let mut factor: Decimal = P[0];
-        for n in 1..P.len() {
-            factor += P[n] / (x + Decimal::from_usize(n).unwrap());
+        for (n, coefficient) in P.iter().enumerate().skip(1){
+            factor += coefficient / (x + Decimal::from_usize(n).unwrap());
         }
 
         let t: Decimal = x + G + consts::HALF;

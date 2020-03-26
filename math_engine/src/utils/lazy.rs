@@ -62,10 +62,7 @@ impl<T, F> Lazy<T, F> {
     #[inline]
     pub fn is_initialized(&self) -> bool {
         unsafe {
-            match &*self.value.get() {
-                None => false,
-                Some(_) => true,
-            }
+            (*self.value.get()).is_some()
         }
     }
 

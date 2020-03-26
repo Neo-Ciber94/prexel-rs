@@ -35,12 +35,12 @@ impl StringTokenizer{
         while let Some((_, next)) = iterator.next(){
             match next{
                 'a'..='z' | 'A'..='Z' => {
-                    let mut temp = String::from(next.to_string());
+                    let mut temp = next.to_string();
                     Self::next_alphanumeric(&mut temp, &mut iterator);
                     tokens.push(temp);
                 },
                 '0'..='9' => {
-                    let mut temp = String::from(next.to_string());
+                    let mut temp = next.to_string();
                     Self::next_numeric(&mut temp, &mut iterator);
                     tokens.push(temp);
                 },
@@ -50,7 +50,7 @@ impl StringTokenizer{
                         TokenizeKind::RemoveWhiteSpaces => {},
                     }
                 },
-                c => tokens.push(String::from(c.to_string()))
+                c => tokens.push(c.to_string())
             }
         }
 

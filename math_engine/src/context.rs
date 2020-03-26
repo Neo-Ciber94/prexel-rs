@@ -47,46 +47,31 @@ pub trait Context<'a, N> {
     /// Checks if exists a variable with the given name.
     #[inline]
     fn is_variable(&self, name: &str) -> bool {
-        match self.get_variable(name) {
-            Some(_) => true,
-            None => false,
-        }
+        self.get_variable(name).is_some()
     }
 
     /// Checks if exists a constant with the given name.
     #[inline]
     fn is_constant(&self, name: &str) -> bool {
-        match self.get_constant(name) {
-            Some(_) => true,
-            None => false,
-        }
+        self.get_constant(name).is_some()
     }
 
     /// Checks if exists a function with the given name.
     #[inline]
     fn is_function(&self, name: &str) -> bool {
-        match self.get_function(name) {
-            Some(_) => true,
-            None => false,
-        }
+        self.get_function(name).is_some()
     }
 
     /// Checks if exists a binary function with the given name.
     #[inline]
     fn is_binary_function(&self, name: &str) -> bool {
-        match self.get_binary_function(name) {
-            Some(_) => true,
-            None => false,
-        }
+        self.get_binary_function(name).is_some()
     }
 
     /// Checks if exists a unary function with the given name.
     #[inline]
     fn is_unary_function(&self, name: &str) -> bool {
-        match self.get_unary_function(name) {
-            Some(_) => true,
-            None => false,
-        }
+        self.get_unary_function(name).is_some()
     }
 }
 
@@ -175,19 +160,20 @@ impl<'a, N> DefaultContext<'a, N> {
     /// use math_engine::context::{DefaultContext, Context};
     /// use math_engine::ops::math::MaxFunction;
     ///
-    /// let mut context = DefaultContext::empty();
+    /// let mut context : DefaultContext<f64> = DefaultContext::empty();
     /// context.add_function(MaxFunction);
     /// context.add_function_as(MaxFunction, "Maximum");
     /// ```
     #[inline]
     pub fn add_function_as<F: Function<N> + 'a>(&mut self, func: F, name: &str) {
         let function_name = IgnoreCaseString::from(name);
-        match self.functions.contains_key(&function_name) {
-            true => panic!("A function named '{}' already exists", function_name),
-            false => self.functions.insert(function_name, Rc::new(func)),
-        };
+        if self.functions.contains_key(&function_name){
+            panic!("A function named '{}' already exists", function_name);
+        }
+        else {
+            self.functions.insert(function_name, Rc::new(func));
+        }
     }
-
 
     /// Adds the specified binary function to the context using the given name.
     ///
@@ -199,17 +185,19 @@ impl<'a, N> DefaultContext<'a, N> {
     /// use math_engine::context::{DefaultContext, Context};
     /// use math_engine::ops::unchecked::AddOperator;
     ///
-    /// let mut context = DefaultContext::empty();
+    /// let mut context : DefaultContext<f64> = DefaultContext::empty();
     /// context.add_binary_function(AddOperator);
     /// context.add_binary_function_as(AddOperator, "Plus");
     /// ```
     #[inline]
     pub fn add_binary_function_as<F: BinaryFunction<N> + 'a>(&mut self, func: F, name: &str) {
         let function_name = IgnoreCaseString::from(name);
-        match self.binary_functions.contains_key(&function_name) {
-            true => panic!("A binary function named '{}' already exists", function_name),
-            false => self.binary_functions.insert(function_name, Rc::new(func)),
-        };
+        if self.binary_functions.contains_key(&function_name){
+            panic!("A binary function named '{}' already exists", function_name);
+        }
+        else{
+            self.binary_functions.insert(function_name, Rc::new(func));
+        }
     }
 
     /// Adds the specified unary function to the context using the given name.
@@ -219,10 +207,12 @@ impl<'a, N> DefaultContext<'a, N> {
     #[inline]
     pub fn add_unary_function_as<F: UnaryFunction<N> + 'a>(&mut self, func: F, name: &str) {
         let function_name = IgnoreCaseString::from(name);
-        match self.unary_functions.contains_key(&function_name) {
-            true => panic!("An unary function named '{}' already exists", function_name),
-            false => self.unary_functions.insert(function_name, Rc::new(func)),
-        };
+        if self.unary_functions.contains_key(&function_name){
+            panic!("An unary function named '{}' already exists", function_name);
+        }
+        else{
+            self.unary_functions.insert(function_name, Rc::new(func));
+        }
     }
 }
 
@@ -270,12 +260,11 @@ impl<'a, N> Context<'a, N> for DefaultContext<'a, N> {
     fn set_variable(&mut self, name: &str, value: N) -> Option<N> {
         validator::check_variable_name(name);
         let string = IgnoreCaseString::from(name);
-        match self.constants.contains_key(&string) {
-            true => panic!(
-                "Invalid variable name, a constant named '{}' already exists",
-                string.clone()
-            ),
-            false => self.variables.insert(string, value),
+        if self.constants.contains_key(&string){
+            panic!("Invalid variable name, a constant named '{}' already exists", string)
+        }
+        else{
+            self.variables.insert(string, value)
         }
     }
 
@@ -307,12 +296,15 @@ impl<'a, N> Context<'a, N> for DefaultContext<'a, N> {
 
 impl<'a, N: CheckedNum> DefaultContext<'a, N> {
     /// Gets an instance of a `DefaultContext`.
+    ///
+    /// # Safety
+    /// Stores a cache of the `DefaultContext` used as raw pointers.
     pub unsafe fn instance() -> &'static DefaultContext<'a, N> {
         use crate::utils::lazy::Lazy;
         use crate::utils::untyped::Untyped;
         use std::any::TypeId;;
 
-        static mut CACHE: Lazy<HashMap<TypeId, Untyped>> = Lazy::new(|| HashMap::new());
+        static mut CACHE: Lazy<HashMap<TypeId, Untyped>> = Lazy::new(HashMap::new);
         let type_id = TypeId::of::<N>();
 
         match (*CACHE).get(&type_id) {
@@ -521,12 +513,15 @@ impl Config {
     pub fn with_group_symbol(mut self, open_group: char, close_group: char) -> Config {
         let grouping = &mut self.grouping;
         let grouping_symbol = GroupingSymbol::new(open_group, close_group);
-        grouping
-            .insert(open_group, grouping_symbol)
-            .map(|_| panic!("Duplicated symbol: `{}`", open_group));
-        grouping
-            .insert(close_group, grouping_symbol)
-            .map(|_| panic!("Duplicated symbol: `{}`", close_group));
+
+        if grouping.insert(open_group, grouping_symbol).is_some() {
+            panic!("Duplicated symbol: `{}`", open_group);
+        }
+
+        if grouping.insert(close_group, grouping_symbol).is_some() {
+            panic!("Duplicated symbol: `{}`", close_group);
+        }
+
         self
     }
 
@@ -624,7 +619,7 @@ mod validator {
                 );
 
                 debug_assert!(
-                    name.chars().nth(0).unwrap().is_alphabetic(),
+                    name.chars().next().unwrap().is_alphabetic(),
                     "function names must start with a letter: `{}`",
                     name
                 );
@@ -636,7 +631,7 @@ mod validator {
                     name
                 );
                 debug_assert!(
-                    name.chars().nth(0).unwrap().is_ascii_punctuation(),
+                    name.chars().next().unwrap().is_ascii_punctuation(),
                     "operators names must be a symbol: `{}`",
                     name
                 )
@@ -655,7 +650,7 @@ mod validator {
             name
         );
         debug_assert!(
-            name.chars().nth(0).unwrap().is_alphabetic(),
+            name.chars().next().unwrap().is_alphabetic(),
             "variables and constants names must start with a letter: `{}`",
             name
         );

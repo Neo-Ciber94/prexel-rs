@@ -1,5 +1,6 @@
 use math_engine::function::{BinaryFunction, Precedence, Associativity};
 use math_engine::error::*;
+use math_engine::Result;
 use math_engine::context::{DefaultContext, Context};
 use math_engine::evaluator::Evaluator;
 

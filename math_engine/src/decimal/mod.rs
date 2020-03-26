@@ -267,9 +267,9 @@ pub mod ops {
 
             for cur in args {
                 match result {
-                    None => result = Some(cur.clone()),
+                    None => result = Some(*cur),
                     Some(ref n) => {
-                        result = Some(n.clone() + cur.clone());
+                        result = Some(*n + *cur);
                     }
                 }
             }
@@ -289,7 +289,7 @@ pub mod ops {
 
             for cur in args {
                 match result {
-                    None => result = Some(cur.clone()),
+                    None => result = Some(*cur),
                     Some(ref n) => {
                         result = Some(n.clone() * cur.clone());
                     }
@@ -311,9 +311,9 @@ pub mod ops {
 
             for cur in args {
                 match sum {
-                    None => sum = Some(cur.clone()),
+                    None => sum = Some(*cur),
                     Some(ref n) => {
-                        sum = Some(n.clone() + cur.clone());
+                        sum = Some(*n + *cur);
                     }
                 }
             }
