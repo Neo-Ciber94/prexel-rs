@@ -42,10 +42,6 @@ pub trait UnaryFunction<N>{
     fn call(&self, value: N) -> Result<N>;
 }
 
-/// A trait for a function that takes 2 arguments.
-pub trait InfixFunction<N> : BinaryFunction<N>{
-}
-
 impl Precedence{
     pub const VERY_LOW : Precedence = Precedence::from(0);
     pub const LOW : Precedence = Precedence::from(1);

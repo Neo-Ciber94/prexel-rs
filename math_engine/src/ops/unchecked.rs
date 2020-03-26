@@ -1,4 +1,4 @@
-use crate::function::{BinaryFunction, Associativity, Precedence, InfixFunction, UnaryFunction, Notation, Function};
+use crate::function::{BinaryFunction, UnaryFunction, Function, Associativity, Precedence, Notation};
 use crate::error::*;
 use num_traits::{Zero, FromPrimitive};
 use std::ops::{Add, Sub, Mul, Div, Rem, Neg};
@@ -60,7 +60,6 @@ impl <N: Div<N, Output = N> + Zero> BinaryFunction<N> for DivOperator{
 }
 
 pub struct ModOperator;
-impl <N: Rem<N, Output = N> + Zero> InfixFunction<N> for ModOperator{}
 impl <N: Rem<N, Output = N> + Zero> BinaryFunction<N> for ModOperator{
     fn name(&self) -> &'static str { "mod" }
 

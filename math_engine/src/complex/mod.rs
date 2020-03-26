@@ -182,8 +182,6 @@ pub mod context{
     use num_complex::Complex64;
     use num_traits::FromPrimitive;
 
-    use ops::*;
-
     use crate::context::{Config, Context, DefaultContext};
     use crate::ops::unchecked::*;
     use crate::complex::ops::PowOperator;

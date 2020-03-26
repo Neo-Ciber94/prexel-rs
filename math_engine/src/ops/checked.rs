@@ -1,10 +1,8 @@
-use num_traits::{Zero, FromPrimitive};
+use num_traits::{FromPrimitive, Zero};
 
 use crate::error::*;
-use crate::function::Function;
-use crate::function::{Associativity, BinaryFunction, InfixFunction, Precedence};
-use crate::function::{Notation, UnaryFunction};
-use crate::num::checked::{CheckedAdd, CheckedSub, CheckedMul, CheckedDiv, CheckedRem, CheckedNeg};
+use crate::num::checked::{CheckedAdd, CheckedDiv, CheckedMul, CheckedNeg, CheckedRem, CheckedSub};
+use crate::function::{BinaryFunction, UnaryFunction, Function, Precedence, Associativity, Notation};
 
 pub struct AddOperator;
 impl<N: CheckedAdd> BinaryFunction<N> for AddOperator {
@@ -91,7 +89,6 @@ impl<N: CheckedDiv + Zero> BinaryFunction<N> for DivOperator {
 }
 
 pub struct ModOperator;
-impl<N: CheckedRem + Zero> InfixFunction<N> for ModOperator {}
 impl<N: CheckedRem + Zero> BinaryFunction<N> for ModOperator {
     fn name(&self) -> &str {
         "mod"

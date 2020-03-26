@@ -70,7 +70,7 @@ pub mod ops {
     use crate::decimal::decimal_ext::DecimalExt;
     use crate::error::*;
     use crate::function::{
-        Associativity, BinaryFunction, Function, InfixFunction, Notation, Precedence, UnaryFunction,
+        Associativity, BinaryFunction, Function, Notation, Precedence, UnaryFunction,
     };
 
     pub struct AddOperator;
@@ -170,7 +170,6 @@ pub mod ops {
     }
 
     pub struct ModOperator;
-    impl InfixFunction<Decimal> for ModOperator {}
     impl BinaryFunction<Decimal> for ModOperator {
         #[inline]
         fn name(&self) -> &str {
