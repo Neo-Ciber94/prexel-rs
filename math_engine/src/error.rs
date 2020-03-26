@@ -13,14 +13,18 @@ pub struct Error{
 
 /// The detail information of an error.
 enum Detail{
+    /// An error that only contains the `ErrorKind`.
     Simple(ErrorKind),
+    /// An error that contains the `ErrorKind` and extra information.
     Custom(Box<Custom>)
 }
 
 /// Represents a custom error.
 #[derive(Debug)]
 pub struct Custom{
+    /// Type of error.
     kind: ErrorKind,
+    /// Extra information about the error.
     error: Box<dyn std::error::Error + Send + Sync>
 }
 
@@ -122,6 +126,7 @@ impl Error{
     /// let error = Error::from(ErrorKind::InvalidInput);
     /// assert_eq!(ErrorKind::InvalidInput, error.kind());
     /// ```
+    #[inline]
     pub fn kind(&self) -> ErrorKind{
         match self.detail{
             Detail::Simple(ref kind) => *kind,
@@ -152,6 +157,7 @@ impl Error{
     ///     print_error(Error::new(ErrorKind::Other, "Custom error"))
     /// }
     /// ```
+    #[inline]
     pub fn into_inner(self) -> Option<Box<dyn std::error::Error + Send + Sync>>{
         match self.detail{
             Detail::Simple(_) => None,
@@ -167,6 +173,7 @@ impl Error{
     /// let error = Error::new(ErrorKind::Overflow, "Value has overflow");
     /// let inner_error = error.get_ref().unwrap();
     /// ```
+    #[inline]
     pub fn get_ref(&self) -> Option<&Box<dyn std::error::Error + Send + Sync>>{
         match self.detail{
             Detail::Simple(_) => None,
@@ -182,6 +189,7 @@ impl Error{
     /// let mut error = Error::new(ErrorKind::Overflow, "Value has overflow");
     /// let inner_error = error.get_mut().unwrap();
     /// ```
+    #[inline]
     pub fn get_mut(&mut self) -> Option<&mut Box<dyn std::error::Error + Send + Sync + 'static>>{
         match self.detail{
             Detail::Simple(_) => None,

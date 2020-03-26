@@ -106,7 +106,9 @@ where
 {
     // Converts the array of tokens to RPN.
     let rpn = shunting_yard::infix_to_rpn(tokens, context)?;
+    // Stores the resulting values
     let mut values: Vec<N> = Vec::new();
+    // Stores the argument count of the current function, if any.
     let mut arg_count: Option<u32> = None;
 
     for token in &rpn {
@@ -151,8 +153,8 @@ where
                         ))?;
 
                 match values.pop() {
-                    Some(value) => {
-                        let result = func.call(value)?;
+                    Some(n) => {
+                        let result = func.call(n)?;
                         values.push(result);
                     }
                     _ => {
@@ -208,12 +210,14 @@ where
                 }
             }
             Function(name) => {
+                // A reference to the function
                 let func = context.get_function(&name)
                     .ok_or(Error::new(
                     ErrorKind::InvalidInput,
                     format!("Function `{}` not found", name),
                 ))?;
 
+                // The number of arguments the function takes
                 let n = arg_count.
                     ok_or(Error::new(
                     ErrorKind::InvalidInput,
@@ -223,7 +227,9 @@ where
                     ),
                 ))?;
 
+                // Stores the arguments to pass to the function.
                 let mut args = Vec::new();
+
                 for _ in 0..n {
                     match values.pop() {
                         Some(n) => args.push(n.clone()),
@@ -236,10 +242,12 @@ where
                     }
                 }
 
+                // Reverse the order of the arguments.
+                // For a function as `TakeFirst(1, 2, 3)`, values are taken from last,
+                // so `args` will contain [3, 2, 1], so reverse is needed.
                 args.reverse();
                 let result = func.call(&args)?;
-                values.push(result.clone());
-
+                values.push(result);
                 arg_count = None;
             }
             _ => {
