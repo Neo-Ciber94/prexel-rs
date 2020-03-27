@@ -897,6 +897,7 @@ mod tests {
         assert!(evaluator.eval("^10!").is_err());
         assert!(evaluator.eval("8+").is_err());
         assert!(evaluator.eval("([10)]").is_err());
+        assert!(evaluator.eval("()+5").is_err());
         // assert!(evaluator.eval("Sum((10, 2, 3))").is_err()); TODO: Must be considered an error?
         assert!(evaluator.eval("Sum 2 3 4").is_err());
     }

@@ -86,23 +86,21 @@ where
         // `Vec` used for fast access indexing, Iterator.nth(..) could be O(N)
         let raw_tokens = STRING_TOKENIZER.get_tokens(expression);
         // Actual iterator over the string tokens.
-        let mut iter = raw_tokens.iter().peekable();
+        let mut iter = raw_tokens.iter().enumerate().peekable();
         // Stores the tokens to return.
         let mut tokens = Vec::new();
-        // Current position of the iterator, used for check previous elements.
-        let mut pos = 0;
         // Context that contains the variables, constants and functions.
         let context = self.context;
 
-        while let Some(string) = iter.next() {
+        while let Some((pos, string)) = iter.next() {
             if is_number(string) {
                 // `complex_number` is enable in the context, check the next value and
                 // if is the imaginary unit append it to the current number.
                 if context.config().complex_number()
-                    && iter.peek().map(|s|*s).contains_str("i")
+                    && iter.peek().map(|s|s.1).contains_str("i")
                 {
-                    let mut temp = (*iter.peek().unwrap()).clone();
-                    let im = iter.next().unwrap();
+                    let mut temp = (*iter.peek().unwrap().1).clone();
+                    let im = iter.next().unwrap().1;
                     temp.push_str(im);
 
                     let n = N::from_str(&temp).map_err(|_| {
@@ -191,8 +189,6 @@ where
             } else {
                 tokens.push(Token::Unknown(string.clone()));
             }
-
-            pos += 1;
         }
 
         Ok(tokens)
