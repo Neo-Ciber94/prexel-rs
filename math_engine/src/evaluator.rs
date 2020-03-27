@@ -339,7 +339,18 @@ mod shunting_yard {
                 Token::UnaryOperator(c) => {
                     push_unary_function(context, &mut output, &mut operators, token, *c)?
                 }
-                Token::Function(_) => {
+                Token::Function(name) => {
+                    if !context.config().custom_function_call(){
+                        // Checks the function call starts with a parentheses open
+                        // We only allow function arguments in a parentheses, so function calls
+                        // with custom grouping symbols are invalid eg: Max[1,2,3], Sum<2,4,6>
+                        if !token_iterator.peek().map_or(false, |t| t.contains_symbol('(')){
+                            return Err(Error::new(
+                                ErrorKind::InvalidInput,
+                                format!("Function arguments (if any) for `{}` are not within a parentheses", name)))
+                        }
+                    }
+
                     arg_count.push(0);
                     operators.push(token.clone());
                 }
@@ -519,20 +530,33 @@ mod shunting_yard {
         operators: &mut Vec<Token<N>>,
         arg_count: &mut Vec<u32>,
     ) -> Result<()> {
+        // Flag used for detect misplaced grouping symbol.
         let mut is_group_open = false;
+
+        // Pop tokens from the operator stack and push then into the output stack
+        // until a group close token is found.
         while let Some(t) = operators.pop() {
             match t {
-                // TODO: Is this nested mess readable? FIXME
                 Token::GroupingOpen(c) => {
                     if let Some(grouping) = context.config().get_group_symbol(c) {
                         if grouping.group_close == group_close {
                             is_group_open = true;
+                            // If `arg_count` is not empty we are inside a function.
+                            // So we pop the argument count and function token into the output stack.
                             if !arg_count.is_empty() {
                                 if let Some(top) = operators.last() {
                                     if let Token::Function(_) = top {
                                         let count = arg_count.pop().unwrap() + 1;
                                         output.push(Token::ArgCount(count));
                                         output.push(operators.pop().unwrap());
+                                    }
+                                    else{
+                                        // Should a function receiving its args in grouping symbols
+                                        // be considered invalid? eg: Max((1,2,3)), Random(())
+                                        // return Err(Error::new(
+                                        //     ErrorKind::InvalidInput,
+                                        //     "Grouping symbol is wrapping function arguments")
+                                        // )
                                     }
                                 }
                             }
@@ -841,7 +865,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn evaluate_test() {
+    fn eval_test() {
         let config = Config::new().with_group_symbol('[', ']');
         let evaluator: Evaluator<i64> =
             Evaluator::with_context(DefaultContext::new_checked_with_config(config));
@@ -873,10 +897,12 @@ mod tests {
         assert!(evaluator.eval("^10!").is_err());
         assert!(evaluator.eval("8+").is_err());
         assert!(evaluator.eval("([10)]").is_err());
+        // assert!(evaluator.eval("Sum((10, 2, 3))").is_err()); TODO: Must be considered an error?
+        assert!(evaluator.eval("Sum 2 3 4").is_err());
     }
 
     #[test]
-    fn evaluate_implicit_mul_test() {
+    fn eval_implicit_mul_test() {
         let config = Config::new().with_implicit_mul();
         let context = DefaultContext::new_checked_with_config(config);
         let mut evaluator: Evaluator<i64> = Evaluator::with_context(context);
@@ -897,7 +923,7 @@ mod tests {
     }
 
     #[test]
-    fn evaluate_tokens_test() {
+    fn eval_tokens_test() {
         let evaluator = Evaluator::new();
 
         // 2 + 3
@@ -944,7 +970,7 @@ mod tests {
     }
 
     #[test]
-    fn evaluate_variable(){
+    fn eval_using_variable_test(){
         let mut evaluator = Evaluator::new();
         evaluator.mut_context().set_variable("x", 10);
 

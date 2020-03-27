@@ -183,4 +183,53 @@ impl <N> Token<N> {
             _ => false
         }
     }
+
+    /// Checks if the token contains the specified number value.
+    ///
+    /// # Remarks
+    /// This check the token value if is a `Token::Number` otherwise returns false.
+    #[inline]
+    pub fn contains_number<U: PartialEq<N>>(&self, value: &U) -> bool{
+        match self{
+            Token::Number(n) => value == n,
+            _ => false
+        }
+    }
+
+    /// Checks if the token contains a value with the specified name.
+    ///
+    /// # Remarks
+    /// If the token is a named token eg: variable, constant, function, infix function or unknown token,
+    /// will compare its `String` with the specified `str` otherwise returns `false`.
+    #[inline]
+    pub fn contains_name(&self, name: &str) -> bool{
+        match self{
+            Token::Variable(s) |
+            Token::Constant(s) |
+            Token::Function(s) |
+            Token::InfixFunction(s) |
+            Token::Unknown(s) => {
+                s == name
+            }
+            _ => false
+        }
+    }
+
+    /// Checks if the token contains a symbol with the specified value.
+    ///
+    /// # Remarks
+    /// If the token is a named token with a `char` eg: grouping and operators will compare its values,
+    /// otherwise returns `false`.
+    #[inline]
+    pub fn contains_symbol(&self, name: char) -> bool{
+        match *self{
+            Token::GroupingClose(c) |
+            Token::GroupingOpen(c) |
+            Token::UnaryOperator(c) |
+            Token::BinaryOperator(c) => {
+                c == name
+            }
+            _ => false
+        }
+    }
 }

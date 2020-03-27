@@ -108,7 +108,7 @@ where
                     let n = N::from_str(&temp).map_err(|_| {
                         Error::new(
                             ErrorKind::InvalidInput,
-                            format!("Failed to convert `{}` to type `{}`.",
+                            format!("Failed to parse `{}` to `{}`.",
                                     temp,
                                     std::any::type_name::<N>()
                             ),
@@ -120,7 +120,7 @@ where
                     let n = N::from_str(string).map_err(|_| {
                         Error::new(
                             ErrorKind::InvalidInput,
-                            format!("Failed to convert `{}` to type `{}`.",
+                            format!("Failed to parse `{}` to `{}`.",
                                 string,
                                 std::any::type_name::<N>()
                             ),

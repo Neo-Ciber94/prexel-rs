@@ -1,3 +1,5 @@
+use crate::context::{Config, DefaultContext};
+
 pub mod num;
 pub mod token;
 pub mod tokenizer;
@@ -12,8 +14,13 @@ pub mod ops;
 pub type Result<T> = std::result::Result<T, error::Error>;
 
 pub fn eval<'a, T>(expression: &str) -> Result<T> where T: num::checked::CheckedNum{
-    evaluator::Evaluator::new()
-        .eval(expression)
+    let config = Config::new()
+        .with_group_symbol('[', ']')
+        .with_implicit_mul();
+
+    let context = DefaultContext::new_checked_with_config(config);
+    let evaluator : evaluator::Evaluator<T> = evaluator::Evaluator::with_context(context);
+    evaluator.eval(expression)
 }
 
 #[cfg(feature = "decimal")]

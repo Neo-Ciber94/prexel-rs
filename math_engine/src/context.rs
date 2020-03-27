@@ -461,10 +461,12 @@ impl<'a, N: UncheckedNum> DefaultContext<'a, N> {
 /// Represents the configuration used by a `Context`.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Config {
-    /// Allow implicit multiplication.
+    /// Allows implicit multiplication.
     implicit_mul: bool,
-    /// Allow complex numbers.
+    /// Allows complex numbers.
     complex_number: bool,
+    /// Allows using custom grouping symbols for function calls, eg: Max[1,2,3], Sum<2,4,6>
+    custom_function_call: bool,
     /// Stores the grouping symbols as: `(`, `)`, `[`, `]`.
     grouping: HashMap<char, GroupingSymbol>,
 }
@@ -493,6 +495,17 @@ impl Config {
     #[inline]
     pub fn with_complex_number(mut self) -> Config {
         self.complex_number = true;
+        self
+    }
+
+    /// Enables custom function calls groping symbols.
+    ///
+    /// # Remarks
+    /// Function calls are only allowed within parentheses, eg: Product(3, 6, 6),
+    /// but `with_custom_function_call` allow to use others, eg: Max[1,2,3], Sum<2,4,6>.
+    #[inline]
+    pub fn with_custom_function_call(mut self) -> Config{
+        self.custom_function_call = true;
         self
     }
 
@@ -525,16 +538,22 @@ impl Config {
         self
     }
 
-    /// Enables implicit multiplication in this `Config`.
+    /// Checks if the context allow implicit multiplication.
     #[inline]
     pub fn implicit_mul(&self) -> bool {
         self.implicit_mul
     }
 
-    /// Enables complex numbers usage in this `Config`.
+    /// Checks if the context allows work with complex numbers.
     #[inline]
     pub fn complex_number(&self) -> bool {
         self.complex_number
+    }
+
+    /// Checks if the context allows custom function calls, eg: Max[1,2,3], Sum<2,4,6>
+    #[inline]
+    pub fn custom_function_call(&self) -> bool{
+        self.custom_function_call
     }
 
     /// Gets a grouping symbol pair from this `Config`.
@@ -558,6 +577,7 @@ impl Default for Config {
         Config {
             implicit_mul: false,
             complex_number: false,
+            custom_function_call: false,
             grouping: Default::default(),
         }
     }
