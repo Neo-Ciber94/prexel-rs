@@ -19,7 +19,7 @@ pub enum Token<N>{
     /// An unary operator
     UnaryOperator(char),
     /// The argument count
-    ArgCount(u32),
+    ArgCount(usize),
     /// An open grouping symbol
     GroupingOpen(char),
     /// A close grouping symbol

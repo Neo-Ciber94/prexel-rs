@@ -110,7 +110,7 @@ where
     // Stores the resulting values
     let mut values: Vec<N> = Vec::new();
     // Stores the argument count of the current function, if any.
-    let mut arg_count: Option<u32> = None;
+    let mut arg_count: Option<usize> = None;
 
     for token in &rpn {
         match token {
@@ -315,10 +315,11 @@ mod shunting_yard {
               C: Context<'a, N> {
         let mut output = Vec::new();
         let mut operators = Vec::new();
-        let mut arg_count: Vec<u32> = Vec::new();
+        let mut arg_count: Vec<usize> = Vec::new();
+        let mut grouping_count: Vec<usize> = Vec::new();
 
-        let mut token_iterator = tokens.iter().peekable();
-        while let Some(token) = token_iterator.next() {
+        let mut token_iterator = tokens.iter().enumerate().peekable();
+        while let Some((pos, token)) = token_iterator.next() {
             match token {
                 Token::Number(_) | Token::Variable(_) | Token::Constant(_) => {
                     push_number(context, &mut output, &mut operators, token)
@@ -344,7 +345,7 @@ mod shunting_yard {
                         // Checks the function call starts with a parentheses open
                         // We only allow function arguments in a parentheses, so function calls
                         // with custom grouping symbols are invalid eg: Max[1,2,3], Sum<2,4,6>
-                        if !token_iterator.peek().map_or(false, |t| t.contains_symbol('(')){
+                        if !token_iterator.peek().map_or(false, |t| t.1.contains_symbol('(')){
                             return Err(Error::new(
                                 ErrorKind::InvalidInput,
                                 format!("Function arguments (if any) for `{}` are not within a parentheses", name)))
@@ -358,7 +359,28 @@ mod shunting_yard {
                 Token::GroupingClose(c) => {
                     push_grouping_close(context, *c, &mut output, &mut operators, &mut arg_count)?
                 }
-                Token::Comma => push_comma(&mut output, &mut operators, &mut arg_count)?,
+                Token::Comma => {
+                    // TODO: Moves this comma checks to its own function
+                    if pos == 0{
+                        return Err(Error::new(ErrorKind::InvalidInput, "Misplaced comma"))
+                    }
+
+                    if tokens.iter()
+                        .nth(pos - 1)
+                        .map_or(false, |t| t.is_grouping_open()){
+                        // Invalid expression: (,
+                        return Err(Error::new(ErrorKind::InvalidInput, "Misplaced comma: `(,`"))
+                    }
+
+                    if tokens.iter()
+                        .nth(pos + 1)
+                        .map_or(false, |t| t.is_grouping_close()){
+                        // Invalid expression: ,)
+                        return Err(Error::new(ErrorKind::InvalidInput, "Misplaced comma: `,)`"))
+                    }
+
+                    push_comma(&mut output, &mut operators, &mut arg_count)?
+                },
                 _ => {
                     return Err(Error::new(
                         ErrorKind::InvalidInput,
@@ -374,7 +396,7 @@ mod shunting_yard {
                 if token.is_number() {
                     // 2Max, 2PI, 2x, 2(4)
                     if let Some(next_token) = token_iterator.peek() {
-                        match *next_token {
+                        match next_token.1 {
                             Token::Function(_)
                             | Token::Constant(_)
                             | Token::Variable(_)
@@ -387,7 +409,7 @@ mod shunting_yard {
                 } else if token.is_grouping_close() {
                     //(2)2, (2)PI, (2)x, (4)(2)
                     if let Some(next_token) = token_iterator.peek() {
-                        if next_token.is_grouping_open() {
+                        if next_token.1.is_grouping_open() {
                             operators.push(BinaryOperator('*'));
                         }
                     }
@@ -528,7 +550,7 @@ mod shunting_yard {
         group_close: char,
         output: &mut Vec<Token<N>>,
         operators: &mut Vec<Token<N>>,
-        arg_count: &mut Vec<u32>,
+        arg_count: &mut Vec<usize>,
     ) -> Result<()> {
         // Flag used for detect misplaced grouping symbol.
         let mut is_group_open = false;
@@ -582,7 +604,7 @@ mod shunting_yard {
     fn push_comma<N: Clone + Debug>(
         output: &mut Vec<Token<N>>,
         operators: &mut Vec<Token<N>>,
-        arg_count: &mut Vec<u32>,
+        arg_count: &mut Vec<usize>,
     ) -> Result<()> {
         match arg_count.last_mut() {
             None => {
@@ -898,8 +920,14 @@ mod tests {
         assert!(evaluator.eval("8+").is_err());
         assert!(evaluator.eval("([10)]").is_err());
         assert!(evaluator.eval("()+5").is_err());
-        // assert!(evaluator.eval("Sum((10, 2, 3))").is_err()); TODO: Must be considered an error?
+        assert!(evaluator.eval("()+5").is_err());
         assert!(evaluator.eval("Sum 2 3 4").is_err());
+        assert!(evaluator.eval("Max(,)").is_err());
+        assert!(evaluator.eval("Max(2, )").is_err());
+        assert!(evaluator.eval("Max( ,3)").is_err());
+        assert!(evaluator.eval("Max(2, 3,)").is_err());
+        // assert!(evaluator.eval("Sum((10, 2, 3))").is_err()); TODO: Must be considered an error?
+        // assert!(evaluator.eval("Random(())").is_err()); TODO: Must be considered an error?
     }
 
     #[test]
