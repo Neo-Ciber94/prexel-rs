@@ -7,9 +7,9 @@ pub mod checked {
     use std::str::FromStr;
 
     /// A base trait for numeric types, provides `0` and `1` values,
-/// comparisons, conversions from and to string, and checked numeric operations.
-///
-/// This trait is implemented for all the types that implements the traits.
+    /// comparisons, conversions from and to string, and checked numeric operations.
+    ///
+    /// This trait is implemented for all the types that implements the traits.
     pub trait CheckedNum: CheckedNumOps
     + Zero
     + One

@@ -1,5 +1,3 @@
-use crate::context::{Config, DefaultContext};
-
 pub mod context;
 pub mod error;
 pub mod evaluator;
@@ -19,7 +17,34 @@ pub mod decimal;
 #[cfg(feature = "complex")]
 pub mod complex;
 
-/// Evaluates the specified math expression.
+/// Evaluates the specified math expression and gets the result as `Result<T>`.
+///
+/// # Remarks
+/// Type `T` must implement:
+/// - Basic numeric operations using: `Add`, `Sub`, `Mul`, `Div`, `Rem` and `Neg` traits.
+/// - Conversion from `0` and `1` with the traits `Zero` and `One`.
+/// - Conversion from and to primitive types by: `FromPrimitive` and `ToPrimitive`.
+/// - Ordering using: `PartialOrd`.
+/// - Conversion form `&str` using `FromStr` trait.
+/// - Provides display and debug using: `Debug` and `Display`
+/// - Provides cloning by: `Clone`
+///
+/// Primitive types as: `i8`, `i16`, `i32`, `i64`, `i128`, `f32`, `f64` meet all those conditions.
+///
+/// NOTE: Unsigned types don't implement `Neg`.
+///
+/// If a more complex behaviour is needed as custom functions, operators, variables, constants, etc.
+/// [`DefaultContext`] and [`Evaluator`] should be used diretly.
+///
+/// # Example
+/// ```
+/// assert_eq!(Ok(17), math_engine::eval::<i32>("2 + 3 * 5"));
+/// assert_eq!(Ok(100_f32), math_engine::eval::<f32>("10^2"));
+/// assert!(math_engine::eval::<f64>("10/0").is_err())
+/// ```
+///
+/// [`DefaultContext`]: context/struct.DefaultContext.html
+/// [`Evaluator`]: evaluator/struct.Evaluator.html
 pub fn eval<'a, T>(expression: &str) -> Result<T>
     where T: num::unchecked::UncheckedNum
     + std::panic::RefUnwindSafe
@@ -31,6 +56,8 @@ pub fn eval<'a, T>(expression: &str) -> Result<T>
     use std::cell::RefCell;
     use std::collections::HashMap;
     use std::panic::*;
+    use context::DefaultContext;
+    use context::Config;
 
     /// Allow to catch `panic`s without print error messages.
     fn catch_panic<F: FnOnce() -> R + UnwindSafe, R>(

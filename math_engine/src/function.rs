@@ -62,11 +62,11 @@ pub struct Precedence(pub u32);
 impl Precedence{
     /// Very low precedence.
     pub const VERY_LOW : Precedence = Precedence::from(0);
-    /// Low precedence, used for addition (+) and subtraction (-) operators.
+    /// Low precedence, used for addition `(+)` and subtraction `(-)` operators.
     pub const LOW : Precedence = Precedence::from(1);
-    /// Medium precedence, used for multiplication (*) and division (/) operators.
+    /// Medium precedence, used for multiplication `(*)` and division `(/)` operators.
     pub const MEDIUM : Precedence = Precedence::from(2);
-    /// High precedence, used for power (^) operator.
+    /// High precedence, used for power `(^)` operator.
     pub const HIGH : Precedence = Precedence::from(3);
     /// Very high precedence.
     pub const VERY_HIGH : Precedence = Precedence::from(4);
