@@ -91,9 +91,9 @@ impl Error{
     /// ```
     /// use math_engine::error::{Error, ErrorKind};
     ///
-    /// let custom_error = Error::new(ErrorKind::Other, "My error");
+    /// let custom_error = Error::new(ErrorKind::Other, "my error");
     /// assert_eq!(ErrorKind::Other, custom_error.kind());
-    /// assert_eq!("My error", custom_error.to_string());
+    /// assert_eq!("my error", custom_error.to_string());
     /// ```
     #[inline]
     pub fn new<E>(kind: ErrorKind, error: E) -> Error
@@ -106,8 +106,8 @@ impl Error{
     /// # Example
     /// ```
     /// use math_engine::error::Error;
-    /// let error = Error::other("Custom error");
-    /// assert_eq!("Custom error", error.to_string());
+    /// let error = Error::other("custom error");
+    /// assert_eq!("custom error", error.to_string());
     /// ```
     #[inline]
     pub fn other(msg: &str) -> Error{
@@ -150,7 +150,7 @@ impl Error{
     ///     // No inner error
     ///     print_error(Error::from(ErrorKind::InvalidInput));
     ///     // With inner error
-    ///     print_error(Error::new(ErrorKind::Other, "Custom error"))
+    ///     print_error(Error::new(ErrorKind::Other, "custom error"))
     /// }
     /// ```
     #[inline]
@@ -166,7 +166,7 @@ impl Error{
     /// # Example
     /// ```
     /// use math_engine::error::{Error, ErrorKind};
-    /// let error = Error::new(ErrorKind::Overflow, "Value has overflow");
+    /// let error = Error::new(ErrorKind::Overflow, "value has overflow");
     /// let inner_error = error.get_ref().unwrap();
     /// ```
     #[inline]
@@ -182,7 +182,7 @@ impl Error{
     /// # Example
     /// ```
     /// use math_engine::error::{Error, ErrorKind};
-    /// let mut error = Error::new(ErrorKind::Overflow, "Value has overflow");
+    /// let mut error = Error::new(ErrorKind::Overflow, "value has overflow");
     /// let inner_error = error.get_mut().unwrap();
     /// ```
     #[inline]

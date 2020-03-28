@@ -120,7 +120,7 @@ where
                     .get_variable(&name)
                     .ok_or(Error::new(
                         ErrorKind::InvalidInput,
-                        format!("Variable `{}` not found", name),
+                        format!("variable `{}` not found", name),
                     ))?
                     .clone();
 
@@ -131,7 +131,7 @@ where
                     .get_constant(&name)
                     .ok_or(Error::new(
                         ErrorKind::InvalidInput,
-                        format!("Constant `{}` not found", name),
+                        format!("constant `{}` not found", name),
                     ))?
                     .clone();
 
@@ -150,7 +150,7 @@ where
                         .get_unary_function(name)
                         .ok_or(Error::new(
                             ErrorKind::InvalidInput,
-                            format!("Unary operator `{}` not found", c),
+                            format!("unary operator `{}` not found", c),
                         ))?;
 
                 match values.pop() {
@@ -169,7 +169,7 @@ where
             InfixFunction(name) => {
                 let func = context.get_binary_function(&name).ok_or(Error::new(
                     ErrorKind::InvalidInput,
-                    format!("Infix function `{}` not found", name),
+                    format!("infix function `{}` not found", name),
                 ))?;
 
                 match (values.pop(), values.pop()) {
@@ -194,7 +194,7 @@ where
                         .get_binary_function(name)
                         .ok_or(Error::new(
                             ErrorKind::InvalidInput,
-                            format!("Binary operator `{}` not found", c),
+                            format!("binary operator `{}` not found", c),
                         ))?;
 
                 match (values.pop(), values.pop()) {
@@ -215,7 +215,7 @@ where
                 let func = context.get_function(&name)
                     .ok_or(Error::new(
                     ErrorKind::InvalidInput,
-                    format!("Function `{}` not found", name),
+                    format!("function `{}` not found", name),
                 ))?;
 
                 // The number of arguments the function takes
@@ -223,7 +223,7 @@ where
                     ok_or(Error::new(
                     ErrorKind::InvalidInput,
                     format!(
-                        "Cannot evaluate function `{}`, unknown number of arguments",
+                        "cannot evaluate function `{}`, unknown number of arguments",
                         name
                     ),
                 ))?;
@@ -237,7 +237,7 @@ where
                         None => {
                             Error::new(
                                 ErrorKind::InvalidArgumentCount,
-                                format!("Expected {} arguments but {} was get", n, args.len()),
+                                format!("expected {} arguments but {} was get", n, args.len()),
                             );
                         }
                     }
@@ -254,7 +254,7 @@ where
             _ => {
                 return Err(Error::new(
                     ErrorKind::InvalidInput,
-                    format!("Unknown token: `{:?}`", token),
+                    format!("unknown token: `{:?}`", token),
                 ));
             }
         }
@@ -348,7 +348,7 @@ mod shunting_yard {
                         if !token_iterator.peek().map_or(false, |t| t.1.contains_symbol('(')){
                             return Err(Error::new(
                                 ErrorKind::InvalidInput,
-                                format!("Function arguments (if any) for `{}` are not within a parentheses", name)))
+                                format!("function arguments (if any) for `{}` are not within a parentheses", name)))
                         }
                     }
 
@@ -371,7 +371,7 @@ mod shunting_yard {
                                 if context.config().get_group_open_for(*c)
                                     .map_or(false, |v| v == s) {
                                     if !tokens[pos - 2].is_function(){
-                                        return Err(Error::new(ErrorKind::InvalidInput, "Empty grouping: `()`"));
+                                        return Err(Error::new(ErrorKind::InvalidInput, "empty grouping: `()`"));
                                     }
                                 }
                             },
@@ -418,7 +418,7 @@ mod shunting_yard {
                 _ => {
                     return Err(Error::new(
                         ErrorKind::InvalidInput,
-                        format!("Invalid token: {:?}", token),
+                        format!("invalid token: {:?}", token),
                     ))
                 }
             }
@@ -453,13 +453,13 @@ mod shunting_yard {
             if t.is_grouping_close() || t.is_grouping_close() {
                 return Err(Error::new(
                     ErrorKind::InvalidExpression,
-                    "Misplace parentheses",
+                    "misplace parentheses",
                 ));
             }
 
             output.push(t)
         }
-        
+
         Ok(output)
     }
 
@@ -515,7 +515,7 @@ mod shunting_yard {
         } else {
             Err(Error::new(
                 ErrorKind::InvalidInput,
-                format!("Unary operator `{}` not found", c),
+                format!("unary operator `{}` not found", c),
             ))
         }
     }
@@ -530,7 +530,7 @@ mod shunting_yard {
         let operator = context.get_binary_function(name)
             .ok_or(
                 Error::new(ErrorKind::InvalidInput,
-                format!("Binary function `{}` not found", name)
+                format!("binary function `{}` not found", name)
             ))?;
 
         while let Some(t) = operators.last() {

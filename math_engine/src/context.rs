@@ -84,10 +84,10 @@ pub struct DefaultContext<'a, N> {
     constants: HashMap<IgnoreCaseString, N>,
     /// The functions.
     functions: HashMap<IgnoreCaseString, Rc<dyn Function<N> + 'a>>,
-    /// The binary functions.
-    binary_functions: HashMap<IgnoreCaseString, Rc<dyn BinaryFunction<N> + 'a>>,
     /// The unary functions.
     unary_functions: HashMap<IgnoreCaseString, Rc<dyn UnaryFunction<N> + 'a>>,
+    /// The binary functions.
+    binary_functions: HashMap<IgnoreCaseString, Rc<dyn BinaryFunction<N> + 'a>>,
     /// Additional information about this context
     config: Config,
 }

@@ -106,7 +106,7 @@ where
                     let n = N::from_str(&temp).map_err(|_| {
                         Error::new(
                             ErrorKind::InvalidInput,
-                            format!("Failed to parse `{}` to `{}`.",
+                            format!("failed to parse `{}` to `{}`.",
                                     temp,
                                     std::any::type_name::<N>()
                             ),
@@ -118,7 +118,7 @@ where
                     let n = N::from_str(string).map_err(|_| {
                         Error::new(
                             ErrorKind::InvalidInput,
-                            format!("Failed to parse `{}` to `{}`.",
+                            format!("failed to parse `{}` to `{}`.",
                                 string,
                                 std::any::type_name::<N>()
                             ),
@@ -153,7 +153,7 @@ where
                         return Err(Error::new(
                             ErrorKind::InvalidExpression,
                             format!(
-                                "Binary operations need 2 operands: {:?} {} {:?}",
+                                "binary operations need 2 operands: {:?} {} {:?}",
                                 prev, string, next
                             ),
                         ));
@@ -172,22 +172,21 @@ where
                 tokens.push(Token::Comma);
             } else if string == WHITESPACE {
                 // Ignore whitespaces
-            } else if string.len() == 1 {
-                // If string token length is 1 and its not considered a binary operator, unary operator
-                // or a function we check if is a grouping symbol in the context `Config`.
-                let c = string.chars().next().unwrap();
-                if let Some(symbol) = context.config().get_group_symbol(c) {
-                    if c == symbol.group_open {
-                        tokens.push(Token::GroupingOpen(c));
-                    }
-                    else {
-                        tokens.push(Token::GroupingClose(c));
-                    }
-                } else {
-                    // TODO: repeated code, move to else?
-                    tokens.push(Token::Unknown(string.clone()));
-                }
             } else {
+                if string.len() == 1 {
+                    // If string token length is 1 and its not considered a binary operator, unary operator
+                    // or a function we check if is a grouping symbol in the context `Config`.
+                    let c = string.chars().next().unwrap();
+                    if let Some(symbol) = context.config().get_group_symbol(c) {
+                        if c == symbol.group_open {
+                            tokens.push(Token::GroupingOpen(c));
+                        } else {
+                            tokens.push(Token::GroupingClose(c));
+                        }
+                        continue;
+                    }
+                }
+
                 tokens.push(Token::Unknown(string.clone()));
             }
         }
