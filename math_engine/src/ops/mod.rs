@@ -2,14 +2,17 @@ pub mod checked;
 pub mod unchecked;
 
 pub mod math {
-    use num_traits::{FromPrimitive, Inv, ToPrimitive, Zero};
+    use std::fmt::Debug;
+    use std::ops::{Mul, Sub};
+
+    use num_traits::{FromPrimitive, Inv, One, ToPrimitive, Zero};
     use rand::random;
 
-    use crate::Result;
     use crate::error::*;
     use crate::function::{
         Associativity, BinaryFunction, Function, Notation, Precedence, UnaryFunction,
     };
+    use crate::Result;
     use crate::utils::gamma::gamma;
 
     pub struct UnaryPlus;
@@ -28,7 +31,15 @@ pub mod math {
     }
 
     pub struct Factorial;
-    impl<N: Zero + PartialOrd + ToPrimitive + FromPrimitive> UnaryFunction<N> for Factorial {
+    impl<N> UnaryFunction<N> for Factorial where N: Clone + Debug
+            + Zero
+            + One
+            + Sub<N, Output = N>
+            + Mul<N, Output = N>
+            + PartialOrd
+            + ToPrimitive
+            + FromPrimitive
+    {
         fn name(&self) -> &str {
             "!"
         }
@@ -42,20 +53,41 @@ pub mod math {
                 return Err(Error::from(ErrorKind::NegativeValue));
             }
 
-            let mut total = value.to_f64().ok_or(Error::from(ErrorKind::Overflow))?;
-            let mut n: f64 = total - 1.0;
-
-            while n > 1.0 {
-                total *= n;
-                n -= 1.0;
+            // 0! = 1 and 1! = 1
+            if value.is_zero() || value.is_one() {
+                return Ok(N::one());
             }
 
-            if !n.is_zero() {
-                total *= gamma(n + 1.0);
+            // Quick path for: `x < 1`
+            if value < N::one(){
+                return if let Some(n) = value.to_f64() {
+                    let result = gamma(n + 1f64);
+                    N::from_f64(result).ok_or(Error::from(ErrorKind::Overflow))
+                } else {
+                    Err(Error::from(ErrorKind::Overflow))
+                }
             }
 
-            let result = N::from_f64(total).ok_or(Error::from(ErrorKind::Overflow))?;
-            Ok(result)
+            let mut total = value;
+            let mut next = total.clone() - N::one();
+
+            while next >= N::one() {
+                total = total.clone() * next.clone();
+                next = next.clone() - N::one();
+            }
+
+            // If next value is non-zero, apply `Gamma function`.
+            if !next.is_zero() {
+                if let (Some(mut total_f64), Some(n)) = (total.to_f64(), next.to_f64()){
+                    total_f64 *= gamma(n + 1f64);
+                    N::from_f64(total_f64).ok_or(Error::from(ErrorKind::Overflow))
+                }
+                else{
+                    Err(Error::from(ErrorKind::Overflow))
+                }
+            } else {
+                Ok(total.clone())
+            }
         }
     }
 
@@ -74,11 +106,11 @@ pub mod math {
         }
 
         fn call(&self, left: N, right: N) -> Result<N> {
-            let base = left.to_f64().ok_or(Error::from(ErrorKind::Overflow))?;
-            let exponent = right.to_f64().ok_or(Error::from(ErrorKind::Overflow))?;
-
-            // Result
-            N::from_f64(f64::powf(base, exponent)).ok_or(Error::from(ErrorKind::Overflow))
+            if let (Some(base), Some(exp)) = (left.to_f64(), right.to_f64()) {
+                N::from_f64(f64::powf(base, exp)).ok_or(Error::from(ErrorKind::Overflow))
+            } else {
+                Err(Error::from(ErrorKind::Overflow))
+            }
         }
     }
 
@@ -89,20 +121,20 @@ pub mod math {
         }
 
         fn call(&self, args: &[N]) -> Result<N> {
-            let mut result = None;
+            let mut max = None;
 
-            for cur in args {
-                match result {
-                    None => result = Some(cur.clone()),
-                    Some(ref max) => {
-                        if cur > max {
-                            result = Some(cur.clone())
+            for n in args {
+                match max {
+                    None => max = Some(n.clone()),
+                    Some(ref current_max) => {
+                        if n > current_max {
+                            max = Some(n.clone())
                         }
                     }
                 }
             }
 
-            result.ok_or(Error::from(ErrorKind::InvalidArgumentCount))
+            max.ok_or(Error::from(ErrorKind::InvalidArgumentCount))
         }
     }
 
@@ -113,20 +145,20 @@ pub mod math {
         }
 
         fn call(&self, args: &[N]) -> Result<N> {
-            let mut result = None;
+            let mut min = None;
 
-            for cur in args {
-                match result {
-                    None => result = Some(cur.clone()),
-                    Some(ref min) => {
-                        if cur < min {
-                            result = Some(cur.clone());
+            for n in args {
+                match min {
+                    None => min = Some(n.clone()),
+                    Some(ref current_min) => {
+                        if n < current_min {
+                            min = Some(n.clone());
                         }
                     }
                 }
             }
 
-            result.ok_or(Error::from(ErrorKind::InvalidArgumentCount))
+            min.ok_or(Error::from(ErrorKind::InvalidArgumentCount))
         }
     }
 
@@ -146,8 +178,7 @@ pub mod math {
                         Err(Error::from(ErrorKind::InvalidArgumentCount))
                     } else {
                         let result = try_to_float(&args[0])?.$method_name();
-                        N::from_f64(result)
-                            .ok_or(Error::from(ErrorKind::Overflow))
+                        N::from_f64(result).ok_or(Error::from(ErrorKind::Overflow))
                     }
                 }
             }
@@ -179,71 +210,65 @@ pub mod math {
     forward_func_impl!(LnFunction, ln);
 
     pub struct LogFunction;
-    impl<N: ToPrimitive + FromPrimitive> Function<N> for LogFunction{
+    impl<N: ToPrimitive + FromPrimitive> Function<N> for LogFunction {
         fn name(&self) -> &str {
             "log"
         }
 
         fn call(&self, args: &[N]) -> Result<N> {
-            match args.len(){
-                1 => {
-                    match args[0].to_f64().map(f64::log10){
-                        Some(n) => {
-                            if n.is_nan() || n.is_infinite(){
-                                Err(Error::from(ErrorKind::NAN))
-                            }
-                            else{
-                                N::from_f64(n).ok_or(Error::from(ErrorKind::Overflow))
-                            }
+            match args.len() {
+                1 => match args[0].to_f64().map(f64::log10) {
+                    Some(n) => {
+                        if n.is_nan() || n.is_infinite() {
+                            Err(Error::from(ErrorKind::NAN))
+                        } else {
+                            N::from_f64(n).ok_or(Error::from(ErrorKind::Overflow))
                         }
-                        None => Err(Error::from(ErrorKind::Overflow))
                     }
+                    None => Err(Error::from(ErrorKind::Overflow)),
                 },
                 2 => {
                     let x = args[0].to_f64();
                     let y = args[1].to_f64();
 
-                    match (x, y){
+                    match (x, y) {
                         (Some(value), Some(base)) => {
                             let result = value.log(base);
-                            if result.is_nan() || result.is_infinite(){
+                            if result.is_nan() || result.is_infinite() {
                                 Err(Error::from(ErrorKind::NAN))
-                            }
-                            else{
+                            } else {
                                 N::from_f64(result).ok_or(Error::from(ErrorKind::Overflow))
                             }
-                        },
-                        _ => Err(Error::from(ErrorKind::Overflow))
+                        }
+                        _ => Err(Error::from(ErrorKind::Overflow)),
                     }
-                },
-                _ => Err(Error::from(ErrorKind::InvalidArgumentCount))
+                }
+                _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
             }
         }
     }
 
     pub struct RandFunction;
-    impl<N: ToPrimitive + FromPrimitive> Function<N> for RandFunction{
+    impl<N: ToPrimitive + FromPrimitive> Function<N> for RandFunction {
         #[inline]
         fn name(&self) -> &str {
             "random"
         }
 
         fn call(&self, args: &[N]) -> Result<N> {
-            match args.len(){
+            match args.len() {
                 0 => N::from_f64(random::<f64>()).ok_or(Error::from(ErrorKind::Overflow)),
                 1 => {
                     let max = try_to_float(&args[0])?;
-                    N::from_f64(random::<f64>() * max)
-                        .ok_or(Error::from(ErrorKind::Overflow))
-                },
+                    N::from_f64(random::<f64>() * max).ok_or(Error::from(ErrorKind::Overflow))
+                }
                 2 => {
                     let min = try_to_float(&args[0])?;
                     let max = try_to_float(&args[1])?;
-                    let value = min + ((max - min) *  random::<f64>());
-                    N::from_f64(value)
-                        .ok_or(Error::from(ErrorKind::Overflow))
-                },
-                _ => Err(Error::from(ErrorKind::InvalidArgumentCount))
+                    let value = min + ((max - min) * random::<f64>());
+                    N::from_f64(value).ok_or(Error::from(ErrorKind::Overflow))
+                }
+                _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
             }
         }
     }
@@ -268,7 +293,7 @@ pub mod math {
                                 } else {
                                     N::from_f64(n).ok_or(Error::from(ErrorKind::Overflow))
                                 }
-                            },
+                            }
                             None => Err(Error::from(ErrorKind::Overflow)),
                         }
                     }
@@ -288,7 +313,12 @@ pub mod math {
                     if args.len() != 1 {
                         Err(Error::from(ErrorKind::InvalidArgumentCount))
                     } else {
-                        match args[0].to_f64().map(f64::to_radians).map(f64::$method_name).map(f64::inv){
+                        match args[0]
+                            .to_f64()
+                            .map(f64::to_radians)
+                            .map(f64::$method_name)
+                            .map(f64::inv)
+                        {
                             Some(n) => {
                                 if n.is_nan() || n.is_infinite() {
                                     Err(Error::from(ErrorKind::NAN))
@@ -364,7 +394,7 @@ pub mod math {
                                 } else {
                                     N::from_f64(n).ok_or(Error::from(ErrorKind::Overflow))
                                 }
-                            },
+                            }
                             None => Err(Error::from(ErrorKind::Overflow)),
                         }
                     }
@@ -388,7 +418,7 @@ pub mod math {
                     if args.len() != 1 {
                         Err(Error::from(ErrorKind::InvalidArgumentCount))
                     } else {
-                        match args[0].to_f64().map(f64::inv).map(f64::$method_name){
+                        match args[0].to_f64().map(f64::inv).map(f64::$method_name) {
                             Some(n) => {
                                 if n.is_nan() || n.is_infinite() {
                                     Err(Error::from(ErrorKind::NAN))
@@ -413,42 +443,37 @@ pub mod math {
     pub struct ATanFunction;
     impl<N: ToPrimitive + FromPrimitive> Function<N> for ATanFunction {
         fn name(&self) -> &str {
-            stringify!( atan )
+            stringify!(atan)
         }
 
         fn call(&self, args: &[N]) -> Result<N> {
-            match args.len(){
-                1 => {
-                    match args[0].to_f64().map(f64::atan) {
-                        Some(n) => {
-                            if n.is_nan() || n.is_infinite() {
-                                Err(Error::from(ErrorKind::NAN))
-                            } else {
-                                N::from_f64(n).ok_or(Error::from(ErrorKind::Overflow))
-                            }
+            match args.len() {
+                1 => match args[0].to_f64().map(f64::atan) {
+                    Some(n) => {
+                        if n.is_nan() || n.is_infinite() {
+                            Err(Error::from(ErrorKind::NAN))
+                        } else {
+                            N::from_f64(n).ok_or(Error::from(ErrorKind::Overflow))
                         }
-                        None => Err(Error::from(ErrorKind::Overflow)),
                     }
+                    None => Err(Error::from(ErrorKind::Overflow)),
                 },
                 2 => {
                     let opy = args[0].to_f64();
                     let opx = args[1].to_f64();
 
-                    if opy.is_none() || opx.is_none(){
+                    if opy.is_none() || opx.is_none() {
                         Err(Error::from(ErrorKind::Overflow))
-                    }
-                    else{
+                    } else {
                         let result = opy.unwrap().atan2(opx.unwrap());
-                        if result.is_nan() ||  result.is_infinite(){
+                        if result.is_nan() || result.is_infinite() {
                             Err(Error::from(ErrorKind::NAN))
-                        }
-                        else{
-                            N::from_f64(result)
-                                .ok_or(Error::from(ErrorKind::Overflow))
+                        } else {
+                            N::from_f64(result).ok_or(Error::from(ErrorKind::Overflow))
                         }
                     }
                 }
-                _ =>  Err(Error::from(ErrorKind::InvalidArgumentCount))
+                _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
             }
         }
     }
@@ -481,17 +506,16 @@ pub mod math {
     impl_arc_trig_rec!(ACothFunction, atanh, acoth);
 
     #[inline(always)]
-    pub(crate) fn try_to_float<N: ToPrimitive>(n: &N) -> Result<f64>{
-        match n.to_f64(){
+    pub(crate) fn try_to_float<N: ToPrimitive>(n: &N) -> Result<f64> {
+        match n.to_f64() {
             Some(n) => {
-                if n.is_nan() || n.is_infinite(){
+                if n.is_nan() || n.is_infinite() {
                     Err(Error::from(ErrorKind::NAN))
-                }
-                else{
+                } else {
                     Ok(n)
                 }
-            },
-            None => Err(Error::from(ErrorKind::Overflow))
+            }
+            None => Err(Error::from(ErrorKind::Overflow)),
         }
     }
 }

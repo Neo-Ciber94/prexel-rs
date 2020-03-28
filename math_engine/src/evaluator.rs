@@ -505,7 +505,7 @@ mod shunting_yard {
                     } else {
                         return Err(Error::new(
                             ErrorKind::InvalidExpression,
-                            "Misplace unary operator",
+                            "misplace unary operator",
                         ));
                     }
                 }
@@ -602,14 +602,6 @@ mod shunting_yard {
                                         output.push(Token::ArgCount(count));
                                         output.push(operators.pop().unwrap());
                                     }
-                                    else{
-                                        // Should a function receiving its args in grouping symbols
-                                        // be considered invalid? eg: Max((1,2,3)), Random(())
-                                        // return Err(Error::new(
-                                        //     ErrorKind::InvalidInput,
-                                        //     "Grouping symbol is wrapping function arguments")
-                                        // )
-                                    }
                                 }
                             }
                         }
@@ -660,7 +652,7 @@ mod shunting_yard {
         }
 
         if !is_group_open {
-            Err(Error::new(ErrorKind::InvalidExpression, "Misplace comma"))
+            Err(Error::new(ErrorKind::InvalidExpression, "misplace comma"))
         } else {
             Ok(())
         }
