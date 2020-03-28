@@ -4,7 +4,8 @@ description = "A math expression evaluator"
 version = "0.0.1"
 authors = ["Freddy L"]
 edition = "2018"
-exclude = ["math_eval"]
+categories = ["mathematics", "algorithms", "text processing", "value formatting"]
+exclude = ["eval"]
 
 [features]
 complex = ["num-complex"]
@@ -13,7 +14,6 @@ decimal = ["rust_decimal", "rust_decimal_macros"]
 [dependencies]
 num-traits = "0.2"
 rand = "0.7"
-
 rust_decimal = {version = "1.2.1", optional = true}
 rust_decimal_macros = {version = "1.2.1", optional = true}
 num-complex = { version = "0.2.4", optional = true}
