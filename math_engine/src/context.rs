@@ -569,6 +569,54 @@ impl Config {
     pub fn get_group_symbol(&self, symbol: char) -> Option<&GroupingSymbol> {
         self.grouping.get(&symbol)
     }
+
+    /// Gets the grouping close for the specified grouping open.
+    ///
+    /// # Example
+    /// ```
+    /// use math_engine::context::Config;
+    ///
+    /// let config = Config::default()
+    ///     .with_group_symbol('(', ')')
+    ///     .with_group_symbol('[', ']');
+    ///
+    /// assert_eq!(Some('('), config.get_group_open_for(')'));
+    /// assert_eq!(Some('['), config.get_group_open_for(']'));
+    /// assert_eq!(None, config.get_group_open_for('['));
+    /// ```
+    #[inline]
+    pub fn get_group_open_for(&self, group_close: char) -> Option<char>{
+        match self.get_group_symbol(group_close){
+            Some(s) if s.group_close == group_close => {
+                Some(s.group_open)
+            }
+            _ => None
+        }
+    }
+
+    /// Gets the grouping close for the specified grouping open.
+    ///
+    /// # Example
+    /// ```
+    /// use math_engine::context::Config;
+    ///
+    /// let config = Config::default()
+    ///     .with_group_symbol('(', ')')
+    ///     .with_group_symbol('[', ']');
+    ///
+    /// assert_eq!(Some(')'), config.get_group_close_for('('));
+    /// assert_eq!(Some(']'), config.get_group_close_for('['));
+    /// assert_eq!(None, config.get_group_close_for(']'));
+    /// ```
+    #[inline]
+    pub fn get_group_close_for(&self, group_open: char) -> Option<char>{
+        match self.get_group_symbol(group_open){
+            Some(s) if s.group_open == group_open => {
+                Some(s.group_close)
+            }
+            _ => None
+        }
+    }
 }
 
 impl Default for Config {

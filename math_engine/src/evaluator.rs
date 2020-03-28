@@ -355,28 +355,62 @@ mod shunting_yard {
                     arg_count.push(0);
                     operators.push(token.clone());
                 }
-                Token::GroupingOpen(_) => operators.push(token.clone()),
+                Token::GroupingOpen(_) =>{
+                    operators.push(token.clone());
+                    if !arg_count.is_empty(){
+                        grouping_count.push(pos);
+                    }
+                },
                 Token::GroupingClose(c) => {
-                    push_grouping_close(context, *c, &mut output, &mut operators, &mut arg_count)?
+                    push_grouping_close(context, *c, &mut output, &mut operators, &mut arg_count)?;
+
+                    // Checking for empty grouping symbols: eg: `Random(())`, `()+2`
+                    if pos > 1 {
+                        match tokens[pos - 1]{
+                            Token::GroupingOpen(s) => {
+                                if context.config().get_group_open_for(*c)
+                                    .map_or(false, |v| v == s) {
+                                    if !tokens[pos - 2].is_function(){
+                                        return Err(Error::new(ErrorKind::InvalidInput, "Empty grouping: `()`"));
+                                    }
+                                }
+                            },
+                            _ => {}
+                        }
+                    }
+
+                    if !arg_count.is_empty(){
+                        grouping_count.pop();
+                    }
                 }
                 Token::Comma => {
                     // TODO: Moves this comma checks to its own function
                     if pos == 0{
-                        return Err(Error::new(ErrorKind::InvalidInput, "Misplaced comma"))
+                        return Err(Error::new(ErrorKind::InvalidInput, "misplaced comma"))
                     }
 
                     if tokens.iter()
                         .nth(pos - 1)
                         .map_or(false, |t| t.is_grouping_open()){
-                        // Invalid expression: (,
-                        return Err(Error::new(ErrorKind::InvalidInput, "Misplaced comma: `(,`"))
+                        // Invalid expression: `(,`
+                        return Err(Error::new(ErrorKind::InvalidInput, "misplaced comma: `(,`"))
                     }
 
                     if tokens.iter()
                         .nth(pos + 1)
                         .map_or(false, |t| t.is_grouping_close()){
-                        // Invalid expression: ,)
-                        return Err(Error::new(ErrorKind::InvalidInput, "Misplaced comma: `,)`"))
+                        // Invalid expression: `,)`
+                        return Err(Error::new(ErrorKind::InvalidInput, "misplaced comma: `,)`"))
+                    }
+
+                    // We avoid all function arguments wrapped by grouping symbols,
+                    // eg: Max((1,2,3))
+                    if !grouping_count.is_empty(){
+                        if !tokens.iter()
+                            .nth(*grouping_count.last().unwrap() - 1)
+                            .map_or(false, |t| t.is_function()){
+                            return Err(Error::new(ErrorKind::InvalidInput, "misplaced comma"))
+                        }
                     }
 
                     push_comma(&mut output, &mut operators, &mut arg_count)?
@@ -388,8 +422,6 @@ mod shunting_yard {
                     ))
                 }
             }
-
-            //println!("Current: {:?}\nOut: {:?}\nOp: {:?}\nArgCount: {:?}\n\n", token, output, operators, arg_count);
 
             // If implicit multiplication
             if context.config().implicit_mul() {
@@ -427,9 +459,7 @@ mod shunting_yard {
 
             output.push(t)
         }
-
-        //println!("Current: -\nOut: {:?}\nOp: {:?}\nArgCount: {:?}\n\n", output, operators, arg_count);
-
+        
         Ok(output)
     }
 
@@ -904,6 +934,7 @@ mod tests {
         assert!(evaluator.eval("5").is_ok());
         assert!(evaluator.eval("-2").is_ok());
         assert!(evaluator.eval("(10)").is_ok());
+        assert!(evaluator.eval("([(25)])").is_ok());
         assert!(evaluator.eval("-(+(6))").is_ok());
         assert!(evaluator.eval("+10").is_ok());
         assert!(evaluator.eval("((10)+(((2)))*(3))").is_ok());
@@ -926,8 +957,9 @@ mod tests {
         assert!(evaluator.eval("Max(2, )").is_err());
         assert!(evaluator.eval("Max( ,3)").is_err());
         assert!(evaluator.eval("Max(2, 3,)").is_err());
-        // assert!(evaluator.eval("Sum((10, 2, 3))").is_err()); TODO: Must be considered an error?
-        // assert!(evaluator.eval("Random(())").is_err()); TODO: Must be considered an error?
+        assert!(evaluator.eval("Sum((10, 2, 3))").is_err());
+        assert!(evaluator.eval("(())").is_err());
+        assert!(evaluator.eval("Random(())").is_err());
     }
 
     #[test]

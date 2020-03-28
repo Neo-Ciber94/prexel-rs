@@ -130,7 +130,7 @@ mod tests{
 
     #[test]
     fn cast_test2(){
-        let mut p = Untyped::new(&97_u8);
+        let p = Untyped::new(&97_u8);
         assert_eq!(b'a', unsafe { *p.cast::<u8>()});
     }
 

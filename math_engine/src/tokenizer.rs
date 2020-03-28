@@ -175,15 +175,16 @@ where
             } else if string.len() == 1 {
                 // If string token length is 1 and its not considered a binary operator, unary operator
                 // or a function we check if is a grouping symbol in the context `Config`.
-                let c = string.chars().nth(0).unwrap();
+                let c = string.chars().next().unwrap();
                 if let Some(symbol) = context.config().get_group_symbol(c) {
                     if c == symbol.group_open {
                         tokens.push(Token::GroupingOpen(c));
-                    } else {
+                    }
+                    else {
                         tokens.push(Token::GroupingClose(c));
                     }
                 } else {
-                    // TODO: repeated code
+                    // TODO: repeated code, move to else?
                     tokens.push(Token::Unknown(string.clone()));
                 }
             } else {
