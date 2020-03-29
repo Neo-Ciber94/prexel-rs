@@ -28,7 +28,7 @@ fn main(){
 There are 3 steps for evaluating each expression:
 - *Tokenization*: A string is converted into an array of tokens.
 
-- *Conversion*: The array of tokens are converted from infix to postfix notation using
+- *Conversion*: The array of tokens is converted from infix to postfix notation using
 using the [Shunting Yard Algorithm](https://en.wikipedia.org/wiki/Shunting-yard_algorithm).
 
 - *Evaluation*: The resulting [RPN (Reverse Polish Notation)](https://en.wikipedia.org/wiki/Reverse_Polish_notation)

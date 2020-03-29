@@ -6,4 +6,5 @@ edition = "2018"
 
 [dependencies]
 win32console = "0.1.4"
+crossterm = "0.17.1"
 math_engine = { path = "../math_engine" , features = ["decimal"]}

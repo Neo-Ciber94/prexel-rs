@@ -17,11 +17,11 @@ pub trait Context<'a, N> {
     /// Adds a function to the context.
     fn add_function<F: Function<N> + 'a>(&mut self, func: F);
 
-    /// Adds a binary function to the context.
-    fn add_binary_function<F: BinaryFunction<N> + 'a>(&mut self, func: F);
-
     /// Adds an unary function to the context.
     fn add_unary_function<F: UnaryFunction<N> + 'a>(&mut self, func: F);
+
+    /// Adds a binary function to the context.
+    fn add_binary_function<F: BinaryFunction<N> + 'a>(&mut self, func: F);
 
     /// Adds a constant value to the context.
     fn add_constant(&mut self, name: &str, value: N);
@@ -38,11 +38,11 @@ pub trait Context<'a, N> {
     /// Gets a function with the given name.
     fn get_function(&self, name: &str) -> Option<&Rc<dyn Function<N> + 'a>>;
 
-    /// Gets a binary function with the given name.
-    fn get_binary_function(&self, name: &str) -> Option<&Rc<dyn BinaryFunction<N> + 'a>>;
-
     /// Gets an unary function with the given name.
     fn get_unary_function(&self, name: &str) -> Option<&Rc<dyn UnaryFunction<N> + 'a>>;
+
+    /// Gets a binary function with the given name.
+    fn get_binary_function(&self, name: &str) -> Option<&Rc<dyn BinaryFunction<N> + 'a>>;
 
     /// Checks if exists a variable with the given name.
     #[inline]
@@ -62,16 +62,16 @@ pub trait Context<'a, N> {
         self.get_function(name).is_some()
     }
 
-    /// Checks if exists a binary function with the given name.
-    #[inline]
-    fn is_binary_function(&self, name: &str) -> bool {
-        self.get_binary_function(name).is_some()
-    }
-
     /// Checks if exists a unary function with the given name.
     #[inline]
     fn is_unary_function(&self, name: &str) -> bool {
         self.get_unary_function(name).is_some()
+    }
+
+    /// Checks if exists a binary function with the given name.
+    #[inline]
+    fn is_binary_function(&self, name: &str) -> bool {
+        self.get_binary_function(name).is_some()
     }
 }
 
@@ -138,16 +138,16 @@ impl<'a, N> DefaultContext<'a, N> {
         &self.functions
     }
 
-    /// Gets a reference to the binary functions of this context.
-    #[inline]
-    pub fn binary_functions(&self) -> &HashMap<IgnoreCaseString, Rc<dyn BinaryFunction<N> + 'a>> {
-        &self.binary_functions
-    }
-
     /// Gets a reference to the unary functions of this context.
     #[inline]
     pub fn unary_functions(&self) -> &HashMap<IgnoreCaseString, Rc<dyn UnaryFunction<N> + 'a>> {
         &self.unary_functions
+    }
+
+    /// Gets a reference to the binary functions of this context.
+    #[inline]
+    pub fn binary_functions(&self) -> &HashMap<IgnoreCaseString, Rc<dyn BinaryFunction<N> + 'a>> {
+        &self.binary_functions
     }
 
     /// Adds the specified function to the context using the given name.
@@ -175,6 +175,21 @@ impl<'a, N> DefaultContext<'a, N> {
         }
     }
 
+    /// Adds the specified unary function to the context using the given name.
+///
+/// # Remarks
+/// - This allows to use an unary function with an alias.
+    #[inline]
+    pub fn add_unary_function_as<F: UnaryFunction<N> + 'a>(&mut self, func: F, name: &str) {
+        let function_name = IgnoreCaseString::from(name);
+        if self.unary_functions.contains_key(&function_name){
+            panic!("An unary function named '{}' already exists", function_name);
+        }
+        else{
+            self.unary_functions.insert(function_name, Rc::new(func));
+        }
+    }
+
     /// Adds the specified binary function to the context using the given name.
     ///
     /// # Remarks
@@ -199,21 +214,6 @@ impl<'a, N> DefaultContext<'a, N> {
             self.binary_functions.insert(function_name, Rc::new(func));
         }
     }
-
-    /// Adds the specified unary function to the context using the given name.
-    ///
-    /// # Remarks
-    /// - This allows to use an unary function with an alias.
-    #[inline]
-    pub fn add_unary_function_as<F: UnaryFunction<N> + 'a>(&mut self, func: F, name: &str) {
-        let function_name = IgnoreCaseString::from(name);
-        if self.unary_functions.contains_key(&function_name){
-            panic!("An unary function named '{}' already exists", function_name);
-        }
-        else{
-            self.unary_functions.insert(function_name, Rc::new(func));
-        }
-    }
 }
 
 impl<'a, N> Context<'a, N> for DefaultContext<'a, N> {
@@ -230,6 +230,13 @@ impl<'a, N> Context<'a, N> for DefaultContext<'a, N> {
     }
 
     #[inline]
+    fn add_unary_function<F: UnaryFunction<N> + 'a>(&mut self, func: F) {
+        validator::check_function_name(func.name(), validator::Kind::Operator);
+        let name = func.name().to_string();
+        self.add_unary_function_as(func, &name)
+    }
+
+    #[inline]
     fn add_binary_function<F: BinaryFunction<N> + 'a>(&mut self, func: F) {
         validator::check_function_name(
             func.name(),
@@ -241,13 +248,6 @@ impl<'a, N> Context<'a, N> for DefaultContext<'a, N> {
         );
         let name = func.name().to_string();
         self.add_binary_function_as(func, &name)
-    }
-
-    #[inline]
-    fn add_unary_function<F: UnaryFunction<N> + 'a>(&mut self, func: F) {
-        validator::check_function_name(func.name(), validator::Kind::Operator);
-        let name = func.name().to_string();
-        self.add_unary_function_as(func, &name)
     }
 
     #[inline]
@@ -284,13 +284,13 @@ impl<'a, N> Context<'a, N> for DefaultContext<'a, N> {
     }
 
     #[inline]
-    fn get_binary_function(&self, name: &str) -> Option<&Rc<dyn BinaryFunction<N> + 'a>> {
-        self.binary_functions.get(&IgnoreCaseString::from(name))
+    fn get_unary_function(&self, name: &str) -> Option<&Rc<dyn UnaryFunction<N> + 'a>> {
+        self.unary_functions.get(&IgnoreCaseString::from(name))
     }
 
     #[inline]
-    fn get_unary_function(&self, name: &str) -> Option<&Rc<dyn UnaryFunction<N> + 'a>> {
-        self.unary_functions.get(&IgnoreCaseString::from(name))
+    fn get_binary_function(&self, name: &str) -> Option<&Rc<dyn BinaryFunction<N> + 'a>> {
+        self.binary_functions.get(&IgnoreCaseString::from(name))
     }
 }
 
