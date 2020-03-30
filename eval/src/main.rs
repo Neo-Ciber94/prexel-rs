@@ -14,6 +14,7 @@ fn main() {
         "--run" | "--r" => {
             if arguments.len() == 1 {
                 eval_internal::run();
+                println!();
             } else {
                 println!("Invalid arguments, expected format: eval --[options] [args]");
             }
@@ -34,8 +35,13 @@ fn eval_single_arg(expression: &str) {
     use math_engine::evaluator::Evaluator;
     use math_engine::decimal::Decimal;
     use math_engine::context::DefaultContext;
+    use math_engine::context::Config;
 
-    let context = DefaultContext::new_decimal();
+    let config = Config::new()
+        .with_group_symbol('[', ']')
+        .with_implicit_mul();
+
+    let context = DefaultContext::new_decimal_with_config(config);
     let evaluator: Evaluator<Decimal> = Evaluator::with_context(context);
 
     match evaluator.eval(expression) {
@@ -64,7 +70,7 @@ mod eval_internal {
     const BACKSPACE: &str = "\x08 \x08";
 
     const TEXT_COLOR: Color = Color::Cyan;
-    const RESULT_COLOR: Color = Color::AnsiValue(0);
+    const RESULT_COLOR: Color = Color::White;
     const NEWLINE_COLOR: Color = Color::Green;
     const ERROR_COLOR: Color = Color::Red;
 

@@ -439,11 +439,12 @@ mod shunting_yard {
                         }
                     }
                 } else if token.is_grouping_close() {
-                    //(2)2, (2)PI, (2)x, (4)(2)
-                    if let Some(next_token) = token_iterator.peek() {
-                        if next_token.1.is_grouping_open() {
-                            operators.push(BinaryOperator('*'));
-                        }
+                    //(2)2, (2)PI, (2)x, (4)(2), Sin(30)4
+                    if let Some(_) = token_iterator.peek() {
+                        // if next_token.1.is_grouping_open() {
+                        //     operators.push(BinaryOperator('*'));
+                        // }
+                        operators.push(BinaryOperator('*'));
                     }
                 }
             }
@@ -968,9 +969,11 @@ mod tests {
 
         assert!(evaluator.eval("2Sin(50)").is_ok());
         assert!(evaluator.eval("(2)(4)").is_ok());
+        assert!(evaluator.eval("2(4)").is_ok());
+        assert!(evaluator.eval("(2)4").is_ok());
         assert!(evaluator.eval("Cos(30)(2)").is_ok());
 
-        // not allowed due looks like function call
+        // not allowed currently
         assert!(evaluator.eval("5x(2)").is_err());
         assert!(evaluator.eval("3 2Sin(50)").is_err());
     }
