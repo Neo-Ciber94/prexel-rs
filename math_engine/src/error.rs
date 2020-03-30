@@ -79,7 +79,7 @@ impl Debug for Detail{
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match *self{
             Detail::Simple(ref kind) => f.write_str(kind.as_str()),
-            Detail::Custom(ref custom) => Debug::fmt(custom.error.as_ref(), f)
+            Detail::Custom(ref custom) => Debug::fmt(custom, f)
         }
     }
 }

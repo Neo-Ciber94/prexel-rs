@@ -45,8 +45,7 @@ pub mod complex;
 ///
 /// [`DefaultContext`]: context/struct.DefaultContext.html
 /// [`Evaluator`]: evaluator/struct.Evaluator.html
-pub fn eval<'a, T>(expression: &str) -> Result<T>
-    where T: num::unchecked::UncheckedNum
+pub fn eval<T>(expression: &str) -> Result<T> where T: num::unchecked::UncheckedNum
     + std::panic::RefUnwindSafe
     + std::panic::UnwindSafe
     + 'static,
@@ -77,11 +76,10 @@ pub fn eval<'a, T>(expression: &str) -> Result<T>
         }
 
         STATIC_DATA.with(|map| {
-            let raw = map
+            let raw = *map
                 .borrow_mut()
                 .entry(TypeId::of::<T>())
-                .or_insert(Box::into_raw(Box::new(f())) as *const ())
-                .clone();
+                .or_insert(Box::into_raw(Box::new(f())) as *const ());
 
             unsafe { &*(raw as *const T) }
         })

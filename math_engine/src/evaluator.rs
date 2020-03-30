@@ -300,7 +300,7 @@ mod shunting_yard {
     use crate::error::{Error, ErrorKind};
     use crate::function::{Associativity, Notation};
     use crate::token::Token;
-    use crate::token::Token::BinaryOperator;
+    use crate::token::Token::*;
 
     /// Converts an `infix` notation expression to `rpn` (Reverse Polish Notation) using
         /// the shunting yard algorithm.
@@ -439,12 +439,18 @@ mod shunting_yard {
                         }
                     }
                 } else if token.is_grouping_close() {
-                    //(2)2, (2)PI, (2)x, (4)(2), Sin(30)4
-                    if let Some(_) = token_iterator.peek() {
-                        // if next_token.1.is_grouping_open() {
-                        //     operators.push(BinaryOperator('*'));
-                        // }
-                        operators.push(BinaryOperator('*'));
+                    //(2)2, (2)PI, (2)x, (4)(2), Sin(30)Cos(30), Tan(45)2
+                    if let Some(next_token) = token_iterator.peek() {
+                        match next_token.1{
+                            Number(_)
+                            | Variable(_)
+                            | Constant(_)
+                            | Function(_)
+                            | GroupingOpen(_) => {
+                                operators.push(BinaryOperator('*'))
+                            }
+                            _ => {}
+                        }
                     }
                 }
             }
@@ -935,6 +941,9 @@ mod tests {
         assert!(evaluator.eval("-(+(-(+(5))))").is_ok());
         assert!(evaluator.eval("10--+2").is_ok());
         assert!(evaluator.eval("+2!").is_ok());
+        assert!(evaluator.eval("5 * Sin(40)").is_ok());
+        assert!(evaluator.eval("Sin(30) * 5").is_ok());
+        assert!(evaluator.eval("Cos(30) * Sin(30)").is_ok());
 
         assert!(evaluator.eval("((20) + 2").is_err());
         assert!(evaluator.eval("(1,23) + 1").is_err());
@@ -971,10 +980,13 @@ mod tests {
         assert!(evaluator.eval("(2)(4)").is_ok());
         assert!(evaluator.eval("2(4)").is_ok());
         assert!(evaluator.eval("(2)4").is_ok());
+        assert!(evaluator.eval("Cos(30) * 2").is_ok());
         assert!(evaluator.eval("Cos(30)(2)").is_ok());
 
-        // not allowed currently
+        // Not allowed currently due looks like function call
         assert!(evaluator.eval("5x(2)").is_err());
+
+        // Confusing expression
         assert!(evaluator.eval("3 2Sin(50)").is_err());
     }
 
