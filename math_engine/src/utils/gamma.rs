@@ -1,9 +1,9 @@
-use std::f64::consts;
 use num_traits::ToPrimitive;
+use std::f64::consts;
 
 pub fn gamma(mut x: f64) -> f64 {
     //Using Coefficients from: https://mrob.com/pub/ries/lanczos-gamma.html
-    const G : f64 = 4.742_187_5;
+    const G: f64 = 4.742_187_5;
     const P: [f64; 15] = [
         0.999_999_999_999_997_091_82,
         57.156_235_665_862_923_517,
@@ -32,38 +32,47 @@ pub fn gamma(mut x: f64) -> f64 {
         x -= 1.0;
 
         let mut factor: f64 = P[0];
-        for (n, coefficient) in P.iter().enumerate().skip(1){
+        for (n, coefficient) in P.iter().enumerate().skip(1) {
             factor += coefficient / (x + n.to_f64().unwrap());
         }
 
         let t: f64 = x + G + 0.5;
 
         // Result = sqrt( 2 * PI) * t ^ (x + 1/2) * e^(-t) * factor
-        f64::sqrt(2.0 * consts::PI)
-            * f64::powf(t, x + 0.5)
-            * f64::exp(-t)
-            * factor
+        f64::sqrt(2.0 * consts::PI) * f64::powf(t, x + 0.5) * f64::exp(-t) * factor
     }
 }
 
 #[cfg(test)]
-mod tests{
+mod tests {
     use super::*;
 
-    fn gamma_fact(n: f64) -> f64{
+    fn gamma_fact(n: f64) -> f64 {
         gamma(n + 1.0)
     }
 
-    fn f64_eq(a: f64, b: f64, delta: f64) -> bool{
+    fn f64_eq(a: f64, b: f64, delta: f64) -> bool {
         a.abs() - b.abs() < delta
     }
 
     #[test]
-    fn gamma_test(){
-        const ERROR : f64 = 0.00000000001;
-        assert!(f64_eq(gamma_fact(0.9), 0.96176583190738741940757480212503, ERROR));
-        assert!(f64_eq(gamma_fact(0.5), 0.88622692545275801364908374167057, ERROR));
-        assert!(f64_eq(gamma_fact(0.1), 0.95135076986687318362924871772654, ERROR));
+    fn gamma_test() {
+        const ERROR: f64 = 0.00000000001;
+        assert!(f64_eq(
+            gamma_fact(0.9),
+            0.96176583190738741940757480212503,
+            ERROR
+        ));
+        assert!(f64_eq(
+            gamma_fact(0.5),
+            0.88622692545275801364908374167057,
+            ERROR
+        ));
+        assert!(f64_eq(
+            gamma_fact(0.1),
+            0.95135076986687318362924871772654,
+            ERROR
+        ));
 
         //assert_eq!(gamma_fact(0.9), 0.96176583190738741940757480212503);
         //assert_eq!(gamma_fact(0.5), 0.88622692545275801364908374167057);

@@ -5,6 +5,6 @@ authors = ["Freddy L P.B <freddy_luis_94@hotmail.com>"]
 edition = "2018"
 
 [dependencies]
-win32console = "0.1.4"
+math_engine = { path = "../math_engine" , features = ["decimal", "complex"]}
 crossterm = "0.17.1"
-math_engine = { path = "../math_engine" , features = ["decimal"]}
+bigdecimal = "0.1.0"

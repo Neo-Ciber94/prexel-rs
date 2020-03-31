@@ -69,10 +69,10 @@ pub mod ops {
     use crate::decimal::consts;
     use crate::decimal::decimal_ext::DecimalExt;
     use crate::error::*;
-    use crate::Result;
     use crate::function::{
         Associativity, BinaryFunction, Function, Notation, Precedence, UnaryFunction,
     };
+    use crate::Result;
 
     pub struct AddOperator;
     impl BinaryFunction<Decimal> for AddOperator {
@@ -319,9 +319,7 @@ pub mod ops {
             }
 
             match sum {
-                Some(n) => {
-                    Ok(n / Decimal::from_usize(args.len()).unwrap())
-                }
+                Some(n) => Ok(n / Decimal::from_usize(args.len()).unwrap()),
                 None => Err(Error::from(ErrorKind::InvalidArgumentCount)),
             }
         }
@@ -329,7 +327,7 @@ pub mod ops {
 
     macro_rules! forward_checked_func_impl {
         ($struct_name:ident, $method_name:ident, $name:ident) => {
-            impl Function<Decimal> for $struct_name{
+            impl Function<Decimal> for $struct_name {
                 #[inline]
                 fn name(&self) -> &str {
                     stringify!($name)
@@ -337,9 +335,11 @@ pub mod ops {
 
                 #[inline]
                 fn call(&self, args: &[Decimal]) -> Result<Decimal> {
-                    match args.len(){
-                        1 => args[0].$method_name().ok_or(Error::from(ErrorKind::Overflow)),
-                        _ => Err(Error::from(ErrorKind::InvalidArgumentCount))
+                    match args.len() {
+                        1 => args[0]
+                            .$method_name()
+                            .ok_or(Error::from(ErrorKind::Overflow)),
+                        _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
                     }
                 }
             }
@@ -352,7 +352,7 @@ pub mod ops {
 
     macro_rules! forward_func_impl {
         ($struct_name:ident, $method_name:ident, $name:ident) => {
-            impl Function<Decimal> for $struct_name{
+            impl Function<Decimal> for $struct_name {
                 #[inline]
                 fn name(&self) -> &str {
                     stringify!($name)
@@ -360,9 +360,9 @@ pub mod ops {
 
                 #[inline]
                 fn call(&self, args: &[Decimal]) -> Result<Decimal> {
-                    match args.len(){
+                    match args.len() {
                         1 => Ok(args[0].$method_name()),
-                        _ => Err(Error::from(ErrorKind::InvalidArgumentCount))
+                        _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
                     }
                 }
             }
@@ -398,16 +398,20 @@ pub mod ops {
     forward_checked_func_impl!(LnFunction, checked_ln, ln);
 
     pub struct LogFunction;
-    impl Function<Decimal> for LogFunction{
+    impl Function<Decimal> for LogFunction {
         fn name(&self) -> &str {
             "log"
         }
 
         fn call(&self, args: &[Decimal]) -> Result<Decimal> {
-            match args.len(){
-                1 => args[0].checked_log(consts::TEN).ok_or(Error::from(ErrorKind::Overflow)),
-                2 => args[0].checked_log(args[1]).ok_or(Error::from(ErrorKind::Overflow)),
-                _ => Err(Error::from(ErrorKind::InvalidArgumentCount))
+            match args.len() {
+                1 => args[0]
+                    .checked_log(consts::TEN)
+                    .ok_or(Error::from(ErrorKind::Overflow)),
+                2 => args[0]
+                    .checked_log(args[1])
+                    .ok_or(Error::from(ErrorKind::Overflow)),
+                _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
             }
         }
     }
@@ -425,7 +429,7 @@ pub mod ops {
 
     macro_rules! impl_checked_trig_rec {
         ($struct_name:ident, $method_name:ident, $name:ident) => {
-            impl Function<Decimal> for $struct_name{
+            impl Function<Decimal> for $struct_name {
                 #[inline]
                 fn name(&self) -> &str {
                     stringify!($name)
@@ -433,11 +437,12 @@ pub mod ops {
 
                 #[inline]
                 fn call(&self, args: &[Decimal]) -> Result<Decimal> {
-                    match args.len(){
-                        1 => args[0].$method_name()
+                    match args.len() {
+                        1 => args[0]
+                            .$method_name()
                             .map(Decimal::inv)
                             .ok_or(Error::from(ErrorKind::Overflow)),
-                        _ => Err(Error::from(ErrorKind::InvalidArgumentCount))
+                        _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
                     }
                 }
             }
@@ -460,7 +465,7 @@ pub mod ops {
 
     macro_rules! impl_trig_rec {
         ($struct_name:ident, $method_name:ident, $name:ident) => {
-            impl Function<Decimal> for $struct_name{
+            impl Function<Decimal> for $struct_name {
                 #[inline]
                 fn name(&self) -> &str {
                     stringify!($name)
@@ -468,9 +473,9 @@ pub mod ops {
 
                 #[inline]
                 fn call(&self, args: &[Decimal]) -> Result<Decimal> {
-                    match args.len(){
+                    match args.len() {
                         1 => Ok(args[0].$method_name().inv()),
-                        _ => Err(Error::from(ErrorKind::InvalidArgumentCount))
+                        _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
                     }
                 }
             }
@@ -502,7 +507,7 @@ pub mod ops {
     //////////////////// Inverse Trigonometric ////////////////////
     macro_rules! impl_arc_trig_rec {
         ($struct_name:ident, $method_name:ident, $name:ident) => {
-            impl Function<Decimal> for $struct_name{
+            impl Function<Decimal> for $struct_name {
                 #[inline]
                 fn name(&self) -> &str {
                     stringify!($name)
@@ -510,9 +515,9 @@ pub mod ops {
 
                 #[inline]
                 fn call(&self, args: &[Decimal]) -> Result<Decimal> {
-                    match args.len(){
+                    match args.len() {
                         1 => Ok(args[0].$method_name()),
-                        _ => Err(Error::from(ErrorKind::InvalidArgumentCount))
+                        _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
                     }
                 }
             }
@@ -525,7 +530,7 @@ pub mod ops {
 
     macro_rules! impl_checked_arc_trig_rec {
         ($struct_name:ident, $method_name:ident, $name:ident) => {
-            impl Function<Decimal> for $struct_name{
+            impl Function<Decimal> for $struct_name {
                 #[inline]
                 fn name(&self) -> &str {
                     stringify!($name)
@@ -533,11 +538,12 @@ pub mod ops {
 
                 #[inline]
                 fn call(&self, args: &[Decimal]) -> Result<Decimal> {
-                    match args.len(){
-                        1 => args[0].inv()
+                    match args.len() {
+                        1 => args[0]
+                            .inv()
                             .$method_name()
                             .ok_or(Error::from(ErrorKind::Overflow)),
-                        _ => Err(Error::from(ErrorKind::InvalidArgumentCount))
+                        _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
                     }
                 }
             }
@@ -558,7 +564,7 @@ pub mod ops {
     impl Function<Decimal> for ATanFunction {
         #[inline]
         fn name(&self) -> &str {
-            stringify!( atan )
+            stringify!(atan)
         }
 
         #[inline]
@@ -566,7 +572,7 @@ pub mod ops {
             match args.len() {
                 1 => Ok(args[0].atan()),
                 2 => Ok(args[0].atan2(args[1])),
-                _ => Err(Error::from(ErrorKind::InvalidArgumentCount))
+                _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
             }
         }
     }
@@ -619,20 +625,20 @@ pub mod ops {
     impl_checked_arc_trig_rec!(ACothFunction, atanh, acoth);
 }
 
-pub mod context{
-    use crate::context::{DefaultContext, Config, Context};
-    use rust_decimal::Decimal;
+pub mod context {
+    use crate::context::{Config, Context, DefaultContext};
+    use crate::decimal::consts;
     use crate::decimal::ops::*;
     use crate::ops::math::{MaxFunction, MinFunction, RandFunction, UnaryPlus};
-    use crate::decimal::consts;
+    use rust_decimal::Decimal;
 
-    impl <'a> DefaultContext<'a, Decimal>{
+    impl<'a> DefaultContext<'a, Decimal> {
         #[inline]
-        pub fn new_decimal() -> Self{
+        pub fn new_decimal() -> Self {
             Self::new_decimal_with_config(Config::new())
         }
 
-        pub fn new_decimal_with_config(config: Config) -> Self{
+        pub fn new_decimal_with_config(config: Config) -> Self {
             let mut context = Self::empty_with_config(config);
             context.add_constant("PI", consts::PI);
             context.add_constant("E", consts::E);

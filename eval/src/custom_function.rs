@@ -9,7 +9,10 @@ use math_engine::function::Function;
 use math_engine::token::Token::*;
 use math_engine::tokenizer::{Tokenize, Tokenizer};
 
-pub struct CustomFunction<'a, T> where T: Display + Debug + Clone + FromStr {
+pub struct CustomFunction<'a, T>
+where
+    T: Display + Debug + Clone + FromStr,
+{
     function_name: String,
     params: Vec<String>,
     body: String,
@@ -19,9 +22,17 @@ pub struct CustomFunction<'a, T> where T: Display + Debug + Clone + FromStr {
 
 impl<'a, T> RefUnwindSafe for CustomFunction<'a, T> where T: Display + Debug + Clone + FromStr {}
 
-impl<'a, T> CustomFunction<'a, T> where T: Display + Debug + Clone + FromStr {
+impl<'a, T> CustomFunction<'a, T>
+where
+    T: Display + Debug + Clone + FromStr,
+{
     #[inline]
-    pub fn with_evaluator(function_name: String, params: Vec<String>, body: String, evaluator: Evaluator<'a, T>) -> Self {
+    pub fn with_evaluator(
+        function_name: String,
+        params: Vec<String>,
+        body: String,
+        evaluator: Evaluator<'a, T>,
+    ) -> Self {
         CustomFunction {
             function_name,
             params,
@@ -33,10 +44,13 @@ impl<'a, T> CustomFunction<'a, T> where T: Display + Debug + Clone + FromStr {
 
     pub fn from_str(evaluator: Evaluator<'a, T>, s: &str) -> Result<Self, ParseFunctionError> {
         fn check_name(name: &str) -> Result<(), ParseFunctionError> {
-            if name.is_empty() ||
-                name.chars().any(char::is_whitespace) ||
-                !name.chars().all(char::is_alphanumeric) {
-                return Err(ParseFunctionError::from(FunctionErrorKind::InvalidName(name.to_string())));
+            if name.is_empty()
+                || name.chars().any(char::is_whitespace)
+                || !name.chars().all(char::is_alphanumeric)
+            {
+                return Err(ParseFunctionError::from(FunctionErrorKind::InvalidName(
+                    name.to_string(),
+                )));
             }
 
             Ok(())
@@ -46,9 +60,7 @@ impl<'a, T> CustomFunction<'a, T> where T: Display + Debug + Clone + FromStr {
             return Err(ParseFunctionError::from(FunctionErrorKind::Empty));
         }
 
-        let parts: Vec<&str> = s.split("=")
-            .map(|s| s.trim())
-            .collect::<Vec<&str>>();
+        let parts: Vec<&str> = s.split("=").map(|s| s.trim()).collect::<Vec<&str>>();
 
         if parts.len() != 2 {
             return Err(ParseFunctionError::from(FunctionErrorKind::InvalidFormat));
@@ -66,7 +78,9 @@ impl<'a, T> CustomFunction<'a, T> where T: Display + Debug + Clone + FromStr {
                     for p in s.split(",").map(|s| s.trim()).map(|s| s.to_string()) {
                         check_name(&p)?;
                         if temp.contains(&p) {
-                            return Err(ParseFunctionError::from(FunctionErrorKind::DuplicatedParam(p)));
+                            return Err(ParseFunctionError::from(
+                                FunctionErrorKind::DuplicatedParam(p),
+                            ));
                         }
 
                         temp.push(p);
@@ -77,7 +91,12 @@ impl<'a, T> CustomFunction<'a, T> where T: Display + Debug + Clone + FromStr {
             };
 
             Self::check_function_body(&evaluator, &params, body)?;
-            Ok(CustomFunction::with_evaluator(function_name, params, body.to_string(), evaluator))
+            Ok(CustomFunction::with_evaluator(
+                function_name,
+                params,
+                body.to_string(),
+                evaluator,
+            ))
         } else {
             Err(ParseFunctionError::from(FunctionErrorKind::InvalidFormat))
         }
@@ -98,7 +117,11 @@ impl<'a, T> CustomFunction<'a, T> where T: Display + Debug + Clone + FromStr {
         &self.body
     }
 
-    fn check_function_body(evaluator: &Evaluator<T>, params: &Vec<String>, expr: &str) -> Result<(), ParseFunctionError> {
+    fn check_function_body(
+        evaluator: &Evaluator<T>,
+        params: &Vec<String>,
+        expr: &str,
+    ) -> Result<(), ParseFunctionError> {
         if expr.is_empty() {
             return Err(ParseFunctionError::from(FunctionErrorKind::Empty));
         }
@@ -116,14 +139,14 @@ impl<'a, T> CustomFunction<'a, T> where T: Display + Debug + Clone + FromStr {
             Err(_) => Err(ParseFunctionError::from(FunctionErrorKind::InvalidBody)),
             Ok(tokens) => {
                 // Gets all the unknown values which should be equals to the number of params.
-                let locals = tokens.into_iter()
+                let locals = tokens
+                    .into_iter()
                     .filter(|t| t.is_unknown())
-                    .map(|t| {
-                        match t {
-                            Unknown(s) => s,
-                            _ => unreachable!()
-                        }
-                    }).collect::<Vec<String>>();
+                    .map(|t| match t {
+                        Unknown(s) => s,
+                        _ => unreachable!(),
+                    })
+                    .collect::<Vec<String>>();
 
                 if locals.len() != params.len() {
                     return Err(ParseFunctionError::from(FunctionErrorKind::InvalidBody));
@@ -135,7 +158,10 @@ impl<'a, T> CustomFunction<'a, T> where T: Display + Debug + Clone + FromStr {
     }
 }
 
-impl<'a, T> Function<T> for CustomFunction<'a, T> where T: Display + Debug + Clone + FromStr {
+impl<'a, T> Function<T> for CustomFunction<'a, T>
+where
+    T: Display + Debug + Clone + FromStr,
+{
     #[inline]
     fn name(&self) -> &str {
         self.name()
@@ -157,7 +183,7 @@ impl<'a, T> Function<T> for CustomFunction<'a, T> where T: Display + Debug + Clo
 
 #[derive(Debug)]
 pub struct ParseFunctionError {
-    kind: FunctionErrorKind
+    kind: FunctionErrorKind,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -175,20 +201,25 @@ pub enum FunctionErrorKind {
 impl Display for FunctionErrorKind {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match *self {
-            FunctionErrorKind::Empty =>
-                write!(f, "Empty expression"),
-            FunctionErrorKind::InvalidName(ref s) =>
-                write!(f, "Expected param names with not whitespaces and alphanumeric: `{}`", s),
-            FunctionErrorKind::UnusedParam(ref s) =>
-                write!(f, "A param `{}` is not being used in the body of the function", s),
-            FunctionErrorKind::DuplicatedParam(ref s) =>
-                write!(f, "The param `{}` is duplicated", s),
-            FunctionErrorKind::InvalidBody =>
-                write!(f, "Invalid function body expression"),
-            FunctionErrorKind::InvalidFormat =>
-                write!(f, "Invalid format, expected: FunctionName(args, ..) = expr"),
-            FunctionErrorKind::InvalidParam =>
-                write!(f, "Invalid param name"),
+            FunctionErrorKind::Empty => write!(f, "Empty expression"),
+            FunctionErrorKind::InvalidName(ref s) => write!(
+                f,
+                "Expected param names with not whitespaces and alphanumeric: `{}`",
+                s
+            ),
+            FunctionErrorKind::UnusedParam(ref s) => write!(
+                f,
+                "A param `{}` is not being used in the body of the function",
+                s
+            ),
+            FunctionErrorKind::DuplicatedParam(ref s) => {
+                write!(f, "The param `{}` is duplicated", s)
+            }
+            FunctionErrorKind::InvalidBody => write!(f, "Invalid function body expression"),
+            FunctionErrorKind::InvalidFormat => {
+                write!(f, "Invalid format, expected: FunctionName(args, ..) = expr")
+            }
+            FunctionErrorKind::InvalidParam => write!(f, "Invalid param name"),
         }
     }
 }
@@ -196,9 +227,7 @@ impl Display for FunctionErrorKind {
 impl From<FunctionErrorKind> for ParseFunctionError {
     #[inline]
     fn from(kind: FunctionErrorKind) -> Self {
-        ParseFunctionError {
-            kind
-        }
+        ParseFunctionError { kind }
     }
 }
 

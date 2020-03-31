@@ -12,8 +12,8 @@ pub mod math {
     use crate::function::{
         Associativity, BinaryFunction, Function, Notation, Precedence, UnaryFunction,
     };
-    use crate::Result;
     use crate::utils::gamma::gamma;
+    use crate::Result;
 
     pub struct UnaryPlus;
     impl<N> UnaryFunction<N> for UnaryPlus {
@@ -31,14 +31,17 @@ pub mod math {
     }
 
     pub struct Factorial;
-    impl<N> UnaryFunction<N> for Factorial where N: Clone + Debug
+    impl<N> UnaryFunction<N> for Factorial
+    where
+        N: Clone
+            + Debug
             + Zero
             + One
             + Sub<N, Output = N>
             + Mul<N, Output = N>
             + PartialOrd
             + ToPrimitive
-            + FromPrimitive
+            + FromPrimitive,
     {
         fn name(&self) -> &str {
             "!"
@@ -59,13 +62,13 @@ pub mod math {
             }
 
             // Quick path for: `x < 1`
-            if value < N::one(){
+            if value < N::one() {
                 return if let Some(n) = value.to_f64() {
                     let result = gamma(n + 1f64);
                     N::from_f64(result).ok_or(Error::from(ErrorKind::Overflow))
                 } else {
                     Err(Error::from(ErrorKind::Overflow))
-                }
+                };
             }
 
             let mut total = value;
@@ -78,11 +81,10 @@ pub mod math {
 
             // If next value is non-zero, apply `Gamma function`.
             if !next.is_zero() {
-                if let (Some(mut total_f64), Some(n)) = (total.to_f64(), next.to_f64()){
+                if let (Some(mut total_f64), Some(n)) = (total.to_f64(), next.to_f64()) {
                     total_f64 *= gamma(n + 1f64);
                     N::from_f64(total_f64).ok_or(Error::from(ErrorKind::Overflow))
-                }
-                else{
+                } else {
                     Err(Error::from(ErrorKind::Overflow))
                 }
             } else {

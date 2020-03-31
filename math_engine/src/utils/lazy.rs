@@ -28,7 +28,7 @@ pub struct Lazy<T, F = fn() -> T> {
     /// Provides the value to initialize this instance.
     initializer: Cell<Option<F>>,
     /// Used for a sync initialization.
-    once: Once
+    once: Once,
 }
 
 unsafe impl<T, F> Sync for Lazy<T, F> {}
@@ -52,7 +52,7 @@ impl<T, F> Lazy<T, F> {
         Lazy {
             value: UnsafeCell::new(None),
             initializer: Cell::new(Some(initializer)),
-            once: Once::new()
+            once: Once::new(),
         }
     }
 
@@ -62,9 +62,7 @@ impl<T, F> Lazy<T, F> {
     /// - Returns `true` if the instance is initialized, otherwise false.
     #[inline]
     pub fn is_initialized(&self) -> bool {
-        unsafe {
-            (*self.value.get()).is_some()
-        }
+        unsafe { (*self.value.get()).is_some() }
     }
 
     /// Sets the value of this instance.
@@ -133,8 +131,11 @@ impl<T, F: FnOnce() -> T> Lazy<T, F> {
     unsafe fn initialize(&self) -> &mut T {
         let ptr = self.value.get();
 
-        self.once.call_once(||{
-            let init = self.initializer.take().expect("Lazy is already initialized");
+        self.once.call_once(|| {
+            let init = self
+                .initializer
+                .take()
+                .expect("Lazy is already initialized");
             let value = init();
             ptr.write(Some(value));
         });
@@ -225,7 +226,6 @@ mod tests {
     use super::*;
     use std::thread;
     use std::time::Duration;
-    
 
     #[test]
     fn lazy_test0() {
@@ -314,14 +314,14 @@ mod tests {
 
     //#[test]
     #[allow(dead_code)]
-    fn multithreaded_access_test(){
+    fn multithreaded_access_test() {
         //static mut LAZY : Lazy<Mutex<Vec<u64>>> = Lazy::new(|| Mutex::new(Vec::new()));
-        static mut LAZY : Lazy<Vec<u64>> = Lazy::new(|| Vec::new());
+        static mut LAZY: Lazy<Vec<u64>> = Lazy::new(|| Vec::new());
 
         let iterations = 10;
-        unsafe{
-            for x in 0..iterations{
-                thread::spawn(move ||{
+        unsafe {
+            for x in 0..iterations {
+                thread::spawn(move || {
                     thread::sleep(Duration::from_millis(10));
                     //LAZY.lock().unwrap().push(x);
                     LAZY.push(x);

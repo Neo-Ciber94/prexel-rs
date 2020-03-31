@@ -5,8 +5,8 @@ use std::rc::Rc;
 use crate::function::{BinaryFunction, Function, UnaryFunction};
 use crate::num::checked::CheckedNum;
 use crate::num::unchecked::UncheckedNum;
-use crate::ops::math::*;
 use crate::ops::math::RandFunction;
+use crate::ops::math::*;
 use crate::utils::ignore_case_string::IgnoreCaseString;
 
 /// Trait to provides the variables, constants and functions used for evaluate an expression.
@@ -167,25 +167,23 @@ impl<'a, N> DefaultContext<'a, N> {
     #[inline]
     pub fn add_function_as<F: Function<N> + 'a>(&mut self, func: F, name: &str) {
         let function_name = IgnoreCaseString::from(name);
-        if self.functions.contains_key(&function_name){
+        if self.functions.contains_key(&function_name) {
             panic!("A function named '{}' already exists", function_name);
-        }
-        else {
+        } else {
             self.functions.insert(function_name, Rc::new(func));
         }
     }
 
     /// Adds the specified unary function to the context using the given name.
-///
-/// # Remarks
-/// - This allows to use an unary function with an alias.
+    ///
+    /// # Remarks
+    /// - This allows to use an unary function with an alias.
     #[inline]
     pub fn add_unary_function_as<F: UnaryFunction<N> + 'a>(&mut self, func: F, name: &str) {
         let function_name = IgnoreCaseString::from(name);
-        if self.unary_functions.contains_key(&function_name){
+        if self.unary_functions.contains_key(&function_name) {
             panic!("An unary function named '{}' already exists", function_name);
-        }
-        else{
+        } else {
             self.unary_functions.insert(function_name, Rc::new(func));
         }
     }
@@ -207,10 +205,9 @@ impl<'a, N> DefaultContext<'a, N> {
     #[inline]
     pub fn add_binary_function_as<F: BinaryFunction<N> + 'a>(&mut self, func: F, name: &str) {
         let function_name = IgnoreCaseString::from(name);
-        if self.binary_functions.contains_key(&function_name){
+        if self.binary_functions.contains_key(&function_name) {
             panic!("A binary function named '{}' already exists", function_name);
-        }
-        else{
+        } else {
             self.binary_functions.insert(function_name, Rc::new(func));
         }
     }
@@ -260,10 +257,12 @@ impl<'a, N> Context<'a, N> for DefaultContext<'a, N> {
     fn set_variable(&mut self, name: &str, value: N) -> Option<N> {
         validator::check_variable_name(name);
         let string = IgnoreCaseString::from(name);
-        if self.constants.contains_key(&string){
-            panic!("Invalid variable name, a constant named '{}' already exists", string)
-        }
-        else{
+        if self.constants.contains_key(&string) {
+            panic!(
+                "Invalid variable name, a constant named '{}' already exists",
+                string
+            )
+        } else {
             self.variables.insert(string, value)
         }
     }
@@ -504,7 +503,7 @@ impl Config {
     /// Function calls are only allowed within parentheses, eg: Product(3, 6, 6),
     /// but `with_custom_function_call` allow to use others, eg: Max[1,2,3], Sum<2,4,6>.
     #[inline]
-    pub fn with_custom_function_call(mut self) -> Config{
+    pub fn with_custom_function_call(mut self) -> Config {
         self.custom_function_call = true;
         self
     }
@@ -552,7 +551,7 @@ impl Config {
 
     /// Checks if the context allows custom function calls, eg: Max[1,2,3], Sum<2,4,6>
     #[inline]
-    pub fn custom_function_call(&self) -> bool{
+    pub fn custom_function_call(&self) -> bool {
         self.custom_function_call
     }
 
@@ -585,12 +584,10 @@ impl Config {
     /// assert_eq!(None, config.get_group_open_for('['));
     /// ```
     #[inline]
-    pub fn get_group_open_for(&self, group_close: char) -> Option<char>{
-        match self.get_group_symbol(group_close){
-            Some(s) if s.group_close == group_close => {
-                Some(s.group_open)
-            }
-            _ => None
+    pub fn get_group_open_for(&self, group_close: char) -> Option<char> {
+        match self.get_group_symbol(group_close) {
+            Some(s) if s.group_close == group_close => Some(s.group_open),
+            _ => None,
         }
     }
 
@@ -609,12 +606,10 @@ impl Config {
     /// assert_eq!(None, config.get_group_close_for(']'));
     /// ```
     #[inline]
-    pub fn get_group_close_for(&self, group_open: char) -> Option<char>{
-        match self.get_group_symbol(group_open){
-            Some(s) if s.group_open == group_open => {
-                Some(s.group_close)
-            }
-            _ => None
+    pub fn get_group_close_for(&self, group_open: char) -> Option<char> {
+        match self.get_group_symbol(group_open) {
+            Some(s) if s.group_open == group_open => Some(s.group_close),
+            _ => None,
         }
     }
 }
@@ -653,7 +648,7 @@ impl GroupingSymbol {
 
     /// Gets the open and close `char` symbols of this grouping.
     #[inline]
-    pub fn as_tuple(&self) -> (char, char){
+    pub fn as_tuple(&self) -> (char, char) {
         (self.group_open, self.group_close)
     }
 }

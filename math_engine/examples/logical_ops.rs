@@ -1,14 +1,13 @@
-use math_engine::function::{BinaryFunction, Precedence, Associativity};
-use math_engine::error::*;
-use math_engine::Result;
-use math_engine::context::{DefaultContext, Context};
+use math_engine::context::{Context, DefaultContext};
 use math_engine::evaluator::Evaluator;
+use math_engine::function::{Associativity, BinaryFunction, Precedence};
+use math_engine::Result;
 
-fn main(){
-    const USE_U8 : bool = true;
+fn main() {
+    const USE_U8: bool = true;
 
     if USE_U8 {
-        let mut context : DefaultContext<u8> = DefaultContext::empty();
+        let mut context: DefaultContext<u8> = DefaultContext::empty();
         context.add_constant("true", 1);
         context.add_constant("false", 0);
         context.add_binary_function(AndOperator);
@@ -19,16 +18,15 @@ fn main(){
 
         let expression1 = "(1 or 0) and (1 xor 0)";
         let expression2 = "(0 and 1)";
-        
+
         assert_eq!(evaluator.eval(expression1).unwrap(), 1);
         assert_eq!(evaluator.eval(expression2).unwrap(), 0);
 
         // Prints the result
         println!("{} = {}", expression1, evaluator.eval(expression1).unwrap());
         println!("{} = {}", expression2, evaluator.eval(expression2).unwrap());
-    }
-    else{
-        let mut context : DefaultContext<bool> = DefaultContext::empty();
+    } else {
+        let mut context: DefaultContext<bool> = DefaultContext::empty();
         context.add_constant("true", true);
         context.add_constant("false", false);
         context.add_binary_function(AndOperator);
@@ -54,7 +52,7 @@ struct XorOperator;
 struct OrOperator;
 
 //////////////// Implementation for bool ////////////////
-impl BinaryFunction<bool> for AndOperator{
+impl BinaryFunction<bool> for AndOperator {
     fn name(&self) -> &str {
         "and"
     }
@@ -72,7 +70,7 @@ impl BinaryFunction<bool> for AndOperator{
     }
 }
 
-impl BinaryFunction<bool> for XorOperator{
+impl BinaryFunction<bool> for XorOperator {
     fn name(&self) -> &str {
         "xor"
     }
@@ -90,7 +88,7 @@ impl BinaryFunction<bool> for XorOperator{
     }
 }
 
-impl BinaryFunction<bool> for OrOperator{
+impl BinaryFunction<bool> for OrOperator {
     fn name(&self) -> &str {
         "or"
     }
@@ -109,7 +107,7 @@ impl BinaryFunction<bool> for OrOperator{
 }
 
 //////////////// Implementation for u8 ////////////////
-impl BinaryFunction<u8> for AndOperator{
+impl BinaryFunction<u8> for AndOperator {
     fn name(&self) -> &str {
         "and"
     }
@@ -127,7 +125,7 @@ impl BinaryFunction<u8> for AndOperator{
     }
 }
 
-impl BinaryFunction<u8> for XorOperator{
+impl BinaryFunction<u8> for XorOperator {
     fn name(&self) -> &str {
         "xor"
     }
@@ -145,7 +143,7 @@ impl BinaryFunction<u8> for XorOperator{
     }
 }
 
-impl BinaryFunction<u8> for OrOperator{
+impl BinaryFunction<u8> for OrOperator {
     fn name(&self) -> &str {
         "or"
     }

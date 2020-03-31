@@ -5,8 +5,8 @@ pub mod ops {
     use num_traits::Zero;
 
     use crate::error::*;
-    use crate::Result;
     use crate::function::{Associativity, BinaryFunction, Function, Precedence};
+    use crate::Result;
 
     pub struct PowOperator;
     impl BinaryFunction<Complex64> for PowOperator {
@@ -36,18 +36,16 @@ pub mod ops {
         fn call(&self, args: &[Complex64]) -> Result<Complex64> {
             match args.len() {
                 1 => Ok(args[0].log(10_f64)),
-                2 => {
-                    match args[1].im {
-                        n if n.is_zero() => Ok(args[0].log(args[1].re)),
-                        _ => Err(Error::new(ErrorKind::InvalidInput, "Expected decimal base"))
-                    }
-                }
-                _ => Err(Error::from(ErrorKind::InvalidArgumentCount))
+                2 => match args[1].im {
+                    n if n.is_zero() => Ok(args[0].log(args[1].re)),
+                    _ => Err(Error::new(ErrorKind::InvalidInput, "Expected decimal base")),
+                },
+                _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
             }
         }
     }
 
-    macro_rules! forward_impl_func{
+    macro_rules! forward_impl_func {
         ($t:ty, $method_name:ident) => {
             forward_impl_func!($t, $method_name, $method_name);
         };
@@ -61,14 +59,14 @@ pub mod ops {
                 fn call(&self, args: &[Complex64]) -> Result<Complex64> {
                     match args.len() {
                         1 => Ok(args[0].$method_name()),
-                        _ => Err(Error::from(ErrorKind::InvalidArgumentCount))
+                        _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
                     }
                 }
             }
-        }
+        };
     }
 
-    macro_rules! forward_impl_func_inv{
+    macro_rules! forward_impl_func_inv {
         ($t:ty, $method_name:ident) => {
             forward_impl_func_inv!($t, $method_name, $method_name);
         };
@@ -82,11 +80,11 @@ pub mod ops {
                 fn call(&self, args: &[Complex64]) -> Result<Complex64> {
                     match args.len() {
                         1 => Ok(args[0].$method_name().inv()),
-                        _ => Err(Error::from(ErrorKind::InvalidArgumentCount))
+                        _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
                     }
                 }
             }
-        }
+        };
     }
 
     pub struct SqrtFunction;
@@ -179,13 +177,13 @@ pub mod ops {
     forward_impl_func_inv!(ACothFunction, atanh, acoth);
 }
 
-pub mod context{
+pub mod context {
     use num_complex::Complex64;
     use num_traits::FromPrimitive;
 
+    use crate::complex::ops::PowOperator;
     use crate::context::{Config, Context, DefaultContext};
     use crate::ops::unchecked::*;
-    use crate::complex::ops::PowOperator;
 
     impl<'a> DefaultContext<'a, Complex64> {
         #[inline]

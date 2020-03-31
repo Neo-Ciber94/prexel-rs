@@ -3,12 +3,12 @@ use std::marker::PhantomData;
 use std::str::FromStr;
 
 use crate::context::{Context, DefaultContext};
-use crate::Result;
 use crate::error::{Error, ErrorKind};
 use crate::num::checked::CheckedNum;
 use crate::token::Token;
 use crate::token::Token::*;
 use crate::tokenizer::{Tokenize, Tokenizer};
+use crate::Result;
 
 /// A trait for evaluate an expression of `Token`.
 pub trait Evaluate<N> {
@@ -37,7 +37,10 @@ impl<'a, N: CheckedNum> Evaluator<'a, N, DefaultContext<'a, N>> {
     }
 }
 
-impl<'a, N, C> Evaluator<'a, N, C> where C: Context<'a, N> {
+impl<'a, N, C> Evaluator<'a, N, C>
+where
+    C: Context<'a, N>,
+{
     /// Constructs a new `Evaluator` using the specified `Context`.
     #[inline]
     pub fn with_context(context: C) -> Self {
@@ -60,7 +63,11 @@ impl<'a, N, C> Evaluator<'a, N, C> where C: Context<'a, N> {
     }
 }
 
-impl<'a, N, C> Evaluator<'a, N, C> where C: Context<'a, N>, N: FromStr + Debug + Clone {
+impl<'a, N, C> Evaluator<'a, N, C>
+where
+    C: Context<'a, N>,
+    N: FromStr + Debug + Clone,
+{
     /// Evaluates the given `str` expression.
     ///
     /// # Example
@@ -85,7 +92,11 @@ impl<'a, N, C> Evaluator<'a, N, C> where C: Context<'a, N>, N: FromStr + Debug +
     }
 }
 
-impl<'a, C, N> Evaluate<N> for Evaluator<'a, N, C> where C: Context<'a, N>, N: Debug + Clone {
+impl<'a, C, N> Evaluate<N> for Evaluator<'a, N, C>
+where
+    C: Context<'a, N>,
+    N: Debug + Clone,
+{
     type Output = Result<N>;
     #[inline]
     fn eval_tokens(&self, tokens: &[Token<N>]) -> Self::Output {
@@ -145,13 +156,10 @@ where
                 let mut buf = [0u8; 4];
                 let name = c.encode_utf8(&mut buf);
 
-                let func =
-                    context
-                        .get_unary_function(name)
-                        .ok_or(Error::new(
-                            ErrorKind::InvalidInput,
-                            format!("unary operator `{}` not found", c),
-                        ))?;
+                let func = context.get_unary_function(name).ok_or(Error::new(
+                    ErrorKind::InvalidInput,
+                    format!("unary operator `{}` not found", c),
+                ))?;
 
                 match values.pop() {
                     Some(n) => {
@@ -189,13 +197,10 @@ where
                 let mut buf = [0u8; 4];
                 let name = c.encode_utf8(&mut buf);
 
-                let func =
-                    context
-                        .get_binary_function(name)
-                        .ok_or(Error::new(
-                            ErrorKind::InvalidInput,
-                            format!("binary operator `{}` not found", c),
-                        ))?;
+                let func = context.get_binary_function(name).ok_or(Error::new(
+                    ErrorKind::InvalidInput,
+                    format!("binary operator `{}` not found", c),
+                ))?;
 
                 match (values.pop(), values.pop()) {
                     (Some(x), Some(y)) => {
@@ -212,15 +217,13 @@ where
             }
             Function(name) => {
                 // A reference to the function
-                let func = context.get_function(&name)
-                    .ok_or(Error::new(
+                let func = context.get_function(&name).ok_or(Error::new(
                     ErrorKind::InvalidInput,
                     format!("function `{}` not found", name),
                 ))?;
 
                 // The number of arguments the function takes
-                let n = arg_count.
-                    ok_or(Error::new(
+                let n = arg_count.ok_or(Error::new(
                     ErrorKind::InvalidInput,
                     format!(
                         "cannot evaluate function `{}`, unknown number of arguments",
@@ -288,7 +291,10 @@ where
 /// ```
 #[inline(always)]
 pub fn infix_to_rpn<'a, N, C>(tokens: &[Token<N>], context: &C) -> Result<Vec<Token<N>>>
-    where N: Clone + Debug, C: Context<'a, N> {
+where
+    N: Clone + Debug,
+    C: Context<'a, N>,
+{
     shunting_yard::infix_to_rpn(tokens, context)
 }
 
@@ -296,23 +302,25 @@ mod shunting_yard {
     use std::fmt::Debug;
 
     use crate::context::Context;
-    use crate::Result;
     use crate::error::{Error, ErrorKind};
     use crate::function::{Associativity, Notation};
     use crate::token::Token;
     use crate::token::Token::*;
+    use crate::Result;
 
     /// Converts an `infix` notation expression to `rpn` (Reverse Polish Notation) using
-        /// the shunting yard algorithm.
-        ///
-        /// # Arguments
-        /// - token: The tokens of the expression to convert.
-        /// - context: the context which contains the variables, constants and functions.
-        ///
-        /// See: https://en.wikipedia.org/wiki/Shunting-yard_algorithm
-    pub fn infix_to_rpn<'a, N, C>(tokens: &[Token<N>], context: &C, ) -> Result<Vec<Token<N>>>
-        where N: Clone + Debug,
-              C: Context<'a, N> {
+    /// the shunting yard algorithm.
+    ///
+    /// # Arguments
+    /// - token: The tokens of the expression to convert.
+    /// - context: the context which contains the variables, constants and functions.
+    ///
+    /// See: https://en.wikipedia.org/wiki/Shunting-yard_algorithm
+    pub fn infix_to_rpn<'a, N, C>(tokens: &[Token<N>], context: &C) -> Result<Vec<Token<N>>>
+    where
+        N: Clone + Debug,
+        C: Context<'a, N>,
+    {
         let mut output = Vec::new();
         let mut operators = Vec::new();
         let mut arg_count: Vec<usize> = Vec::new();
@@ -341,80 +349,95 @@ mod shunting_yard {
                     push_unary_function(context, &mut output, &mut operators, token, *c)?
                 }
                 Token::Function(name) => {
-                    if !context.config().custom_function_call(){
+                    if !context.config().custom_function_call() {
                         // Checks the function call starts with a parentheses open
                         // We only allow function arguments in a parentheses, so function calls
                         // with custom grouping symbols are invalid eg: Max[1,2,3], Sum<2,4,6>
-                        if !token_iterator.peek().map_or(false, |t| t.1.contains_symbol('(')){
+                        if !token_iterator
+                            .peek()
+                            .map_or(false, |t| t.1.contains_symbol('('))
+                        {
                             return Err(Error::new(
                                 ErrorKind::InvalidInput,
-                                format!("function arguments (if any) for `{}` are not within a parentheses", name)))
+                                format!("function arguments (if any) for `{}` are not within a parentheses", name)));
                         }
                     }
 
                     arg_count.push(0);
                     operators.push(token.clone());
                 }
-                Token::GroupingOpen(_) =>{
+                Token::GroupingOpen(_) => {
                     operators.push(token.clone());
-                    if !arg_count.is_empty(){
+                    if !arg_count.is_empty() {
                         grouping_count.push(pos);
                     }
-                },
+                }
                 Token::GroupingClose(c) => {
                     push_grouping_close(context, *c, &mut output, &mut operators, &mut arg_count)?;
 
                     // Checking for empty grouping symbols: eg: `Random(())`, `()+2`
                     if pos > 1 {
-                        match tokens[pos - 1]{
+                        match tokens[pos - 1] {
                             Token::GroupingOpen(s) => {
-                                if context.config().get_group_open_for(*c)
-                                    .map_or(false, |v| v == s) {
-                                    if !tokens[pos - 2].is_function(){
-                                        return Err(Error::new(ErrorKind::InvalidInput, "empty grouping: `()`"));
+                                if context
+                                    .config()
+                                    .get_group_open_for(*c)
+                                    .map_or(false, |v| v == s)
+                                {
+                                    if !tokens[pos - 2].is_function() {
+                                        return Err(Error::new(
+                                            ErrorKind::InvalidInput,
+                                            "empty grouping: `()`",
+                                        ));
                                     }
                                 }
-                            },
+                            }
                             _ => {}
                         }
                     }
 
-                    if !arg_count.is_empty(){
+                    if !arg_count.is_empty() {
                         grouping_count.pop();
                     }
                 }
                 Token::Comma => {
                     // TODO: Moves this comma checks to its own function
-                    if pos == 0{
-                        return Err(Error::new(ErrorKind::InvalidInput, "misplaced comma"))
+                    if pos == 0 {
+                        return Err(Error::new(ErrorKind::InvalidInput, "misplaced comma"));
                     }
 
-                    if tokens.iter()
+                    if tokens
+                        .iter()
                         .nth(pos - 1)
-                        .map_or(false, |t| t.is_grouping_open()){
+                        .map_or(false, |t| t.is_grouping_open())
+                    {
                         // Invalid expression: `(,`
-                        return Err(Error::new(ErrorKind::InvalidInput, "misplaced comma: `(,`"))
+                        return Err(Error::new(ErrorKind::InvalidInput, "misplaced comma: `(,`"));
                     }
 
-                    if tokens.iter()
+                    if tokens
+                        .iter()
                         .nth(pos + 1)
-                        .map_or(false, |t| t.is_grouping_close()){
+                        .map_or(false, |t| t.is_grouping_close())
+                    {
                         // Invalid expression: `,)`
-                        return Err(Error::new(ErrorKind::InvalidInput, "misplaced comma: `,)`"))
+                        return Err(Error::new(ErrorKind::InvalidInput, "misplaced comma: `,)`"));
                     }
 
                     // We avoid all function arguments wrapped by grouping symbols,
                     // eg: Max((1,2,3))
-                    if !grouping_count.is_empty(){
-                        if !tokens.iter()
+                    if !grouping_count.is_empty() {
+                        if !tokens
+                            .iter()
                             .nth(*grouping_count.last().unwrap() - 1)
-                            .map_or(false, |t| t.is_function()){
-                            return Err(Error::new(ErrorKind::InvalidInput, "misplaced comma"))
+                            .map_or(false, |t| t.is_function())
+                        {
+                            return Err(Error::new(ErrorKind::InvalidInput, "misplaced comma"));
                         }
                     }
 
                     push_comma(&mut output, &mut operators, &mut arg_count)?
-                },
+                }
                 _ => {
                     return Err(Error::new(
                         ErrorKind::InvalidInput,
@@ -441,14 +464,9 @@ mod shunting_yard {
                 } else if token.is_grouping_close() {
                     //(2)2, (2)PI, (2)x, (4)(2), Sin(30)Cos(30), Tan(45)2
                     if let Some(next_token) = token_iterator.peek() {
-                        match next_token.1{
-                            Number(_)
-                            | Variable(_)
-                            | Constant(_)
-                            | Function(_)
-                            | GroupingOpen(_) => {
-                                operators.push(BinaryOperator('*'))
-                            }
+                        match next_token.1 {
+                            Number(_) | Variable(_) | Constant(_) | Function(_)
+                            | GroupingOpen(_) => operators.push(BinaryOperator('*')),
                             _ => {}
                         }
                     }
@@ -534,11 +552,10 @@ mod shunting_yard {
         token: &Token<N>,
         name: &str,
     ) -> Result<()> {
-        let operator = context.get_binary_function(name)
-            .ok_or(
-                Error::new(ErrorKind::InvalidInput,
-                format!("binary function `{}` not found", name)
-            ))?;
+        let operator = context.get_binary_function(name).ok_or(Error::new(
+            ErrorKind::InvalidInput,
+            format!("binary function `{}` not found", name),
+        ))?;
 
         while let Some(t) = operators.last() {
             if let Token::GroupingOpen(_) = t {
@@ -667,10 +684,8 @@ mod shunting_yard {
 
     #[cfg(test)]
     mod tests {
-        use crate::context::{Config, DefaultContext};
-        use crate::token::Token::*;
-
         use super::*;
+        use crate::context::{Config, DefaultContext};
 
         #[test]
         fn unary_ops_test1() {
@@ -912,8 +927,8 @@ mod shunting_yard {
 
 #[cfg(test)]
 mod tests {
-    use crate::context::Config;
     use super::*;
+    use crate::context::Config;
 
     #[test]
     fn eval_test() {
@@ -948,6 +963,7 @@ mod tests {
         assert!(evaluator.eval("((20) + 2").is_err());
         assert!(evaluator.eval("(1,23) + 1").is_err());
         assert!(evaluator.eval("2^").is_err());
+        assert!(evaluator.eval("10 2").is_err());
         assert!(evaluator.eval("2 3 +").is_err());
         assert!(evaluator.eval("^10!").is_err());
         assert!(evaluator.eval("8+").is_err());
@@ -1038,7 +1054,7 @@ mod tests {
     }
 
     #[test]
-    fn eval_using_variable_test(){
+    fn eval_using_variable_test() {
         let mut evaluator = Evaluator::new();
         evaluator.mut_context().set_variable("x", 10);
 

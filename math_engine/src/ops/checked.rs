@@ -1,9 +1,11 @@
 use num_traits::{FromPrimitive, Zero};
 
-use crate::Result;
 use crate::error::*;
+use crate::function::{
+    Associativity, BinaryFunction, Function, Notation, Precedence, UnaryFunction,
+};
 use crate::num::checked::{CheckedAdd, CheckedDiv, CheckedMul, CheckedNeg, CheckedRem, CheckedSub};
-use crate::function::{BinaryFunction, UnaryFunction, Function, Precedence, Associativity, Notation};
+use crate::Result;
 
 pub struct AddOperator;
 impl<N: CheckedAdd> BinaryFunction<N> for AddOperator {
@@ -137,11 +139,9 @@ impl<N: Zero + PartialOrd + CheckedNeg + Clone> Function<N> for AbsFunction {
     fn call(&self, args: &[N]) -> Result<N> {
         if args.len() != 1 {
             Err(Error::from(ErrorKind::InvalidArgumentCount))
-        }
-        else if args[0] >= N::zero() {
+        } else if args[0] >= N::zero() {
             Ok(args[0].clone())
-        }
-        else {
+        } else {
             args[0]
                 .checked_neg()
                 .ok_or(Error::from(ErrorKind::Overflow))

@@ -1,6 +1,6 @@
 use std::env::args;
 
-fn main() {
+fn run() {
     if args().count() <= 1 {
         println!("No arguments passed, usage: eval --[options] [args]");
         return;

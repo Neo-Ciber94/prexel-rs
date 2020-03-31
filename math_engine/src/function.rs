@@ -2,7 +2,7 @@ use crate::Result;
 use std::panic::RefUnwindSafe;
 
 /// A trait for a function that take a variable number of arguments.
-pub trait Function<N>: RefUnwindSafe{
+pub trait Function<N>: RefUnwindSafe {
     /// Gets the name of the function.
     fn name(&self) -> &str;
     /// Calls this function with the given number of arguments.
@@ -10,7 +10,7 @@ pub trait Function<N>: RefUnwindSafe{
 }
 
 /// A trait for a function that takes 2 arguments.
-pub trait BinaryFunction<N>: RefUnwindSafe{
+pub trait BinaryFunction<N>: RefUnwindSafe {
     /// Gets the name of the function.
     fn name(&self) -> &str;
     /// Gets the `Precedence` of the function.
@@ -22,7 +22,7 @@ pub trait BinaryFunction<N>: RefUnwindSafe{
 }
 
 /// A trait a function that takes 1 argument.
-pub trait UnaryFunction<N>: RefUnwindSafe{
+pub trait UnaryFunction<N>: RefUnwindSafe {
     /// Gets the name of the function.
     fn name(&self) -> &str;
     /// Gets the `Notation` of this function.
@@ -39,7 +39,7 @@ pub enum Associativity {
     /// Left to right.
     Left,
     /// Right to left.
-    Right
+    Right,
 }
 
 /// Represents the notation of an unary operator.
@@ -50,7 +50,7 @@ pub enum Notation {
     /// The operator is before the value, eg: -10.
     Prefix,
     /// The operator is after the value, eg: 25!.
-    Postfix
+    Postfix,
 }
 
 /// Represents the precedence of an operator.
@@ -59,17 +59,17 @@ pub enum Notation {
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Precedence(pub u32);
 
-impl Precedence{
+impl Precedence {
     /// Very low precedence.
-    pub const VERY_LOW : Precedence = Precedence::from(0);
+    pub const VERY_LOW: Precedence = Precedence::from(0);
     /// Low precedence, used for addition `(+)` and subtraction `(-)` operators.
-    pub const LOW : Precedence = Precedence::from(1);
+    pub const LOW: Precedence = Precedence::from(1);
     /// Medium precedence, used for multiplication `(*)` and division `(/)` operators.
-    pub const MEDIUM : Precedence = Precedence::from(2);
+    pub const MEDIUM: Precedence = Precedence::from(2);
     /// High precedence, used for power `(^)` operator.
-    pub const HIGH : Precedence = Precedence::from(3);
+    pub const HIGH: Precedence = Precedence::from(3);
     /// Very high precedence.
-    pub const VERY_HIGH : Precedence = Precedence::from(4);
+    pub const VERY_HIGH: Precedence = Precedence::from(4);
 
     /// Constructs a `Precedence` from the given value.
     #[inline]
@@ -78,7 +78,7 @@ impl Precedence{
     }
 }
 
-impl Into<u32> for Precedence{
+impl Into<u32> for Precedence {
     #[inline]
     fn into(self) -> u32 {
         self.0

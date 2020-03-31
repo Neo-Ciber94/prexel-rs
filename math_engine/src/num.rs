@@ -1,7 +1,6 @@
-
 /// Provides traits for implements a checked numeric types.
 pub mod checked {
-    use num_traits::{FromPrimitive, ToPrimitive, Zero, One};
+    use num_traits::{FromPrimitive, One, ToPrimitive, Zero};
     use std::fmt::{Debug, Display};
     use std::ops::{Add, Div, Mul, Neg, Rem, Sub};
     use std::str::FromStr;
@@ -10,30 +9,31 @@ pub mod checked {
     /// comparisons, conversions from and to string, and checked numeric operations.
     ///
     /// This trait is implemented for all the types that implements the traits.
-    pub trait CheckedNum: CheckedNumOps
-    + Zero
-    + One
-    + PartialOrd
-    + ToPrimitive
-    + FromPrimitive
-    + FromStr
-    + Clone
-    + Debug
-    + Display
+    pub trait CheckedNum:
+        CheckedNumOps
+        + Zero
+        + One
+        + PartialOrd
+        + ToPrimitive
+        + FromPrimitive
+        + FromStr
+        + Clone
+        + Debug
+        + Display
     {
     }
 
     impl<T: Sized> CheckedNum for T where
         T: CheckedNumOps
-        + Zero
-        + One
-        + PartialOrd
-        + FromPrimitive
-        + ToPrimitive
-        + FromStr
-        + Clone
-        + Debug
-        + Display
+            + Zero
+            + One
+            + PartialOrd
+            + FromPrimitive
+            + ToPrimitive
+            + FromStr
+            + Clone
+            + Debug
+            + Display
     {
     }
 

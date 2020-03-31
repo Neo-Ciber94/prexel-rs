@@ -5,10 +5,10 @@ use crate::context::{Context, DefaultContext};
 use crate::error::{Error, ErrorKind};
 use crate::function::Notation;
 use crate::num::checked::CheckedNum;
-use crate::Result;
 use crate::token::Token;
 use crate::utils::option_ext::OptionStrExt;
 use crate::utils::string_tokenizer::{StringTokenizer, TokenizeKind};
+use crate::Result;
 
 /// Provides a way to retrieve the tokens of an expression.
 pub trait Tokenize<N> {
@@ -72,7 +72,8 @@ where
     N: FromStr,
 {
     fn tokenize(&self, expression: &str) -> Result<Vec<Token<N>>> {
-        const STRING_TOKENIZER: StringTokenizer = StringTokenizer::new(TokenizeKind::RemoveWhiteSpaces);
+        const STRING_TOKENIZER: StringTokenizer =
+            StringTokenizer::new(TokenizeKind::RemoveWhiteSpaces);
         const COMMA: &str = ",";
         const WHITESPACE: &str = " ";
 
@@ -96,29 +97,28 @@ where
             if is_number(string) {
                 // `complex_number` is enable in the context, check the next value and
                 // if is the imaginary unit append it to the current number.
-                if context.config().complex_number()
-                    && iter.peek().map(|s|s.1).contains_str("i")
-                {
-                    let mut temp = (*iter.peek().unwrap().1).clone();
+                if context.config().complex_number() && iter.peek().map(|s| s.1).contains_str("i") {
+                    let mut temp = string.clone();
                     let im = iter.next().unwrap().1;
                     temp.push_str(im);
 
                     let n = N::from_str(&temp).map_err(|_| {
                         Error::new(
                             ErrorKind::InvalidInput,
-                            format!("failed to parse `{}` to `{}`.",
-                                    temp,
-                                    std::any::type_name::<N>()
+                            format!(
+                                "failed to parse `{}` to `{}`.",
+                                temp,
+                                std::any::type_name::<N>()
                             ),
                         )
                     })?;
                     tokens.push(Token::Number(n));
-                }
-                else {
+                } else {
                     let n = N::from_str(string).map_err(|_| {
                         Error::new(
                             ErrorKind::InvalidInput,
-                            format!("failed to parse `{}` to `{}`.",
+                            format!(
+                                "failed to parse `{}` to `{}`.",
                                 string,
                                 std::any::type_name::<N>()
                             ),
@@ -310,6 +310,7 @@ fn is_number(value: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::token::Token::*;
 
     #[test]
     fn is_number_test() {
@@ -368,51 +369,69 @@ mod tests {
         let tokenizer: Tokenizer<i64> = Tokenizer::with_context(context);
         assert_eq!(
             &tokenizer.tokenize("2 + 3").unwrap(),
-            &[
-                Token::Number(2),
-                Token::BinaryOperator('+'),
-                Token::Number(3)
-            ]
+            &[Number(2), BinaryOperator('+'), Number(3)]
         );
 
         assert_eq!(
             &tokenizer.tokenize("5 * Sin(pi)").unwrap(),
             &[
-                Token::Number(5),
-                Token::BinaryOperator('*'),
-                Token::Function(String::from("Sin")),
-                Token::GroupingOpen('('),
-                Token::Constant(String::from("pi")),
-                Token::GroupingClose(')')
+                Number(5),
+                BinaryOperator('*'),
+                Function(String::from("Sin")),
+                GroupingOpen('('),
+                Constant(String::from("pi")),
+                GroupingClose(')')
             ]
         );
 
         assert_eq!(
             &tokenizer.tokenize("10/2 mod 3^2").unwrap(),
             &[
-                Token::Number(10),
-                Token::BinaryOperator('/'),
-                Token::Number(2),
-                Token::InfixFunction(String::from("mod")),
-                Token::Number(3),
-                Token::BinaryOperator('^'),
-                Token::Number(2)
+                Number(10),
+                BinaryOperator('/'),
+                Number(2),
+                InfixFunction(String::from("mod")),
+                Number(3),
+                BinaryOperator('^'),
+                Number(2)
             ]
         );
 
         assert_eq!(
             &tokenizer.tokenize("10! + 2").unwrap(),
             &[
-                Token::Number(10),
-                Token::UnaryOperator('!'),
-                Token::BinaryOperator('+'),
-                Token::Number(2)
+                Number(10),
+                UnaryOperator('!'),
+                BinaryOperator('+'),
+                Number(2)
             ]
         );
 
         assert_eq!(
             &tokenizer.tokenize("600!").unwrap(),
-            &[Token::Number(600), Token::UnaryOperator('!')]
+            &[Number(600), UnaryOperator('!')]
         );
+
+        assert_eq!(
+            &tokenizer.tokenize("10 2").unwrap(),
+            &[Number(10), Number(2)]
+        );
+
+        #[cfg(feature = "complex")]
+        {
+            use num_complex::Complex;
+            use num_complex::Complex64;
+            let context: &DefaultContext<Complex64> = &DefaultContext::new_complex();
+            let complex_tokenizer = Tokenizer::with_context(context);
+
+            assert_eq!(
+                &complex_tokenizer.tokenize("5 + 3i").unwrap(),
+                &[
+                    Number(Complex64::new(5_f64, 0_f64)),
+                    BinaryOperator('+'),
+                    Number(Complex64::new(0_f64, 3_f64)),
+                ]
+            );
+        }
     }
 }

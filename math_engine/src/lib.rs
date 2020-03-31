@@ -45,18 +45,17 @@ pub mod complex;
 ///
 /// [`DefaultContext`]: context/struct.DefaultContext.html
 /// [`Evaluator`]: evaluator/struct.Evaluator.html
-pub fn eval<T>(expression: &str) -> Result<T> where T: num::unchecked::UncheckedNum
-    + std::panic::RefUnwindSafe
-    + std::panic::UnwindSafe
-    + 'static,
+pub fn eval<T>(expression: &str) -> Result<T>
+where
+    T: num::unchecked::UncheckedNum + std::panic::RefUnwindSafe + std::panic::UnwindSafe + 'static,
 {
+    use context::Config;
+    use context::DefaultContext;
     use evaluator::Evaluator;
     use std::any::TypeId;
     use std::cell::RefCell;
     use std::collections::HashMap;
     use std::panic::*;
-    use context::DefaultContext;
-    use context::Config;
 
     /// Allow to catch `panic`s without print error messages.
     fn catch_panic<F: FnOnce() -> R + UnwindSafe, R>(
