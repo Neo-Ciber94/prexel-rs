@@ -346,7 +346,14 @@ mod shunting_yard {
                     push_binary_function(context, &mut output, &mut operators, token, name)?
                 }
                 Token::UnaryOperator(c) => {
-                    push_unary_function(context, &mut output, &mut operators, token, *c)?
+                    let mut buf = [0u8; 4];
+                    push_unary_function(
+                        context,
+                        &mut output,
+                        &mut operators,
+                        token,
+                        c.encode_utf8(&mut buf)
+                    )?
                 }
                 Token::Function(name) => {
                     if !context.config().custom_function_call {
@@ -512,11 +519,8 @@ mod shunting_yard {
         output: &mut Vec<Token<N>>,
         operators: &mut Vec<Token<N>>,
         token: &Token<N>,
-        c: char,
+        name: &str,
     ) -> Result<()> {
-        let mut buf = [0u8; 4];
-        let name = c.encode_utf8(&mut buf);
-
         if let Some(unary) = context.get_unary_function(name) {
             match unary.notation() {
                 Notation::Prefix => {
@@ -540,7 +544,7 @@ mod shunting_yard {
         } else {
             Err(Error::new(
                 ErrorKind::InvalidInput,
-                format!("unary operator `{}` not found", c),
+                format!("unary operator `{}` not found", name),
             ))
         }
     }
