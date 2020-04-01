@@ -87,8 +87,8 @@ where
     let result = catch_panic(move || {
         let evaluator = load_static(move || {
             let config = Config::new()
-                .with_group_symbol('[', ']')
-                .with_implicit_mul();
+                .with_implicit_mul(true)
+                .with_group_symbol('[', ']');
 
             let context = DefaultContext::new_unchecked_with_config(config);
             let temp: Evaluator<T> = Evaluator::with_context(context);

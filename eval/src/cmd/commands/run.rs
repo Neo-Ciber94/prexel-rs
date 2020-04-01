@@ -1,5 +1,5 @@
 use std::convert::TryFrom;
-use std::fmt::{Debug, Display};
+use std::fmt::{Debug, Display, Formatter};
 use std::io::{stdout, Write};
 use std::iter::Iterator;
 use std::rc::Rc;
@@ -24,16 +24,6 @@ impl RunCommand{
     const ERROR_COLOR: Color = Color::Red;
     const RESULT_VAR_NAME : &'static str  = "result";
     const BACKSPACE: &'static str = "\x08 \x08";
-
-    #[inline]
-    fn print_color<T: Display + Clone>(value: T, color: Color) {
-        execute!(
-            stdout(),
-            SetForegroundColor(color),
-            Print(value),
-            ResetColor
-        ).unwrap();
-    }
 
     fn eval_expr<N>(buffer: &mut String, evaluator: &mut Rc<Evaluator<'_, N>>) where N: FromStr + Debug + Display + Clone {
         if buffer.contains("="){
@@ -82,16 +72,7 @@ impl RunCommand{
         let expr = assignment[1].trim();
 
         // If variable name contains parentheses we assume is a function
-        if !var.contains('(') || !var.contains(')') {
-            // Checks the variable name is valid
-            Self::check_token_name(var)?;
-
-            let value = evaluator.eval(expr)?;
-
-            Rc::make_mut(evaluator)
-                .mut_context()
-                .set_variable(var, value);
-        } else {
+        if var.contains('(') && var.contains(')') {
             match CustomFunction::from_str(evaluator.clone(), var){
                 Ok(f) => {
                     let ev = Rc::make_mut(evaluator);
@@ -117,38 +98,15 @@ impl RunCommand{
                     ));
                 }
             }
-        }
+        } else {
+            // Checks the variable name is valid
+            check_token_name(TokenKind::Variable, var)?;
 
-        Ok(())
-    }
+            let value = evaluator.eval(expr)?;
 
-    fn check_token_name(name: &str) -> math_engine::Result<()>{
-        if name.is_empty(){
-            return Err(MathError::new(
-                ErrorKind::InvalidInput,
-                "Variable names cannot be empty"
-            ));
-        }
-
-        if name.chars().any(char::is_whitespace){
-            return Err(MathError::new(
-                ErrorKind::InvalidInput,
-                "Variable names cannot contains whitespaces"
-            ));
-        }
-
-        if !name.chars().all(char::is_alphanumeric){
-            return Err(MathError::new(
-                ErrorKind::InvalidInput,
-                "Variables can only contain alphanumeric characters"
-            ));
-        }
-
-        if name.chars().next().unwrap().is_alphabetic(){
-            return Err(MathError::new(
-                ErrorKind::InvalidInput,
-                "Variables names should start if a letter"
-            ));
+            Rc::make_mut(evaluator)
+                .mut_context()
+                .set_variable(var, value);
         }
 
         Ok(())
@@ -168,7 +126,7 @@ impl Command<String, Result> for RunCommand{
         // Actual loop
         fn run<N: FromStr + Display + Debug + Clone>(mut evaluator: Rc<Evaluator<'_, N>>){
             let mut buffer = String::new();
-            RunCommand::print_color(">> ", RunCommand::NEWLINE_COLOR);
+            print_color(">> ", RunCommand::NEWLINE_COLOR);
 
             while let Event::Key(key) = event::read().unwrap() {
                 match key.code {
@@ -177,12 +135,12 @@ impl Command<String, Result> for RunCommand{
                             continue;
                         }
 
-                        RunCommand::print_color(c, RunCommand::TEXT_COLOR);
+                        print_color(c, RunCommand::TEXT_COLOR);
                         buffer.push(c);
                     },
                     KeyCode::Backspace => {
                         if !buffer.is_empty() {
-                            RunCommand::print_color(RunCommand::BACKSPACE, Color::White);
+                            print_color(RunCommand::BACKSPACE, Color::White);
                             buffer.pop();
                         }
                     }
@@ -213,18 +171,20 @@ impl Command<String, Result> for RunCommand{
 
         match eval_type {
             EvalType::Decimal => {
-                let config = Config::new().with_implicit_mul();
+                let config = Config::new().with_implicit_mul(true);
                 let context = DefaultContext::new_decimal_with_config(config);
                 run(Rc::new(Evaluator::with_context(context)));
             }
             EvalType::BigDecimal => {
-                let config = Config::new().with_implicit_mul();
+                let config = Config::new().with_implicit_mul(true);
                 let context: DefaultContext<BigDecimal> =
                     DefaultContext::new_unchecked_with_config(config);
                 run(Rc::new(Evaluator::with_context(context)));
             }
             EvalType::Complex => {
-                let config = Config::new().with_implicit_mul().with_complex_number();
+                let config = Config::new()
+                    .with_implicit_mul(true)
+                    .with_complex_number(true);
                 let context = DefaultContext::new_complex_with_config(config);
                 run(Rc::new(Evaluator::with_context(context)));
             }
@@ -232,4 +192,57 @@ impl Command<String, Result> for RunCommand{
 
         Ok(())
     }
+}
+
+#[inline]
+fn print_color<T: Display + Clone>(value: T, color: Color) {
+    execute!(
+            stdout(),
+            SetForegroundColor(color),
+            Print(value),
+            ResetColor
+        ).unwrap();
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+enum TokenKind{ Variable, Function }
+impl Display for TokenKind{
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        match *self{
+            TokenKind::Variable => write!(f, "Variable"),
+            TokenKind::Function => write!(f, "Function"),
+        }
+    }
+}
+
+fn check_token_name(kind: TokenKind, name: &str) -> math_engine::Result<()>{
+    if name.is_empty(){
+        return Err(MathError::new(
+            ErrorKind::InvalidInput,
+            format!("{} names cannot be empty", kind)
+        ));
+    }
+
+    if name.chars().any(char::is_whitespace){
+        return Err(MathError::new(
+            ErrorKind::InvalidInput,
+            format!("{} names cannot contains whitespaces", kind)
+        ));
+    }
+
+    if !name.chars().all(char::is_alphanumeric){
+        return Err(MathError::new(
+            ErrorKind::InvalidInput,
+            format!("{}s can only contain alphanumeric characters", kind)
+        ));
+    }
+
+    if name.chars().next().unwrap().is_alphabetic(){
+        return Err(MathError::new(
+            ErrorKind::InvalidInput,
+            format!("{} names should start if a letter", kind)
+        ));
+    }
+
+    Ok(())
 }

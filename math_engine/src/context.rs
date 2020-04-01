@@ -5,9 +5,9 @@ use std::rc::Rc;
 use crate::function::{BinaryFunction, Function, UnaryFunction};
 use crate::num::checked::CheckedNum;
 use crate::num::unchecked::UncheckedNum;
-use crate::ops::math::RandFunction;
 use crate::ops::math::*;
 use crate::utils::ignore_case_string::IgnoreCaseString;
+use crate::context::validate::{TokenKind, OrPanic};
 
 /// Trait to provides the variables, constants and functions used for evaluate an expression.
 pub trait Context<'a, N> {
@@ -166,6 +166,9 @@ impl<'a, N> DefaultContext<'a, N> {
     /// ```
     #[inline]
     pub fn add_function_as<F: Function<N> + 'a>(&mut self, func: F, name: &str) {
+        #[cfg(debug_assertions)]
+        validate::check_token_name(TokenKind::Function, name).or_panic();
+
         let function_name = IgnoreCaseString::from(name);
         if self.functions.contains_key(&function_name) {
             panic!("A function named '{}' already exists", function_name);
@@ -180,6 +183,9 @@ impl<'a, N> DefaultContext<'a, N> {
     /// - This allows to use an unary function with an alias.
     #[inline]
     pub fn add_unary_function_as<F: UnaryFunction<N> + 'a>(&mut self, func: F, name: &str) {
+        #[cfg(debug_assertions)]
+        validate::check_token_name(TokenKind::Operator, name).or_panic();
+
         let function_name = IgnoreCaseString::from(name);
         if self.unary_functions.contains_key(&function_name) {
             panic!("An unary function named '{}' already exists", function_name);
@@ -204,6 +210,16 @@ impl<'a, N> DefaultContext<'a, N> {
     /// ```
     #[inline]
     pub fn add_binary_function_as<F: BinaryFunction<N> + 'a>(&mut self, func: F, name: &str) {
+        #[cfg(debug_assertions)]
+        {
+            if name.chars().count() == 1{
+                validate::check_token_name(TokenKind::Operator, name).or_panic();
+            }
+            else{
+                validate::check_token_name(TokenKind::Function, name).or_panic();
+            }
+        }
+
         let function_name = IgnoreCaseString::from(name);
         if self.binary_functions.contains_key(&function_name) {
             panic!("A binary function named '{}' already exists", function_name);
@@ -221,41 +237,35 @@ impl<'a, N> Context<'a, N> for DefaultContext<'a, N> {
 
     #[inline]
     fn add_function<F: Function<N> + 'a>(&mut self, func: F) {
-        validator::check_function_name(func.name(), validator::Kind::Function);
         let name = func.name().to_string();
         self.add_function_as(func, &name)
     }
 
     #[inline]
     fn add_unary_function<F: UnaryFunction<N> + 'a>(&mut self, func: F) {
-        validator::check_function_name(func.name(), validator::Kind::Operator);
         let name = func.name().to_string();
         self.add_unary_function_as(func, &name)
     }
 
     #[inline]
     fn add_binary_function<F: BinaryFunction<N> + 'a>(&mut self, func: F) {
-        validator::check_function_name(
-            func.name(),
-            if func.name().len() > 1 {
-                validator::Kind::Function
-            } else {
-                validator::Kind::Operator
-            },
-        );
         let name = func.name().to_string();
         self.add_binary_function_as(func, &name)
     }
 
     #[inline]
     fn add_constant(&mut self, name: &str, value: N) {
-        validator::check_variable_name(name);
+        #[cfg(debug_assertions)]
+        validate::check_token_name(TokenKind::Constant, name).or_panic();
+
         self.constants.insert(IgnoreCaseString::from(name), value);
     }
 
     #[inline]
     fn set_variable(&mut self, name: &str, value: N) -> Option<N> {
-        validator::check_variable_name(name);
+        #[cfg(debug_assertions)]
+        validate::check_token_name(TokenKind::Variable, name).or_panic();
+
         let string = IgnoreCaseString::from(name);
         if self.constants.contains_key(&string) {
             panic!(
@@ -461,11 +471,11 @@ impl<'a, N: UncheckedNum> DefaultContext<'a, N> {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Config {
     /// Allows implicit multiplication.
-    implicit_mul: bool,
+    pub implicit_mul: bool,
     /// Allows complex numbers.
-    complex_number: bool,
+    pub complex_number: bool,
     /// Allows using custom grouping symbols for function calls, eg: Max[1,2,3], Sum<2,4,6>
-    custom_function_call: bool,
+    pub custom_function_call: bool,
     /// Stores the grouping symbols as: `(`, `)`, `[`, `]`.
     grouping: HashMap<char, GroupingSymbol>,
 }
@@ -480,8 +490,8 @@ impl Config {
 
     /// Enables implicit multiplication for this `Config`.
     #[inline]
-    pub fn with_implicit_mul(mut self) -> Config {
-        self.implicit_mul = true;
+    pub fn with_implicit_mul(mut self, enable: bool) -> Config {
+        self.implicit_mul = enable;
         self
     }
 
@@ -492,8 +502,8 @@ impl Config {
     ///
     /// [`Tokenizer`]: ../tokenizer/struct.Tokenizer.html
     #[inline]
-    pub fn with_complex_number(mut self) -> Config {
-        self.complex_number = true;
+    pub fn with_complex_number(mut self, enable: bool) -> Config {
+        self.complex_number = enable;
         self
     }
 
@@ -503,8 +513,8 @@ impl Config {
     /// Function calls are only allowed within parentheses, eg: Product(3, 6, 6),
     /// but `with_custom_function_call` allow to use others, eg: Max[1,2,3], Sum<2,4,6>.
     #[inline]
-    pub fn with_custom_function_call(mut self) -> Config {
-        self.custom_function_call = true;
+    pub fn with_custom_function_call(mut self, enable: bool) -> Config {
+        self.custom_function_call = enable;
         self
     }
 
@@ -535,24 +545,6 @@ impl Config {
         }
 
         self
-    }
-
-    /// Checks if the context allow implicit multiplication.
-    #[inline]
-    pub fn implicit_mul(&self) -> bool {
-        self.implicit_mul
-    }
-
-    /// Checks if the context allows work with complex numbers.
-    #[inline]
-    pub fn complex_number(&self) -> bool {
-        self.complex_number
-    }
-
-    /// Checks if the context allows custom function calls, eg: Max[1,2,3], Sum<2,4,6>
-    #[inline]
-    pub fn custom_function_call(&self) -> bool {
-        self.custom_function_call
     }
 
     /// Gets a grouping symbol pair from this `Config`.
@@ -612,6 +604,22 @@ impl Config {
             _ => None,
         }
     }
+
+    /// Checks a value indicating if the given `char` is a group close symbol
+    /// or returns `None` if the group symbol is not in the `Config`.
+    #[inline]
+    pub fn is_group_close(&self, group_close: char) -> Option<bool>{
+        self.grouping.get(&group_close)
+            .map(|s| s.group_open == group_close)
+    }
+
+    /// Checks a value indicating if the given `char` is a group open symbol
+    /// or returns `None` if the group symbol is not in the `Config`.
+    #[inline]
+    pub fn is_group_open(&self, group_open: char) -> Option<bool>{
+        self.grouping.get(&group_open)
+            .map(|s| s.group_open == group_open)
+    }
 }
 
 impl Default for Config {
@@ -653,76 +661,210 @@ impl GroupingSymbol {
     }
 }
 
-#[cfg(debug_assertions)]
-mod validator {
-    pub enum Kind {
-        /// Validates a function
-        Function,
-        /// Validates an operator
-        Operator,
+pub mod validate {
+    use crate::Result;
+    use crate::error::*;
+    use std::result;
+    use std::fmt::{Display, Formatter, Debug};
+
+    #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+    pub enum TokenKind{
+        Variable, Constant, Operator, Function
     }
 
-    pub fn check_function_name(name: &str, kind: Kind) {
-        debug_assert!(
-            !name.is_empty(),
-            "function and operators names cannot be empty"
-        );
-
-        match kind {
-            Kind::Function => {
-                debug_assert!(
-                    name.len() > 1,
-                    "function names must have more than 1 character: `{}`",
-                    name
-                );
-                debug_assert!(
-                    name.chars().all(char::is_alphanumeric),
-                    "function names must only include letters and numbers: `{}`",
-                    name
-                );
-
-                debug_assert!(
-                    name.chars().next().unwrap().is_alphabetic(),
-                    "function names must start with a letter: `{}`",
-                    name
-                );
+    impl TokenKind{
+        #[inline]
+        pub fn is_variable(&self) -> bool{
+            match self{
+                TokenKind::Variable => true,
+                _ => false
             }
-            Kind::Operator => {
-                debug_assert!(
-                    name.len() == 1,
-                    "operators must have an 1 character: `{}`",
-                    name
-                );
-                debug_assert!(
-                    name.chars().next().unwrap().is_ascii_punctuation(),
-                    "operators names must be a symbol: `{}`",
-                    name
-                )
+        }
+
+        #[inline]
+        pub fn is_constant(&self) -> bool{
+            match self{
+                TokenKind::Constant => true,
+                _ => false
+            }
+        }
+
+        #[inline]
+        pub fn is_operator(&self) -> bool{
+            match self{
+                TokenKind::Operator => true,
+                _ => false
+            }
+        }
+
+        #[inline]
+        pub fn is_function(&self) -> bool{
+            match self{
+                TokenKind::Function => true,
+                _ => false
             }
         }
     }
 
-    pub fn check_variable_name(name: &str) {
-        debug_assert!(
-            !name.is_empty(),
-            "variables and constants names cannot be empty"
-        );
-        debug_assert!(
-            name.chars().all(char::is_alphanumeric),
-            "variables and constants names must only include letters and numbers: `{}`",
-            name
-        );
-        debug_assert!(
-            name.chars().next().unwrap().is_alphabetic(),
-            "variables and constants names must start with a letter: `{}`",
-            name
-        );
+    impl Display for TokenKind{
+        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+            match self{
+                TokenKind::Variable => write!(f, "Variable"),
+                TokenKind::Constant => write!(f, "Constant"),
+                TokenKind::Operator => write!(f, "Operator"),
+                TokenKind::Function => write!(f, "Function"),
+            }
+        }
+    }
+
+    pub fn check_token_name(kind: TokenKind, name: &str) -> Result<()>{
+        if name.is_empty(){
+            return Err(Error::new(
+                ErrorKind::Empty,
+                format!("{} name is empty", kind))
+            );
+        }
+
+        if name.chars().any(char::is_whitespace){
+            return Err(Error::new(
+                ErrorKind::InvalidInput,
+                format!("{} names cannot contain whitespaces: `{}`", kind, name))
+            );
+        }
+
+        if name.chars().any(char::is_control){
+            return Err(Error::new(
+                ErrorKind::InvalidInput,
+                format!("{} names cannot contain control characters: `{}`", kind, name))
+            );
+        }
+
+        let name_length = name.chars().count();
+
+        match kind{
+            TokenKind::Constant | TokenKind::Variable if name_length == 1 => {
+                let c = name.chars().next().unwrap();
+                if c.is_ascii_punctuation(){
+                    return Err(Error::new(
+                        ErrorKind::InvalidInput,
+                        format!(
+                            "{}s must contain a single non-symbol character or 1 or more alphanumeric characters: `{}`",
+                            kind,
+                            name
+                        ))
+                    );
+                }
+            },
+            TokenKind::Variable | TokenKind::Constant | TokenKind::Function => {
+                if !name.chars().any(char::is_alphanumeric){
+                    return Err(Error::new(
+                        ErrorKind::InvalidInput,
+                        format!(
+                            "{} names can only contains alphanumeric characters: `{}`", kind, name
+                        ))
+                    );
+                }
+
+                if !name.chars().next().map_or(false, char::is_alphabetic){
+                    return Err(Error::new(
+                        ErrorKind::InvalidInput,
+                        format!(
+                            "{} names should start with an alphabetic character: `{}`", kind, name
+                        ))
+                    );
+                }
+            },
+            TokenKind::Operator => {
+                if name_length != 1 {
+                    return Err(Error::new(
+                        ErrorKind::InvalidInput,
+                        format!("{}s must contain a single character: `{}`", kind, name))
+                    );
+                }
+
+                let c = name.chars().next().unwrap();
+                if !c.is_ascii_alphanumeric() && !c.is_ascii_punctuation(){
+                    return Err(Error::new(
+                        ErrorKind::InvalidInput,
+                        format!(
+                            "{}s must contain a single symbol character: `{}`",
+                            kind,
+                            name
+                        ))
+                    );
+                }
+            },
+        }
+
+        Ok(())
+    }
+
+    pub trait OrPanic<T, E>{
+        fn or_panic(self) -> T;
+    }
+
+    impl<T, E : Debug> OrPanic<T, E> for result::Result<T, E>{
+        #[inline]
+        fn or_panic(self) -> T{
+            if self.is_err(){
+                panic!("{:?}", self.err().unwrap())
+            }
+
+            self.unwrap()
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::Result;
+    use crate::error::Error;
+    use crate::function::{Associativity, Precedence, Notation};
+
+    struct Dummy(String);
+
+    impl BinaryFunction<f64> for Dummy{
+        fn name(&self) -> &str {
+            &self.0
+        }
+
+        fn precedence(&self) -> Precedence {
+            unimplemented!()
+        }
+
+        fn associativity(&self) -> Associativity {
+            unimplemented!()
+        }
+
+        fn call(&self, left: f64, right: f64) -> Result<f64> {
+            unimplemented!()
+        }
+    }
+
+    impl UnaryFunction<f64> for Dummy{
+        fn name(&self) -> &str {
+            &self.0
+        }
+
+        fn notation(&self) -> Notation {
+            unimplemented!()
+        }
+
+        fn call(&self, value: f64) -> Result<f64> {
+            unimplemented!()
+        }
+    }
+
+    impl Function<f64> for Dummy{
+        fn name(&self) -> &str {
+            &self.0
+        }
+
+        fn call(&self, args: &[f64]) -> Result<f64> {
+            unimplemented!()
+        }
+    }
 
     #[test]
     fn default_context_test() {
@@ -766,5 +908,25 @@ mod tests {
             config.get_group_symbol(']').unwrap(),
             &GroupingSymbol::new('[', ']')
         );
+    }
+
+    //#[test]
+    fn operators_symbols_test(){
+        let mut context : DefaultContext<f64> = DefaultContext::new_unchecked();
+        context.add_constant("∞", std::f64::INFINITY);
+        context.add_constant("π", std::f64::consts::PI);
+        context.add_binary_function(Dummy("√".to_string()));
+        context.add_binary_function(Dummy("∋".to_string()));
+        context.add_unary_function(Dummy("ℝ".to_string()));
+        context.add_function(Dummy("λ".to_string()));
+        context.add_function(Dummy("Σ".to_string()));
+
+        assert!(context.is_constant("∞"));
+        assert!(context.is_constant("π"));
+        assert!(context.is_binary_function("√"));
+        assert!(context.is_binary_function("∋"));
+        assert!(context.is_unary_function("ℝ"));
+        assert!(context.is_function("λ"));
+        assert!(context.is_function("Σ"));
     }
 }

@@ -33,7 +33,7 @@ impl Command<String, Result> for EvalCommand {
 
         match eval_type.unwrap_or_default() {
             EvalType::Decimal => {
-                let config = Config::new().with_implicit_mul();
+                let config = Config::new().with_implicit_mul(true);
                 let context = DefaultContext::new_decimal_with_config(config);
                 let evaluator = Evaluator::with_context(context);
                 match evaluator.eval(&buffer) {
@@ -42,7 +42,7 @@ impl Command<String, Result> for EvalCommand {
                 }
             }
             EvalType::BigDecimal => {
-                let config = Config::new().with_implicit_mul();
+                let config = Config::new().with_implicit_mul(true);
                 let context: DefaultContext<BigDecimal> =
                     DefaultContext::new_unchecked_with_config(config);
                 let evaluator = Evaluator::with_context(context);
@@ -52,7 +52,9 @@ impl Command<String, Result> for EvalCommand {
                 }
             }
             EvalType::Complex => {
-                let config = Config::new().with_implicit_mul().with_complex_number();
+                let config = Config::new()
+                    .with_implicit_mul(true)
+                    .with_complex_number(true);
 
                 let context = DefaultContext::new_complex_with_config(config);
                 let evaluator = Evaluator::with_context(context);

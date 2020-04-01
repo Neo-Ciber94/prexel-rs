@@ -97,7 +97,7 @@ where
             if is_number(string) {
                 // `complex_number` is enable in the context, check the next value and
                 // if is the imaginary unit append it to the current number.
-                if context.config().complex_number() && iter.peek().map(|s| s.1).contains_str("i") {
+                if context.config().complex_number && iter.peek().map(|s| s.1).contains_str("i") {
                     let mut temp = string.clone();
                     let im = iter.next().unwrap().1;
                     temp.push_str(im);

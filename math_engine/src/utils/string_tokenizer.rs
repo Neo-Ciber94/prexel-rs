@@ -1,5 +1,5 @@
 use std::iter::Peekable;
-use std::str::CharIndices;
+use std::str::Chars;
 
 /// Defines the method of the `StringTokenizer` to extract the tokens.
 #[derive(Copy, Clone, Eq, PartialEq)]
@@ -30,9 +30,9 @@ impl StringTokenizer {
 
     pub fn get_tokens(&self, expression: &str) -> Vec<String> {
         let mut tokens = Vec::new();
-        let mut iterator = expression.char_indices().peekable();
+        let mut iterator = expression.chars().peekable();
 
-        while let Some((_, next)) = iterator.next() {
+        while let Some(next) = iterator.next() {
             match next {
                 'a'..='z' | 'A'..='Z' => {
                     let mut temp = next.to_string();
@@ -55,8 +55,8 @@ impl StringTokenizer {
         tokens
     }
 
-    fn next_alphanumeric(dest: &mut String, iterator: &mut Peekable<CharIndices>) {
-        while let Some((_, c)) = iterator.peek() {
+    fn next_alphanumeric(dest: &mut String, iterator: &mut Peekable<Chars>) {
+        while let Some(c) = iterator.peek() {
             if c.is_alphanumeric() {
                 dest.push(*c);
                 iterator.next();
@@ -66,10 +66,10 @@ impl StringTokenizer {
         }
     }
 
-    fn next_numeric(dest: &mut String, iterator: &mut Peekable<CharIndices>) {
+    fn next_numeric(dest: &mut String, iterator: &mut Peekable<Chars>) {
         let mut has_decimal_point = false;
 
-        while let Some((_, c)) = iterator.peek() {
+        while let Some(c) = iterator.peek() {
             if *c == '.' || c.is_ascii_digit() {
                 if *c == '.' {
                     if has_decimal_point {

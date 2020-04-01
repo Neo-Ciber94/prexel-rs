@@ -349,7 +349,7 @@ mod shunting_yard {
                     push_unary_function(context, &mut output, &mut operators, token, *c)?
                 }
                 Token::Function(name) => {
-                    if !context.config().custom_function_call() {
+                    if !context.config().custom_function_call {
                         // Checks the function call starts with a parentheses open
                         // We only allow function arguments in a parentheses, so function calls
                         // with custom grouping symbols are invalid eg: Max[1,2,3], Sum<2,4,6>
@@ -447,7 +447,7 @@ mod shunting_yard {
             }
 
             // If implicit multiplication
-            if context.config().implicit_mul() {
+            if context.config().implicit_mul {
                 if token.is_number() {
                     // 2Max, 2PI, 2x, 2(4)
                     if let Some(next_token) = token_iterator.peek() {
@@ -883,7 +883,7 @@ mod shunting_yard {
 
         #[test]
         fn implicit_mul_test1() {
-            let config = Config::new().with_implicit_mul();
+            let config = Config::new().with_implicit_mul(true);
             let context = DefaultContext::new_checked_with_config(config);
 
             let infix = &[Token::Number(10), Token::Constant("PI".to_string())];
@@ -900,7 +900,7 @@ mod shunting_yard {
 
         #[test]
         fn implicit_mul_test2() {
-            let config = Config::new().with_implicit_mul();
+            let config = Config::new().with_implicit_mul(true);
             let context = DefaultContext::new_checked_with_config(config);
 
             let infix = &[
@@ -982,7 +982,7 @@ mod tests {
 
     #[test]
     fn eval_implicit_mul_test() {
-        let config = Config::new().with_implicit_mul();
+        let config = Config::new().with_implicit_mul(true);
         let context = DefaultContext::new_checked_with_config(config);
         let mut evaluator: Evaluator<i64> = Evaluator::with_context(context);
 
