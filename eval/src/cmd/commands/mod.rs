@@ -1,8 +1,8 @@
 mod eval;
 mod run;
 
-pub use eval::EvalCommand;
-pub use run::RunCommand;
+pub use self::eval::EvalCommand;
+pub use self::run::RunCommand;
 
 mod eval_type{
     use std::convert::TryFrom;

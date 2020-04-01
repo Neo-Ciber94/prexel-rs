@@ -29,24 +29,24 @@ impl RunCommand{
         if buffer.contains("="){
             match Self::eval_assign(buffer, evaluator){
                 Ok(()) => {},
-                Err(e) => Self::print_color(format!(" [Error] {}", e), Self::ERROR_COLOR)
+                Err(e) => print_color(format!(" [Error] {}", e), Self::ERROR_COLOR)
             }
         }
         else{
             match evaluator.eval(buffer) {
                 Ok(n) => {
-                    Self::print_color(format!(" = {}", n), Self::RESULT_COLOR);
+                    print_color(format!(" = {}", n), Self::RESULT_COLOR);
                     Rc::make_mut(evaluator)
                         .mut_context()
                         .set_variable(Self::RESULT_VAR_NAME, n);
                 }
                 Err(e) => {
-                    Self::print_color(format!(" [Error] {}", e), Self::ERROR_COLOR)
+                    print_color(format!(" [Error] {}", e), Self::ERROR_COLOR)
                 }
             }
         }
 
-        Self::print_color("\n>> ", Self::NEWLINE_COLOR);
+        print_color("\n>> ", Self::NEWLINE_COLOR);
         buffer.clear();
     }
 
@@ -207,7 +207,7 @@ fn print_color<T: Display + Clone>(value: T, color: Color) {
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 enum TokenKind{ Variable, Function }
 impl Display for TokenKind{
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match *self{
             TokenKind::Variable => write!(f, "Variable"),
             TokenKind::Function => write!(f, "Function"),

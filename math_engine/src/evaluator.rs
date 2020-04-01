@@ -171,25 +171,6 @@ where
                     }
                 }
             }
-            InfixFunction(name) => {
-                let func = context.get_binary_function(&name).ok_or(Error::new(
-                    ErrorKind::InvalidInput,
-                    format!("infix function `{}` not found", name),
-                ))?;
-
-                match (values.pop(), values.pop()) {
-                    (Some(right), Some(left)) => {
-                        let result = func.call(left, right)?;
-                        values.push(result);
-                    }
-                    _ => {
-                        return Err(Error::new(
-                            ErrorKind::InvalidExpression,
-                            format!("{:?}", &tokens),
-                        ));
-                    }
-                }
-            }
             BinaryOperator(name) => {
                 let func = context.get_binary_function(name).ok_or(Error::new(
                     ErrorKind::InvalidInput,
@@ -327,17 +308,11 @@ mod shunting_yard {
                     push_number(context, &mut output, &mut operators, token)
                 }
                 Token::BinaryOperator(name) => {
-                    push_binary_function(
-                        context,
-                        &mut output,
-                        &mut operators,
-                        token,
-                        name,
-                    )?;
+                    push_binary_function(context, &mut output, &mut operators, token, name, )?;
                 }
-                Token::InfixFunction(name) => {
-                    push_binary_function(context, &mut output, &mut operators, token, name)?
-                }
+                // Token::InfixFunction(name) => {
+                //     push_binary_function(context, &mut output, &mut operators, token, name)?
+                // }
                 Token::UnaryOperator(name) => {
                     push_unary_function(
                         context,
@@ -561,11 +536,8 @@ mod shunting_yard {
                 let top_operator = match t {
                     Token::BinaryOperator(op) => {
                         context.get_binary_function(op)
-                    }
-                    Token::InfixFunction(n) => context.get_binary_function(n),
-                    _ => {
-                        break;
-                    }
+                    },
+                    _ => { break; }
                 };
 
                 match top_operator {
@@ -833,11 +805,11 @@ mod shunting_yard {
             assert_eq!(
                 infix_to_rpn(
                     // 10 mod 2 -> 10 2 mod
-                    &[Number(10), InfixFunction(String::from("mod")), Number(2)],
+                    &[Number(10), BinaryOperator(String::from("mod")), Number(2)],
                     context
                 )
                 .unwrap(),
-                [Number(10), Number(2), InfixFunction(String::from("mod"))]
+                [Number(10), Number(2), BinaryOperator(String::from("mod"))]
             );
         }
 

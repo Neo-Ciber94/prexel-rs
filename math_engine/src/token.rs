@@ -12,8 +12,6 @@ pub enum Token<N> {
     Constant(String),
     /// A function
     Function(String),
-    /// An infix function
-    InfixFunction(String),
     /// A binary operator
     BinaryOperator(String),
     /// An unary operator
@@ -37,7 +35,7 @@ impl<N: Display> Display for Token<N> {
             Variable(name) => write!(f, "Variable({})", name),
             Constant(name) => write!(f, "Constant({})", name),
             Function(name) => write!(f, "Function({})", name),
-            InfixFunction(name) => write!(f, "InfixFunction('{}')", name),
+            //InfixFunction(name) => write!(f, "InfixFunction('{}')", name),
             BinaryOperator(name) => write!(f, "BinaryOperator('{}')", name),
             UnaryOperator(name) => write!(f, "UnaryOperator('{}')", name),
             ArgCount(n) => write!(f, "ArgCount({})", n),
@@ -56,7 +54,7 @@ impl<N: Debug> Debug for Token<N> {
             Variable(name) => write!(f, "Variable({:?})", name),
             Constant(name) => write!(f, "Constant({:?})", name),
             Function(name) => write!(f, "Function({:?})", name),
-            InfixFunction(name) => write!(f, "InfixFunction('{:?}')", name),
+            //InfixFunction(name) => write!(f, "InfixFunction('{:?}')", name),
             BinaryOperator(name) => write!(f, "BinaryOperator('{:?}')", name),
             UnaryOperator(name) => write!(f, "UnaryOperator('{:?}')", name),
             ArgCount(n) => write!(f, "ArgCount({:?})", n),
@@ -101,15 +99,6 @@ impl<N> Token<N> {
     pub fn is_function(&self) -> bool {
         match self {
             Token::Function(_) => true,
-            _ => false,
-        }
-    }
-
-    /// Checks if the token is an infix operator.
-    #[inline]
-    pub fn is_infix_function(&self) -> bool {
-        match self {
-            Token::InfixFunction(_) => true,
             _ => false,
         }
     }

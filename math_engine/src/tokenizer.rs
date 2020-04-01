@@ -148,7 +148,7 @@ where
                     let operator = string.clone();
                     tokens.push(Token::UnaryOperator(operator));
                 } else {
-                    // If the operator is not unary, could be binary so need 2 operands.
+                    // If the operator is not unary, should be binary so need 2 operands.
                     if prev.is_none() || next.is_none() {
                         return Err(Error::new(
                             ErrorKind::InvalidExpression,
@@ -159,14 +159,8 @@ where
                         ));
                     }
 
-                    // If the current string value length is 1 we assume is a symbol
-                    // for a binary operator, otherwise is an infix function.
-                    if string.len() == 1 {
-                        let operator = string.clone();
-                        tokens.push(Token::BinaryOperator(operator));
-                    } else {
-                        tokens.push(Token::InfixFunction(string.clone()));
-                    }
+                    let operator = string.clone();
+                    tokens.push(Token::BinaryOperator(operator));
                 }
             } else if string == COMMA {
                 tokens.push(Token::Comma);
@@ -390,7 +384,7 @@ mod tests {
                 Number(10),
                 BinaryOperator('/'.to_string()),
                 Number(2),
-                InfixFunction(String::from("mod")),
+                BinaryOperator(String::from("mod")),
                 Number(3),
                 BinaryOperator('^'.to_string()),
                 Number(2)
