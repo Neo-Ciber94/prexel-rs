@@ -605,20 +605,18 @@ impl Config {
         }
     }
 
-    /// Checks a value indicating if the given `char` is a group close symbol
-    /// or returns `None` if the group symbol is not in the `Config`.
+    /// Checks a value indicating if the given `char` is a group close symbol.
     #[inline]
-    pub fn is_group_close(&self, group_close: char) -> Option<bool>{
+    pub fn is_group_close(&self, group_close: char) -> bool {
         self.grouping.get(&group_close)
-            .map(|s| s.group_open == group_close)
+            .map_or(false, |s| s.group_close == group_close)
     }
 
-    /// Checks a value indicating if the given `char` is a group open symbol
-    /// or returns `None` if the group symbol is not in the `Config`.
+    /// Checks a value indicating if the given `char` is a group open symbol.
     #[inline]
-    pub fn is_group_open(&self, group_open: char) -> Option<bool>{
+    pub fn is_group_open(&self, group_open: char) -> bool{
         self.grouping.get(&group_open)
-            .map(|s| s.group_open == group_open)
+            .map_or(false, |s| s.group_open == group_open)
     }
 }
 

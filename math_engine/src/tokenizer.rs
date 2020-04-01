@@ -1,14 +1,13 @@
 use std::marker::PhantomData;
 use std::str::FromStr;
-
 use crate::context::{Context, DefaultContext};
 use crate::error::{Error, ErrorKind};
 use crate::function::Notation;
 use crate::num::checked::CheckedNum;
-use crate::token::Token;
-use crate::utils::option_ext::OptionStrExt;
-use crate::utils::string_tokenizer::{StringTokenizer, TokenizeKind};
 use crate::Result;
+use crate::token::Token;
+use crate::utils::extensions::{ OptionStrExt, StrExt };
+use crate::utils::string_tokenizer::{StringTokenizer, TokenizeKind};
 
 /// Provides a way to retrieve the tokens of an expression.
 pub trait Tokenize<N> {
@@ -189,31 +188,43 @@ where
     }
 }
 
-fn is_unary<'a, N>(
-    prev: Option<&str>,
-    cur: &str,
-    next: Option<&str>,
-    context: &impl Context<'a, N>,
-) -> bool {
+fn is_unary<'a, N, C>(prev: Option<&str>, cur: &str, next: Option<&str>, context: &C) -> bool
+    where C: Context<'a, N> {
     if let Some(op) = context.get_unary_function(cur) {
+        let config = context.config();
         if op.notation() == Notation::Postfix {
-            prev.map_or(false, |s| {
-                s == ")" || is_number(s) || context.is_constant(s) || context.is_variable(s)
-            })
+            match prev{
+                Some(s) => {
+                    if let Some(ch) = s.as_single_char(){
+                        // )!
+                        if config.is_group_close(ch){
+                            return true;
+                        }
+                    }
+
+                    // 10! , PI!, x!
+                    is_number(s) || context.is_constant(s) || context.is_variable(s)
+                }
+                None => false
+            }
         } else {
+            // 10-, (24)+
             if next.is_none() {
-                // 10-, (24)+
                 return false;
             }
 
             if let Some(prev_str) = prev {
-                // 10+, 2+(2), (4)-10
-                if prev_str == ")"
-                    || prev_str == "]"
-                    || is_number(prev_str)
+                // )+, )-, ]+
+                if let Some(ch) = prev_str.as_single_char(){
+                    if config.is_group_close(ch){
+                        return false;
+                    }
+                }
+
+                // 10+, PI-, x+
+                if is_number(prev_str)
                     || context.is_variable(prev_str)
-                    || context.is_constant(prev_str)
-                {
+                    || context.is_constant(prev_str) {
                     return false;
                 }
 
@@ -225,7 +236,7 @@ fn is_unary<'a, N>(
                 }
 
                 // +-, (-, !+
-                if prev_str.len() == 1 {
+                if prev_str.chars().count() == 1 {
                     let c = prev_str.chars().last().unwrap();
                     c.is_ascii_punctuation()
                 } else {
@@ -250,11 +261,12 @@ fn is_number(value: &str) -> bool {
         return false;
     }
 
+    let value_len = value.chars().count();
     let mut has_decimal_point = false;
     let is_signed = value.starts_with('+') || value.starts_with('-');
     let mut iterator = value.chars().enumerate();
 
-    if is_signed && value.len() == 1 {
+    if is_signed && value_len == 1 {
         return false;
     }
 
@@ -281,7 +293,7 @@ fn is_number(value: &str) -> bool {
                 }
             }
             (_, '1'..='9') => {}
-            (n, '.') if n < value.len() - 1 => {
+            (n, '.') if n < value_len - 1 => {
                 if !is_signed || n > 1 {
                     if has_decimal_point {
                         return false;
@@ -303,8 +315,9 @@ fn is_number(value: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::token::Token::*;
+
+    use super::*;
 
     #[test]
     fn is_number_test() {
