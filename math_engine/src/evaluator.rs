@@ -152,13 +152,10 @@ where
                 debug_assert_eq!(arg_count, None);
                 arg_count = Some(*n);
             }
-            UnaryOperator(c) => {
-                let mut buf = [0u8; 4];
-                let name = c.encode_utf8(&mut buf);
-
+            UnaryOperator(name) => {
                 let func = context.get_unary_function(name).ok_or(Error::new(
                     ErrorKind::InvalidInput,
-                    format!("unary operator `{}` not found", c),
+                    format!("unary operator `{}` not found", name),
                 ))?;
 
                 match values.pop() {
@@ -193,13 +190,10 @@ where
                     }
                 }
             }
-            BinaryOperator(c) => {
-                let mut buf = [0u8; 4];
-                let name = c.encode_utf8(&mut buf);
-
+            BinaryOperator(name) => {
                 let func = context.get_binary_function(name).ok_or(Error::new(
                     ErrorKind::InvalidInput,
-                    format!("binary operator `{}` not found", c),
+                    format!("binary operator `{}` not found", name),
                 ))?;
 
                 match (values.pop(), values.pop()) {
@@ -283,11 +277,11 @@ where
 /// use math_engine::evaluator;
 /// use math_engine::context::DefaultContext;
 ///
-/// let tokens = [Number(5), BinaryOperator('+'), Number(2)];
+/// let tokens = [Number(5), BinaryOperator("+".to_string()), Number(2)];
 /// let context = DefaultContext::new_checked();
 /// let rpn = evaluator::infix_to_rpn(&tokens, &context).unwrap();
 ///
-/// assert_eq!(&rpn, &[Number(5), Number(2), BinaryOperator('+')]);
+/// assert_eq!(&rpn, &[Number(5), Number(2), BinaryOperator("+".to_string())]);
 /// ```
 #[inline(always)]
 pub fn infix_to_rpn<'a, N, C>(tokens: &[Token<N>], context: &C) -> Result<Vec<Token<N>>>
@@ -332,27 +326,25 @@ mod shunting_yard {
                 Token::Number(_) | Token::Variable(_) | Token::Constant(_) => {
                     push_number(context, &mut output, &mut operators, token)
                 }
-                Token::BinaryOperator(c) => {
-                    let mut buf = [0u8; 4];
+                Token::BinaryOperator(name) => {
                     push_binary_function(
                         context,
                         &mut output,
                         &mut operators,
                         token,
-                        c.encode_utf8(&mut buf),
+                        name,
                     )?;
                 }
                 Token::InfixFunction(name) => {
                     push_binary_function(context, &mut output, &mut operators, token, name)?
                 }
-                Token::UnaryOperator(c) => {
-                    let mut buf = [0u8; 4];
+                Token::UnaryOperator(name) => {
                     push_unary_function(
                         context,
                         &mut output,
                         &mut operators,
                         token,
-                        c.encode_utf8(&mut buf)
+                        name
                     )?
                 }
                 Token::Function(name) => {
@@ -463,7 +455,7 @@ mod shunting_yard {
                             | Token::Constant(_)
                             | Token::Variable(_)
                             | Token::GroupingOpen(_) => {
-                                operators.push(BinaryOperator('*'));
+                                operators.push(BinaryOperator('*'.to_string()));
                             }
                             _ => {}
                         }
@@ -473,7 +465,7 @@ mod shunting_yard {
                     if let Some(next_token) = token_iterator.peek() {
                         match next_token.1 {
                             Number(_) | Variable(_) | Constant(_) | Function(_)
-                            | GroupingOpen(_) => operators.push(BinaryOperator('*')),
+                            | GroupingOpen(_) => operators.push(BinaryOperator('*'.to_string())),
                             _ => {}
                         }
                     }
@@ -503,11 +495,8 @@ mod shunting_yard {
     ) {
         output.push(token.clone());
         if let Some(t) = operators.last() {
-            if let Token::UnaryOperator(c) = t {
-                let mut buf = [0u8; 4];
-                let name = c.encode_utf8(&mut buf);
-
-                if context.get_unary_function(name).is_some() {
+            if let Token::UnaryOperator(op) = t {
+                if context.get_unary_function(op).is_some() {
                     output.push(operators.pop().unwrap());
                 }
             }
@@ -570,10 +559,8 @@ mod shunting_yard {
                 output.push(operators.pop().unwrap());
             } else {
                 let top_operator = match t {
-                    Token::BinaryOperator(c) => {
-                        let mut buf = [0u8; 4];
-                        let name = c.encode_utf8(&mut buf);
-                        context.get_binary_function(name)
+                    Token::BinaryOperator(op) => {
+                        context.get_binary_function(op)
                     }
                     Token::InfixFunction(n) => context.get_binary_function(n),
                     _ => {
@@ -699,16 +686,16 @@ mod shunting_yard {
                 infix_to_rpn(
                     // -(+10) -> 10 + -
                     &[
-                        UnaryOperator('-'),
+                        UnaryOperator('-'.to_string()),
                         GroupingOpen('('),
-                        UnaryOperator('+'),
+                        UnaryOperator('+'.to_string()),
                         Number(10),
                         GroupingClose(')')
                     ],
                     context
                 )
                 .unwrap(),
-                [Number(10), UnaryOperator('+'), UnaryOperator('-')]
+                [Number(10), UnaryOperator('+'.to_string()), UnaryOperator('-'.to_string())]
             );
         }
 
@@ -719,11 +706,11 @@ mod shunting_yard {
             assert_eq!(
                 infix_to_rpn(
                     // 3 + 2 -> 3 2 +
-                    &[Number(3), BinaryOperator('+'), Number(2)],
+                    &[Number(3), BinaryOperator('+'.to_string()), Number(2)],
                     context
                 )
                 .unwrap(),
-                [Number(3), Number(2), BinaryOperator('+')]
+                [Number(3), Number(2), BinaryOperator('+'.to_string())]
             );
         }
 
@@ -736,9 +723,9 @@ mod shunting_yard {
                     // 2 + 3 * 5 -> 2 3 5 + *
                     &[
                         Number(2),
-                        BinaryOperator('+'),
+                        BinaryOperator('+'.to_string()),
                         Number(3),
-                        BinaryOperator('*'),
+                        BinaryOperator('*'.to_string()),
                         Number(5)
                     ],
                     context
@@ -748,8 +735,8 @@ mod shunting_yard {
                     Number(2),
                     Number(3),
                     Number(5),
-                    BinaryOperator('*'),
-                    BinaryOperator('+')
+                    BinaryOperator('*'.to_string()),
+                    BinaryOperator('+'.to_string())
                 ]
             );
         }
@@ -763,11 +750,11 @@ mod shunting_yard {
                     // 2 ^ 3 ^ 4 - 1
                     &[
                         Number(2),
-                        BinaryOperator('^'),
+                        BinaryOperator('^'.to_string()),
                         Number(3),
-                        BinaryOperator('^'),
+                        BinaryOperator('^'.to_string()),
                         Number(4),
-                        BinaryOperator('-'),
+                        BinaryOperator('-'.to_string()),
                         Number(1)
                     ],
                     context
@@ -777,10 +764,10 @@ mod shunting_yard {
                     Number(2),
                     Number(3),
                     Number(4),
-                    BinaryOperator('^'),
-                    BinaryOperator('^'),
+                    BinaryOperator('^'.to_string()),
+                    BinaryOperator('^'.to_string()),
                     Number(1),
-                    BinaryOperator('-')
+                    BinaryOperator('-'.to_string())
                 ]
             );
         }
@@ -795,24 +782,24 @@ mod shunting_yard {
                     &[
                         GroupingOpen('('),
                         Number(5),
-                        BinaryOperator('+'),
+                        BinaryOperator('+'.to_string()),
                         GroupingOpen('('),
-                        UnaryOperator('-'),
+                        UnaryOperator('-'.to_string()),
                         Number(3),
                         GroupingClose(')'),
                         GroupingClose(')'),
-                        BinaryOperator('^'),
+                        BinaryOperator('^'.to_string()),
                         Function("Max".to_string()),
                         GroupingOpen('('),
                         Number(1),
                         Comma,
                         Number(2),
-                        BinaryOperator('*'),
+                        BinaryOperator('*'.to_string()),
                         Number(5),
                         Comma,
                         GroupingOpen('('),
                         Number(30),
-                        BinaryOperator('/'),
+                        BinaryOperator('/'.to_string()),
                         Number(2),
                         GroupingClose(')'),
                         GroupingClose(')'),
@@ -823,18 +810,18 @@ mod shunting_yard {
                 [
                     Number(5),
                     Number(3),
-                    UnaryOperator('-'),
-                    BinaryOperator('+'),
+                    UnaryOperator('-'.to_string()),
+                    BinaryOperator('+'.to_string()),
                     Number(1),
                     Number(2),
                     Number(5),
-                    BinaryOperator('*'),
+                    BinaryOperator('*'.to_string()),
                     Number(30),
                     Number(2),
-                    BinaryOperator('/'),
+                    BinaryOperator('/'.to_string()),
                     ArgCount(3),
                     Function("Max".to_string()),
-                    BinaryOperator('^')
+                    BinaryOperator('^'.to_string())
                 ]
             );
         }
@@ -863,7 +850,7 @@ mod shunting_yard {
                     // 5 * Sum(2, 3) -> 2 3 2arg Sum 5 *
                     &[
                         Number(5),
-                        BinaryOperator('*'),
+                        BinaryOperator('*'.to_string()),
                         Function(String::from("Sum")),
                         GroupingOpen('('),
                         Number(2),
@@ -880,7 +867,7 @@ mod shunting_yard {
                     Number(3),
                     ArgCount(2),
                     Function(String::from("Sum")),
-                    BinaryOperator('*'),
+                    BinaryOperator('*'.to_string()),
                 ]
             );
         }
@@ -897,7 +884,7 @@ mod shunting_yard {
                 &[
                     Token::Number(10),
                     Token::Constant("PI".to_string()),
-                    Token::BinaryOperator('*')
+                    Token::BinaryOperator('*'.to_string())
                 ]
             );
         }
@@ -922,7 +909,7 @@ mod shunting_yard {
                 &[
                     Token::Number(2),
                     Token::Number(3),
-                    Token::BinaryOperator('*')
+                    Token::BinaryOperator('*'.to_string())
                 ]
             );
         }
@@ -1019,7 +1006,7 @@ mod tests {
             evaluator
                 .eval_tokens(&[
                     Token::Number(3),
-                    Token::BinaryOperator('+'),
+                    Token::BinaryOperator('+'.to_string()),
                     Token::Number(2)
                 ])
                 .unwrap(),
@@ -1031,9 +1018,9 @@ mod tests {
             evaluator
                 .eval_tokens(&[
                     Token::Number(2),
-                    Token::BinaryOperator('^'),
+                    Token::BinaryOperator('^'.to_string()),
                     Token::Number(3),
-                    Token::BinaryOperator('^'),
+                    Token::BinaryOperator('^'.to_string()),
                     Token::Number(2)
                 ])
                 .unwrap(),
@@ -1046,10 +1033,10 @@ mod tests {
                 .eval_tokens(&[
                     Token::GroupingOpen('('),
                     Token::Number(2),
-                    Token::BinaryOperator('^'),
+                    Token::BinaryOperator('^'.to_string()),
                     Token::Number(3),
                     Token::GroupingClose(')'),
-                    Token::BinaryOperator('^'),
+                    Token::BinaryOperator('^'.to_string()),
                     Token::Number(4)
                 ])
                 .unwrap(),

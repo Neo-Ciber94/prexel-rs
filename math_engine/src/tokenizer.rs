@@ -25,7 +25,7 @@ pub trait Tokenize<N> {
 ///
 /// let t : Tokenizer<i32> = Tokenizer::new();
 /// let tokens = t.tokenize("2 + 3").unwrap();
-/// assert_eq!(&[Number(2_i32), BinaryOperator('+'), Number(3_i32)], tokens.as_slice());
+/// assert_eq!(&[Number(2_i32), BinaryOperator('+'.to_string()), Number(3_i32)], tokens.as_slice());
 /// ```
 pub struct Tokenizer<'a, N, C = DefaultContext<'a, N>>
 where
@@ -145,7 +145,7 @@ where
                 };
 
                 if is_unary(prev, string, next, context) {
-                    let operator = string.chars().next().unwrap();
+                    let operator = string.clone();
                     tokens.push(Token::UnaryOperator(operator));
                 } else {
                     // If the operator is not unary, could be binary so need 2 operands.
@@ -162,7 +162,7 @@ where
                     // If the current string value length is 1 we assume is a symbol
                     // for a binary operator, otherwise is an infix function.
                     if string.len() == 1 {
-                        let operator = string.chars().next().unwrap();
+                        let operator = string.clone();
                         tokens.push(Token::BinaryOperator(operator));
                     } else {
                         tokens.push(Token::InfixFunction(string.clone()));
@@ -369,14 +369,14 @@ mod tests {
         let tokenizer: Tokenizer<i64> = Tokenizer::with_context(context);
         assert_eq!(
             &tokenizer.tokenize("2 + 3").unwrap(),
-            &[Number(2), BinaryOperator('+'), Number(3)]
+            &[Number(2), BinaryOperator('+'.to_string()), Number(3)]
         );
 
         assert_eq!(
             &tokenizer.tokenize("5 * Sin(pi)").unwrap(),
             &[
                 Number(5),
-                BinaryOperator('*'),
+                BinaryOperator('*'.to_string()),
                 Function(String::from("Sin")),
                 GroupingOpen('('),
                 Constant(String::from("pi")),
@@ -388,11 +388,11 @@ mod tests {
             &tokenizer.tokenize("10/2 mod 3^2").unwrap(),
             &[
                 Number(10),
-                BinaryOperator('/'),
+                BinaryOperator('/'.to_string()),
                 Number(2),
                 InfixFunction(String::from("mod")),
                 Number(3),
-                BinaryOperator('^'),
+                BinaryOperator('^'.to_string()),
                 Number(2)
             ]
         );
@@ -401,15 +401,15 @@ mod tests {
             &tokenizer.tokenize("10! + 2").unwrap(),
             &[
                 Number(10),
-                UnaryOperator('!'),
-                BinaryOperator('+'),
+                UnaryOperator('!'.to_string()),
+                BinaryOperator('+'.to_string()),
                 Number(2)
             ]
         );
 
         assert_eq!(
             &tokenizer.tokenize("600!").unwrap(),
-            &[Number(600), UnaryOperator('!')]
+            &[Number(600), UnaryOperator('!'.to_string())]
         );
 
         assert_eq!(
@@ -428,7 +428,7 @@ mod tests {
                 &complex_tokenizer.tokenize("5 + 3i").unwrap(),
                 &[
                     Number(Complex64::new(5_f64, 0_f64)),
-                    BinaryOperator('+'),
+                    BinaryOperator('+'.to_string()),
                     Number(Complex64::new(0_f64, 3_f64)),
                 ]
             );

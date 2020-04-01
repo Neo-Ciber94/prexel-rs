@@ -15,9 +15,9 @@ pub enum Token<N> {
     /// An infix function
     InfixFunction(String),
     /// A binary operator
-    BinaryOperator(char),
+    BinaryOperator(String),
     /// An unary operator
-    UnaryOperator(char),
+    UnaryOperator(String),
     /// The argument count
     ArgCount(usize),
     /// An open grouping symbol
@@ -37,9 +37,9 @@ impl<N: Display> Display for Token<N> {
             Variable(name) => write!(f, "Variable({})", name),
             Constant(name) => write!(f, "Constant({})", name),
             Function(name) => write!(f, "Function({})", name),
-            InfixFunction(c) => write!(f, "InfixFunction('{}')", c),
-            BinaryOperator(c) => write!(f, "BinaryOperator('{}')", c),
-            UnaryOperator(c) => write!(f, "UnaryOperator('{}')", c),
+            InfixFunction(name) => write!(f, "InfixFunction('{}')", name),
+            BinaryOperator(name) => write!(f, "BinaryOperator('{}')", name),
+            UnaryOperator(name) => write!(f, "UnaryOperator('{}')", name),
             ArgCount(n) => write!(f, "ArgCount({})", n),
             GroupingOpen(c) => write!(f, "ParenthesisOpen('{}')", c),
             GroupingClose(c) => write!(f, "ParenthesisClose('{}')", c),
@@ -56,9 +56,9 @@ impl<N: Debug> Debug for Token<N> {
             Variable(name) => write!(f, "Variable({:?})", name),
             Constant(name) => write!(f, "Constant({:?})", name),
             Function(name) => write!(f, "Function({:?})", name),
-            InfixFunction(c) => write!(f, "InfixFunction('{:?}')", c),
-            BinaryOperator(c) => write!(f, "BinaryOperator('{:?}')", c),
-            UnaryOperator(c) => write!(f, "UnaryOperator('{:?}')", c),
+            InfixFunction(name) => write!(f, "InfixFunction('{:?}')", name),
+            BinaryOperator(name) => write!(f, "BinaryOperator('{:?}')", name),
+            UnaryOperator(name) => write!(f, "UnaryOperator('{:?}')", name),
             ArgCount(n) => write!(f, "ArgCount({:?})", n),
             GroupingOpen(c) => write!(f, "ParenthesisOpen('{:?}')", c),
             GroupingClose(c) => write!(f, "ParenthesisClose('{:?}')", c),
@@ -184,35 +184,6 @@ impl<N> Token<N> {
         }
     }
 
-    /// Checks if the token contains the specified number value.
-    ///
-    /// # Remarks
-    /// This check the token value if is a `Token::Number` otherwise returns false.
-    #[inline]
-    pub fn contains_number<U: PartialEq<N>>(&self, value: &U) -> bool {
-        match self {
-            Token::Number(n) => value == n,
-            _ => false,
-        }
-    }
-
-    /// Checks if the token contains a value with the specified name.
-    ///
-    /// # Remarks
-    /// If the token is a named token eg: variable, constant, function, infix function or unknown token,
-    /// will compare its `String` with the specified `str` otherwise returns `false`.
-    #[inline]
-    pub fn contains_name(&self, name: &str) -> bool {
-        match self {
-            Token::Variable(s)
-            | Token::Constant(s)
-            | Token::Function(s)
-            | Token::InfixFunction(s)
-            | Token::Unknown(s) => s == name,
-            _ => false,
-        }
-    }
-
     /// Checks if the token contains a symbol with the specified value.
     ///
     /// # Remarks
@@ -220,11 +191,8 @@ impl<N> Token<N> {
     /// otherwise returns `false`.
     #[inline]
     pub fn contains_symbol(&self, name: char) -> bool {
-        match *self {
-            Token::GroupingClose(c)
-            | Token::GroupingOpen(c)
-            | Token::UnaryOperator(c)
-            | Token::BinaryOperator(c) => c == name,
+        match self {
+            Token::GroupingClose(c) | Token::GroupingOpen(c) => *c == name,
             _ => false,
         }
     }
