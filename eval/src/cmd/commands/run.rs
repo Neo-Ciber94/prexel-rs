@@ -35,7 +35,7 @@ impl RunCommand{
         ).unwrap();
     }
 
-    fn eval_expr<N>(buffer: &str, evaluator: &mut Rc<Evaluator<'_, N>>) where N: FromStr + Debug + Display + Clone {
+    fn eval_expr<N>(buffer: &mut String, evaluator: &mut Rc<Evaluator<'_, N>>) where N: FromStr + Debug + Display + Clone {
         if buffer.contains("="){
             match Self::eval_assign(buffer, evaluator){
                 Ok(()) => {},
@@ -55,6 +55,9 @@ impl RunCommand{
                 }
             }
         }
+
+        Self::print_color("\n>> ", Self::NEWLINE_COLOR);
+        buffer.clear();
     }
 
     fn eval_assign<N>(expression: &str, evaluator: &mut Rc<Evaluator<'_, N>>) -> math_engine::Result<()>
