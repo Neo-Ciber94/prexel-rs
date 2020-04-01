@@ -46,12 +46,13 @@ pub enum ErrorKind {
     /// The expression is invalid.
     InvalidExpression,
     /// The expression is empty.
-    EmptyExpression,
+    Empty,
     /// Other type of error.
     Other,
 }
 
 impl ErrorKind {
+    /// Gets a `&str` representation of the `ErrorKind`.
     pub fn as_str(&self) -> &'static str {
         match *self {
             ErrorKind::Overflow => "value has overflow",
@@ -62,7 +63,7 @@ impl ErrorKind {
             ErrorKind::DivisionByZero => "cannot divide by zero",
             ErrorKind::NegativeValue => "value is negative",
             ErrorKind::PositiveValue => "value is positive",
-            ErrorKind::EmptyExpression => "empty expression",
+            ErrorKind::Empty => "empty input",
             ErrorKind::InvalidExpression => "invalid expression",
             ErrorKind::Other => "other error",
         }

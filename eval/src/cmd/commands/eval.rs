@@ -1,30 +1,11 @@
 use std::convert::TryFrom;
-use std::result;
+use bigdecimal::BigDecimal;
 use math_engine::context::{Config, DefaultContext};
 use math_engine::evaluator::Evaluator;
-use crate::cmd::error::{Error, Result};
 use crate::cmd::Command;
-use bigdecimal::BigDecimal;
-use utils::StringIterExt;
-
-pub enum NumberKind {
-    Decimal,
-    BigDecimal,
-    Complex,
-}
-
-impl TryFrom<&str> for NumberKind {
-    type Error = ();
-
-    fn try_from(value: &str) -> result::Result<Self, Self::Error> {
-        match value {
-            "--decimal" | "--d" => Ok(NumberKind::Decimal),
-            "--bigdecimal" | "--b" => Ok(NumberKind::BigDecimal),
-            "--complex" | "--c" => Ok(NumberKind::Complex),
-            _ => Err(()),
-        }
-    }
-}
+use crate::cmd::error::*;
+use crate::cmd::commands::eval::utils::StringIterExt;
+use crate::cmd::commands::eval_type::EvalType;
 
 pub struct EvalCommand;
 impl Command<String, Result> for EvalCommand {
@@ -42,42 +23,42 @@ impl Command<String, Result> for EvalCommand {
             return Err(Error::new("Empty, expected: eval [expression]"));
         }
 
-        let kind = NumberKind::try_from(args[0].as_str());
+        let eval_type = EvalType::try_from(args[0].as_str());
 
-        let buffer = if kind.is_ok() {
+        let buffer = if eval_type.is_ok() {
             args.iter().skip(1).join_by(" ")
         } else {
             args.iter().join_by(" ")
         };
 
-        match kind.unwrap_or(NumberKind::Decimal) {
-            NumberKind::Decimal => {
+        match eval_type.unwrap_or_default() {
+            EvalType::Decimal => {
                 let config = Config::new().with_implicit_mul();
                 let context = DefaultContext::new_decimal_with_config(config);
                 let evaluator = Evaluator::with_context(context);
                 match evaluator.eval(&buffer) {
                     Ok(n) => println!("{}", n),
-                    Err(e) => eprintln!("{:?}", e),
+                    Err(e) => eprintln!("{}", e),
                 }
             }
-            NumberKind::BigDecimal => {
+            EvalType::BigDecimal => {
                 let config = Config::new().with_implicit_mul();
                 let context: DefaultContext<BigDecimal> =
                     DefaultContext::new_unchecked_with_config(config);
                 let evaluator = Evaluator::with_context(context);
                 match evaluator.eval(&buffer) {
                     Ok(n) => println!("{}", n),
-                    Err(e) => eprintln!("{:?}", e),
+                    Err(e) => eprintln!("{}", e),
                 }
             }
-            NumberKind::Complex => {
+            EvalType::Complex => {
                 let config = Config::new().with_implicit_mul().with_complex_number();
 
                 let context = DefaultContext::new_complex_with_config(config);
                 let evaluator = Evaluator::with_context(context);
                 match evaluator.eval(&buffer) {
                     Ok(n) => println!("{}", n),
-                    Err(e) => eprintln!("{:?}", e),
+                    Err(e) => eprintln!("{}", e),
                 }
             }
         }

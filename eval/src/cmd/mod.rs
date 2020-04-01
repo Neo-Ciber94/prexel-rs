@@ -1,5 +1,5 @@
-pub mod commands;
 pub mod error;
+pub mod commands;
 
 use std::collections::HashMap;
 use std::rc::Rc;

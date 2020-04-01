@@ -8,6 +8,8 @@ use math_engine::evaluator::Evaluator;
 use math_engine::function::Function;
 use math_engine::token::Token::*;
 use math_engine::tokenizer::{Tokenize, Tokenizer};
+use std::rc::Rc;
+use std::error;
 
 pub struct CustomFunction<'a, T>
 where
@@ -16,7 +18,7 @@ where
     function_name: String,
     params: Vec<String>,
     body: String,
-    evaluator: Evaluator<'a, T>,
+    evaluator: Rc<Evaluator<'a, T>>,
     _marker: PhantomData<T>,
 }
 
@@ -31,7 +33,7 @@ where
         function_name: String,
         params: Vec<String>,
         body: String,
-        evaluator: Evaluator<'a, T>,
+        evaluator: Rc<Evaluator<'a, T>>,
     ) -> Self {
         CustomFunction {
             function_name,
@@ -42,7 +44,7 @@ where
         }
     }
 
-    pub fn from_str(evaluator: Evaluator<'a, T>, s: &str) -> Result<Self, ParseFunctionError> {
+    pub fn from_str(evaluator: Rc<Evaluator<'a, T>>, s: &str) -> Result<Self, ParseFunctionError> {
         fn check_name(name: &str) -> Result<(), ParseFunctionError> {
             if name.is_empty()
                 || name.chars().any(char::is_whitespace)
@@ -198,20 +200,14 @@ pub enum FunctionErrorKind {
     InvalidParam,
 }
 
-impl Display for FunctionErrorKind {
+impl Display for ParseFunctionError{
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match *self {
+        match self.kind {
             FunctionErrorKind::Empty => write!(f, "Empty expression"),
-            FunctionErrorKind::InvalidName(ref s) => write!(
-                f,
-                "Expected param names with not whitespaces and alphanumeric: `{}`",
-                s
-            ),
-            FunctionErrorKind::UnusedParam(ref s) => write!(
-                f,
-                "A param `{}` is not being used in the body of the function",
-                s
-            ),
+            FunctionErrorKind::InvalidName(ref s) =>
+                write!(f, "Expected param names with not whitespaces and alphanumeric: `{}`", s),
+            FunctionErrorKind::UnusedParam(ref s) =>
+                write!(f, "A param `{}` is not being used in the body of the function", s),
             FunctionErrorKind::DuplicatedParam(ref s) => {
                 write!(f, "The param `{}` is duplicated", s)
             }
@@ -223,6 +219,8 @@ impl Display for FunctionErrorKind {
         }
     }
 }
+
+impl error::Error for ParseFunctionError{}
 
 impl From<FunctionErrorKind> for ParseFunctionError {
     #[inline]
@@ -237,13 +235,16 @@ mod tests {
 
     fn try_from(expr: &str) -> Result<CustomFunction<f64>, ParseFunctionError> {
         let evaluator = Evaluator::new();
-        CustomFunction::from_str(evaluator, expr)
+        CustomFunction::from_str(Rc::new(evaluator), expr)
     }
 
     #[test]
     fn from_str_test() {
         let evaluator: Evaluator<f64> = Evaluator::new();
-        let func = CustomFunction::from_str(evaluator, "Add2(x) = x + 2").unwrap();
+        let func = CustomFunction::from_str(
+            Rc::new(evaluator),
+            "Add2(x) = x + 2"
+        ).unwrap();
 
         assert_eq!(func.function_name, "Add2");
         assert_eq!(&func.params, &["x".to_string()]);
@@ -253,7 +254,10 @@ mod tests {
     #[test]
     fn from_str_and_eval_test() {
         let evaluator: Evaluator<f64> = Evaluator::new();
-        let func = CustomFunction::from_str(evaluator, "Add2(x) = x + 2").unwrap();
+        let func = CustomFunction::from_str(
+            Rc::new(evaluator),
+            "Add2(x) = x + 2"
+        ).unwrap();
 
         assert_eq!(func.call(&[4_f64]), Ok(6_f64));
     }
@@ -281,7 +285,7 @@ mod tests {
             "Plus".to_string(),
             vec!["x".to_string(), "y".to_string()],
             "x + y".to_string(),
-            evaluator,
+            Rc::new(evaluator),
         );
 
         assert_eq!(func.call(&[2_f64, 4_f64]), Ok(6_f64));

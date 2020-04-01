@@ -79,7 +79,7 @@ where
 
         if expression.is_empty() {
             return Err(Error::new(
-                ErrorKind::InvalidExpression,
+                ErrorKind::Empty,
                 "Expression is empty",
             ));
         }
