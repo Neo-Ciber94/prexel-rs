@@ -659,6 +659,7 @@ impl GroupingSymbol {
     }
 }
 
+/// Provides a function for validate token names.
 pub mod validate {
     use crate::Result;
     use crate::error::*;
@@ -668,40 +669,6 @@ pub mod validate {
     #[derive(Debug, Copy, Clone, Eq, PartialEq)]
     pub enum TokenKind{
         Variable, Constant, Operator, Function
-    }
-
-    impl TokenKind{
-        #[inline]
-        pub fn is_variable(&self) -> bool{
-            match self{
-                TokenKind::Variable => true,
-                _ => false
-            }
-        }
-
-        #[inline]
-        pub fn is_constant(&self) -> bool{
-            match self{
-                TokenKind::Constant => true,
-                _ => false
-            }
-        }
-
-        #[inline]
-        pub fn is_operator(&self) -> bool{
-            match self{
-                TokenKind::Operator => true,
-                _ => false
-            }
-        }
-
-        #[inline]
-        pub fn is_function(&self) -> bool{
-            match self{
-                TokenKind::Function => true,
-                _ => false
-            }
-        }
     }
 
     impl Display for TokenKind{
@@ -740,54 +707,38 @@ pub mod validate {
         let name_length = name.chars().count();
 
         match kind{
-            TokenKind::Constant | TokenKind::Variable if name_length == 1 => {
+            // ∞, π, x, Σ, +, -, *, /, %, √
+            TokenKind::Constant | TokenKind::Variable | TokenKind::Operator if name_length == 1 => {
                 let c = name.chars().next().unwrap();
-                if c.is_ascii_punctuation(){
+                if c.is_ascii_digit(){
                     return Err(Error::new(
                         ErrorKind::InvalidInput,
                         format!(
-                            "{}s must contain a single non-symbol character or 1 or more alphanumeric characters: `{}`",
+                            "{}s names cannot be an ASCII number: `{}`",
                             kind,
                             name
                         ))
                     );
                 }
             },
-            TokenKind::Variable | TokenKind::Constant | TokenKind::Function => {
-                if !name.chars().any(char::is_alphanumeric){
+            // PI, Sum, Mod, Sqrt, f, √(10, 2)
+            TokenKind::Variable | TokenKind::Constant | TokenKind::Function | TokenKind::Operator => {
+                if !name.chars().any(|ref c| char::is_ascii_alphanumeric(c)){
                     return Err(Error::new(
                         ErrorKind::InvalidInput,
                         format!(
-                            "{} names can only contains alphanumeric characters: `{}`", kind, name
-                        ))
-                    );
-                }
-
-                if !name.chars().next().map_or(false, char::is_alphabetic){
-                    return Err(Error::new(
-                        ErrorKind::InvalidInput,
-                        format!(
-                            "{} names should start with an alphabetic character: `{}`", kind, name
-                        ))
-                    );
-                }
-            },
-            TokenKind::Operator => {
-                if name_length != 1 {
-                    return Err(Error::new(
-                        ErrorKind::InvalidInput,
-                        format!("{}s must contain a single character: `{}`", kind, name))
-                    );
-                }
-
-                let c = name.chars().next().unwrap();
-                if !c.is_ascii_alphanumeric() && !c.is_ascii_punctuation(){
-                    return Err(Error::new(
-                        ErrorKind::InvalidInput,
-                        format!(
-                            "{}s must contain a single symbol character: `{}`",
+                            "{}s with names `length > 1` should only contains ASCII alphanumeric characters: `{}`",
                             kind,
                             name
+                        ))
+                    );
+                }
+
+                if !name.chars().next().map_or(false, |ref c| char::is_ascii_alphabetic(c)){
+                    return Err(Error::new(
+                        ErrorKind::InvalidInput,
+                        format!(
+                            "{}s with names `length > 1` should start with an ASCII alphabetic character: `{}`", kind, name
                         ))
                     );
                 }
@@ -817,7 +768,6 @@ pub mod validate {
 mod tests {
     use super::*;
     use crate::Result;
-    use crate::error::Error;
     use crate::function::{Associativity, Precedence, Notation};
 
     struct Dummy(String);
@@ -835,7 +785,7 @@ mod tests {
             unimplemented!()
         }
 
-        fn call(&self, left: f64, right: f64) -> Result<f64> {
+        fn call(&self, _: f64, _: f64) -> Result<f64> {
             unimplemented!()
         }
     }
@@ -849,7 +799,7 @@ mod tests {
             unimplemented!()
         }
 
-        fn call(&self, value: f64) -> Result<f64> {
+        fn call(&self, _: f64) -> Result<f64> {
             unimplemented!()
         }
     }
@@ -859,7 +809,7 @@ mod tests {
             &self.0
         }
 
-        fn call(&self, args: &[f64]) -> Result<f64> {
+        fn call(&self, _: &[f64]) -> Result<f64> {
             unimplemented!()
         }
     }
@@ -908,7 +858,7 @@ mod tests {
         );
     }
 
-    //#[test]
+    #[test]
     fn operators_symbols_test(){
         let mut context : DefaultContext<f64> = DefaultContext::new_unchecked();
         context.add_constant("∞", std::f64::INFINITY);
@@ -916,15 +866,15 @@ mod tests {
         context.add_binary_function(Dummy("√".to_string()));
         context.add_binary_function(Dummy("∋".to_string()));
         context.add_unary_function(Dummy("ℝ".to_string()));
-        context.add_function(Dummy("λ".to_string()));
-        context.add_function(Dummy("Σ".to_string()));
+        context.add_unary_function(Dummy("λ".to_string()));
+        context.add_function(Dummy("f".to_string()));
 
         assert!(context.is_constant("∞"));
         assert!(context.is_constant("π"));
         assert!(context.is_binary_function("√"));
         assert!(context.is_binary_function("∋"));
         assert!(context.is_unary_function("ℝ"));
-        assert!(context.is_function("λ"));
-        assert!(context.is_function("Σ"));
+        assert!(context.is_unary_function("λ"));
+        assert!(context.is_function("f"));
     }
 }

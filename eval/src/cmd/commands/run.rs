@@ -1,5 +1,5 @@
 use std::convert::TryFrom;
-use std::fmt::{Debug, Display, Formatter};
+use std::fmt::{Debug, Display};
 use std::io::{stdout, Write};
 use std::iter::Iterator;
 use std::rc::Rc;
@@ -9,6 +9,7 @@ use crossterm::event::{self, Event, KeyCode};
 use crossterm::execute;
 use crossterm::style::{Color, Print, ResetColor, SetForegroundColor};
 use math_engine::context::{Config, Context, DefaultContext};
+use math_engine::context::validate::{check_token_name, TokenKind};
 use math_engine::error::{Error as MathError, ErrorKind};
 use math_engine::evaluator::Evaluator;
 use crate::cmd::Command;
@@ -51,12 +52,11 @@ impl RunCommand{
     }
 
     fn eval_assign<N>(expression: &str, evaluator: &mut Rc<Evaluator<'_, N>>) -> math_engine::Result<()>
-        where N: FromStr + Debug + Display + Clone
-    {
+        where N: FromStr + Debug + Display + Clone {
         // Could be a variable assignment or a function assignment
-        // * Variable Assignment: `VariableName = expression`.
+        // * Variable Assignment: `variable_name = expression`.
         //      Eg.: `x = 10`, `y = x ^ 2`
-        // * Function Assignment: `FunctionName(...args) = expression`.
+        // * Function Assignment: `function_name(...args) = expression`.
         //      Eg.: `Double(x) = x * 2`
         let assignment: Vec<&str> = expression.split("=").collect::<Vec<&str>>();
 
@@ -73,7 +73,8 @@ impl RunCommand{
 
         // If variable name contains parentheses we assume is a function
         if var.contains('(') && var.contains(')') {
-            match CustomFunction::from_str(evaluator.clone(), var){
+            // Takes the entire expression
+            match CustomFunction::from_str(evaluator.clone(), expression){
                 Ok(f) => {
                     let ev = Rc::make_mut(evaluator);
                     let context = ev.mut_context();
@@ -87,6 +88,8 @@ impl RunCommand{
                         ));
                     }
                     else{
+                        // Checks the function name is valid
+                        check_token_name(TokenKind::Function, f.name())?;
                         context.add_function(f)
                     }
                 },
@@ -202,47 +205,4 @@ fn print_color<T: Display + Clone>(value: T, color: Color) {
             Print(value),
             ResetColor
         ).unwrap();
-}
-
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-enum TokenKind{ Variable, Function }
-impl Display for TokenKind{
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match *self{
-            TokenKind::Variable => write!(f, "Variable"),
-            TokenKind::Function => write!(f, "Function"),
-        }
-    }
-}
-
-fn check_token_name(kind: TokenKind, name: &str) -> math_engine::Result<()>{
-    if name.is_empty(){
-        return Err(MathError::new(
-            ErrorKind::InvalidInput,
-            format!("{} names cannot be empty", kind)
-        ));
-    }
-
-    if name.chars().any(char::is_whitespace){
-        return Err(MathError::new(
-            ErrorKind::InvalidInput,
-            format!("{} names cannot contains whitespaces", kind)
-        ));
-    }
-
-    if !name.chars().all(char::is_alphanumeric){
-        return Err(MathError::new(
-            ErrorKind::InvalidInput,
-            format!("{}s can only contain alphanumeric characters", kind)
-        ));
-    }
-
-    if name.chars().next().unwrap().is_alphabetic(){
-        return Err(MathError::new(
-            ErrorKind::InvalidInput,
-            format!("{} names should start if a letter", kind)
-        ));
-    }
-
-    Ok(())
 }

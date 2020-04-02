@@ -11,10 +11,7 @@ use math_engine::tokenizer::{Tokenize, Tokenizer};
 use std::rc::Rc;
 use std::error;
 
-pub struct CustomFunction<'a, T>
-where
-    T: Display + Debug + Clone + FromStr,
-{
+pub struct CustomFunction<'a, T> where T: Display + Debug + Clone + FromStr {
     function_name: String,
     params: Vec<String>,
     body: String,
@@ -24,10 +21,7 @@ where
 
 impl<'a, T> RefUnwindSafe for CustomFunction<'a, T> where T: Display + Debug + Clone + FromStr {}
 
-impl<'a, T> CustomFunction<'a, T>
-where
-    T: Display + Debug + Clone + FromStr,
-{
+impl<'a, T> CustomFunction<'a, T> where T: Display + Debug + Clone + FromStr {
     #[inline]
     pub fn with_evaluator(
         function_name: String,
@@ -62,7 +56,9 @@ where
             return Err(ParseFunctionError::from(FunctionErrorKind::Empty));
         }
 
-        let parts: Vec<&str> = s.split("=").map(|s| s.trim()).collect::<Vec<&str>>();
+        let parts: Vec<&str> = s.split("=")
+            .map(|s| s.trim())
+            .collect::<Vec<&str>>();
 
         if parts.len() != 2 {
             return Err(ParseFunctionError::from(FunctionErrorKind::InvalidFormat));
@@ -128,6 +124,7 @@ where
             return Err(ParseFunctionError::from(FunctionErrorKind::Empty));
         }
 
+        // Checking all the parameters are being used
         for p in params {
             if !expr.contains(p) {
                 return Err(ParseFunctionError::from(FunctionErrorKind::InvalidParam));
@@ -140,6 +137,9 @@ where
         match tokenizer.tokenize(expr) {
             Err(_) => Err(ParseFunctionError::from(FunctionErrorKind::InvalidBody)),
             Ok(tokens) => {
+                // Checking all the params are `unknown`, this means are unique params
+                // and are not considered a `variable`, `constant` or `function` in the context.
+                //
                 // Gets all the unknown values which should be equals to the number of params.
                 let locals = tokens
                     .into_iter()
@@ -150,6 +150,7 @@ where
                     })
                     .collect::<Vec<String>>();
 
+                // If the length is different there are params values stored in the context.
                 if locals.len() != params.len() {
                     return Err(ParseFunctionError::from(FunctionErrorKind::InvalidBody));
                 }
@@ -160,10 +161,7 @@ where
     }
 }
 
-impl<'a, T> Function<T> for CustomFunction<'a, T>
-where
-    T: Display + Debug + Clone + FromStr,
-{
+impl<'a, T> Function<T> for CustomFunction<'a, T> where T: Display + Debug + Clone + FromStr {
     #[inline]
     fn name(&self) -> &str {
         self.name()
@@ -213,7 +211,7 @@ impl Display for ParseFunctionError{
             }
             FunctionErrorKind::InvalidBody => write!(f, "Invalid function body expression"),
             FunctionErrorKind::InvalidFormat => {
-                write!(f, "Invalid format, expected: FunctionName(args, ..) = expr")
+                write!(f, "Invalid format, expected: `function_name(args, ..) = expression`")
             }
             FunctionErrorKind::InvalidParam => write!(f, "Invalid param name"),
         }
@@ -239,16 +237,19 @@ mod tests {
     }
 
     #[test]
-    fn from_str_test() {
-        let evaluator: Evaluator<f64> = Evaluator::new();
-        let func = CustomFunction::from_str(
-            Rc::new(evaluator),
-            "Add2(x) = x + 2"
-        ).unwrap();
-
+    fn from_str_test1() {
+        let func = try_from("Add2(x) = x + 2").unwrap();
         assert_eq!(func.function_name, "Add2");
         assert_eq!(&func.params, &["x".to_string()]);
         assert_eq!(func.body, "x + 2");
+    }
+
+    #[test]
+    fn from_str_test2(){
+        let func = try_from("Double(x) = x * 2").unwrap();
+        assert_eq!(func.function_name, "Double");
+        assert_eq!(&func.params, &["x".to_string()]);
+        assert_eq!(func.body, "x * 2");
     }
 
     #[test]
