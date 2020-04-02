@@ -195,7 +195,7 @@ fn is_unary<'a, N, C>(prev: Option<&str>, cur: &str, next: Option<&str>, context
         if op.notation() == Notation::Postfix {
             match prev{
                 Some(s) => {
-                    if let Some(ch) = s.as_single_char(){
+                    if let Some(ch) = s.single_char(){
                         // )!
                         if config.is_group_close(ch){
                             return true;
@@ -215,7 +215,7 @@ fn is_unary<'a, N, C>(prev: Option<&str>, cur: &str, next: Option<&str>, context
 
             if let Some(prev_str) = prev {
                 // )+, )-, ]+
-                if let Some(ch) = prev_str.as_single_char(){
+                if let Some(ch) = prev_str.single_char(){
                     if config.is_group_close(ch){
                         return false;
                     }
