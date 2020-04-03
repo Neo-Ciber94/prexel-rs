@@ -16,9 +16,6 @@ mod info {
         Run,
         Help,
         Context,
-        Ops,
-        Func,
-        Consts
     }
 
     impl CommandInfo {
@@ -28,9 +25,6 @@ mod info {
                 CommandInfo::Run => "--run",
                 CommandInfo::Help => "--help",
                 CommandInfo::Context => "--context",
-                CommandInfo::Ops => "--operations",
-                CommandInfo::Func => "--functions",
-                CommandInfo::Consts => "--constants",
             }
         }
 
@@ -40,9 +34,6 @@ mod info {
                 CommandInfo::Run => Some("--r"),
                 CommandInfo::Help => Some("--h"),
                 CommandInfo::Context => Some("--ctx"),
-                CommandInfo::Ops => Some("--ops"),
-                CommandInfo::Func => Some("--funs"),
-                CommandInfo::Consts => Some("--cons"),
             }
         }
     }

@@ -1,16 +1,13 @@
+use std::error;
 use std::fmt::{Debug, Display, Formatter};
 use std::marker::PhantomData;
 use std::panic::RefUnwindSafe;
+use std::rc::Rc;
 use std::str::FromStr;
-
+use math_engine::context::Context;
 use math_engine::error::{Error, ErrorKind};
 use math_engine::evaluator::Evaluator;
 use math_engine::function::Function;
-use math_engine::token::Token::*;
-use math_engine::tokenizer::{Tokenize, Tokenizer};
-use std::rc::Rc;
-use std::error;
-use math_engine::context::Context;
 
 pub struct CustomFunction<'a, T> where T: Display + Debug + Clone + FromStr {
     function_name: String,
@@ -137,7 +134,7 @@ impl<'a, T> CustomFunction<'a, T> where T: Display + Debug + Clone + FromStr {
                 return Err(ParseFunctionError::from(FunctionErrorKind::InvalidParam));
             }
         }
-        
+
         Ok(())
     }
 }
