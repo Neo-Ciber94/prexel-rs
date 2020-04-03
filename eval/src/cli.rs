@@ -16,7 +16,7 @@ pub trait Command<Arg, R> {
     fn execute(&self, args: CommandArgs<'_, Arg>) -> R;
 }
 
-/// Stores and runs the cmd.
+/// Stores and runs the commands.
 pub struct CommandExecutor<Arg, R> {
     commands: HashMap<String, Rc<dyn Command<Arg, R>>>,
 }

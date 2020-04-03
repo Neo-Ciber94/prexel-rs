@@ -60,7 +60,7 @@ impl RunCommand {
         //      Eg.: `Double(x) = x * 2`
         let assignment: Vec<&str> = expression.split("=").collect::<Vec<&str>>();
 
-        // We only need 2 parts: `Variable` = `Expression`
+        // We only need 2 parts: `variable_name` = `expression`
         if assignment.len() != 2 {
             return Err(Error::new(
                 ErrorKind::InvalidExpression,

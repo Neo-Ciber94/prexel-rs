@@ -1,20 +1,20 @@
-use bigdecimal::BigDecimal;
-use math_engine::Result;
-use math_engine::context::DefaultContext;
-use math_engine::utils::extensions::IteratorExt;
 use std::convert::TryFrom;
-use crate::cli::{Command, CommandArgs};
-use crate::commands::info::NumberType;
+use bigdecimal::BigDecimal;
+use math_engine::context::DefaultContext;
 use math_engine::error::{Error, ErrorKind};
+use math_engine::Result;
+use math_engine::utils::extensions::IteratorExt;
+use crate::cli::{Command, CommandArgs};
+use crate::commands::info::{CommandInfo, NumberType};
 
 pub struct ContextCommand;
 impl Command<String, Result<()>> for ContextCommand {
     fn name(&self) -> &str {
-        "--context"
+        CommandInfo::Eval.name()
     }
 
     fn alias(&self) -> Option<&str> {
-        Some("--ctx")
+        CommandInfo::Eval.alias()
     }
 
     fn help_info(&self) -> &str {

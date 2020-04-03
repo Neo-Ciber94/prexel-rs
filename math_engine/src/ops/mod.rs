@@ -4,14 +4,11 @@ pub mod unchecked;
 pub mod math {
     use std::fmt::Debug;
     use std::ops::{Mul, Sub};
-
     use num_traits::{FromPrimitive, Inv, One, ToPrimitive, Zero};
     use rand::random;
-
     use crate::error::*;
-    use crate::function::{
-        Associativity, BinaryFunction, Function, Notation, Precedence, UnaryFunction,
-    };
+    pub use crate::function::{BinaryFunction, Function, UnaryFunction};
+    use crate::function::{Associativity, Notation, Precedence};
     use crate::utils::gamma::gamma;
     use crate::Result;
 
@@ -123,6 +120,10 @@ pub mod math {
         }
 
         fn call(&self, args: &[N]) -> Result<N> {
+            if args.len() <= 1{
+                return Err(Error::from(ErrorKind::InvalidArgumentCount));
+            }
+
             let mut max = None;
 
             for n in args {
@@ -147,6 +148,10 @@ pub mod math {
         }
 
         fn call(&self, args: &[N]) -> Result<N> {
+            if args.len() <= 1{
+                return Err(Error::from(ErrorKind::InvalidArgumentCount));
+            }
+
             let mut min = None;
 
             for n in args {
@@ -180,7 +185,8 @@ pub mod math {
                         Err(Error::from(ErrorKind::InvalidArgumentCount))
                     } else {
                         let result = try_to_float(&args[0])?.$method_name();
-                        N::from_f64(result).ok_or(Error::from(ErrorKind::Overflow))
+                        N::from_f64(result)
+                            .ok_or(Error::from(ErrorKind::Overflow))
                     }
                 }
             }
@@ -262,11 +268,23 @@ pub mod math {
                 0 => N::from_f64(random::<f64>()).ok_or(Error::from(ErrorKind::Overflow)),
                 1 => {
                     let max = try_to_float(&args[0])?;
+                    if max.is_sign_negative(){
+                        return Err(Error::from(ErrorKind::NegativeValue));
+                    }
+
                     N::from_f64(random::<f64>() * max).ok_or(Error::from(ErrorKind::Overflow))
                 }
                 2 => {
                     let min = try_to_float(&args[0])?;
                     let max = try_to_float(&args[1])?;
+
+                    if min > max {
+                        return Err(Error::new(
+                            ErrorKind::InvalidInput,
+                            format!("Invalid range for `Random`: min > max, {} > {}", min, max))
+                        )
+                    }
+
                     let value = min + ((max - min) * random::<f64>());
                     N::from_f64(value).ok_or(Error::from(ErrorKind::Overflow))
                 }
@@ -519,5 +537,242 @@ pub mod math {
             }
             None => Err(Error::from(ErrorKind::Overflow)),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests{
+    use super::math::*;
+
+    const ERROR : f64 = 0.000_000_000_01;
+
+    fn almost_eq(x: f64, y: f64, delta: f64) -> bool{
+        (y - x).abs() <= delta
+    }
+
+    fn empty_array<T>() -> Box<[T]>{
+        vec![].into_boxed_slice()
+    }
+
+    #[test]
+    fn unary_plus_test(){
+        let instance = UnaryPlus;
+
+        assert_eq!(instance.call(-10_f64), Ok(-10_f64));
+        assert_eq!(instance.call(5), Ok(5));
+    }
+
+    #[test]
+    fn factorial_test(){
+        let instance = Factorial;
+
+        assert_eq!(instance.call(5), Ok(120));
+        assert_eq!(instance.call(1), Ok(1));
+        assert_eq!(instance.call(0), Ok(1));
+
+        assert_eq!(instance.call(10_f64), Ok(3628800_f64));
+
+        //assert_eq!(instance.call(0.2_f64), Ok(0.91816874239976061_f64));
+        //assert_eq!(instance.call(3.2_f64), Ok(7.75668953579317763_f64));
+        assert!(almost_eq(instance.call(0.2_f64).unwrap(), 0.91816874239976061_f64, ERROR));
+        assert!(almost_eq(instance.call(3.2_f64).unwrap(), 7.75668953579317763_f64, ERROR));
+    }
+
+    #[test]
+    fn pow_test(){
+        let instance = PowOperator;
+
+        assert_eq!(instance.call(2, 3), Ok(8));
+        assert_eq!(instance.call(4, 0), Ok(1));
+        assert_eq!(instance.call(0, 2), Ok(0));
+
+        assert!(almost_eq(instance.call(3_f64, -3_f64).unwrap(), 0.03703703703703703_f64, ERROR));
+        assert!(almost_eq(instance.call(3_f64, -3_f64).unwrap(), 0.03703703703703703_f64, ERROR));
+
+        assert!(almost_eq(instance.call(3_f64, 0.2_f64).unwrap(), 1.245730939615517325966_f64, ERROR));
+        assert!(almost_eq(instance.call(3_f64, -0.2_f64).unwrap(), 0.802741561760230682095_f64, ERROR));
+    }
+
+    #[test]
+    fn min_test(){
+        let instance = MinFunction;
+
+        assert_eq!(instance.call(&[-10_f64, 3_f64]), Ok(-10_f64));
+        assert_eq!(instance.call(&[5, 3, 1]), Ok(1));
+
+        assert!(instance.call(&[5]).is_err());
+        assert!(instance.call(&empty_array::<f64>()).is_err())
+    }
+
+    #[test]
+    fn max_test(){
+        let instance = MaxFunction;
+
+        assert_eq!(instance.call(&[-10_f64, 3_f64]), Ok(3_f64));
+        assert_eq!(instance.call(&[5, 3, 1]), Ok(5));
+
+        assert!(instance.call(&[5]).is_err());
+        assert!(instance.call(&empty_array::<f64>()).is_err())
+    }
+
+    #[test]
+    fn floor_test(){
+        let instance = FloorFunction;
+
+        assert_eq!(instance.call(&[8.2_f64]), Ok(8_f64));
+
+        assert!(instance.call(&[8.2_f64, 3_f64]).is_err());
+        assert!(instance.call(&empty_array::<f64>()).is_err())
+    }
+
+    #[test]
+    fn ceil_test(){
+        let instance = CeilFunction;
+
+        assert_eq!(instance.call(&[8.2_f64]), Ok(9_f64));
+
+        assert!(instance.call(&[8.2_f64, 3_f64]).is_err());
+        assert!(instance.call(&empty_array::<f64>()).is_err())
+    }
+
+    #[test]
+    fn truncate_test(){
+        let instance = TruncateFunction;
+
+        assert_eq!(instance.call(&[8.2_f64]), Ok(8_f64));
+        assert_eq!(instance.call(&[8.9_f64]), Ok(8_f64));
+
+        assert!(instance.call(&[8.2_f64, 3_f64]).is_err());
+        assert!(instance.call(&empty_array::<f64>()).is_err())
+    }
+
+    #[test]
+    fn round_test(){
+        let instance = RoundFunction;
+
+        assert_eq!(instance.call(&[8.2_f64]), Ok(8_f64));
+        assert_eq!(instance.call(&[8.9_f64]), Ok(9_f64));
+
+        assert!(instance.call(&[8.2_f64, 3_f64]).is_err());
+        assert!(instance.call(&empty_array::<f64>()).is_err())
+    }
+
+    #[test]
+    fn sign_test(){
+        let instance = SignFunction;
+
+        assert_eq!(instance.call(&[6]), Ok(1));
+        assert_eq!(instance.call(&[-3]), Ok(-1));
+        assert_eq!(instance.call(&[6_f64]), Ok(1_f64));
+        assert_eq!(instance.call(&[-4_f64]), Ok(-1_f64));
+
+        assert!(instance.call(&[8.2_f64, 3_f64]).is_err());
+        assert!(instance.call(&empty_array::<f64>()).is_err())
+    }
+
+    #[test]
+    fn sqrt_test(){
+        let instance = SqrtFunction;
+
+        assert_eq!(instance.call(&[25]), Ok(5));
+        assert_eq!(instance.call(&[9]), Ok(3));
+        assert_eq!(instance.call(&[5.5_f64]), Ok(5.5_f64.sqrt()));
+        assert_eq!(instance.call(&[0.2_f64]), Ok(0.2_f64.sqrt()));
+
+        assert!(instance.call(&[8.2_f64, 3_f64]).is_err());
+        assert!(instance.call(&[-9]).is_err());
+        assert!(instance.call(&empty_array::<f64>()).is_err())
+    }
+
+    #[test]
+    fn exp_test(){
+        let instance = ExpFunction;
+
+        fn compute_exp(func: &ExpFunction, value: f64){
+            assert_eq!(func.call(&[value]), Ok(value.exp()));
+        }
+
+        compute_exp(&instance, 0_f64);
+        compute_exp(&instance, 5_f64);
+        compute_exp(&instance, -3_f64);
+
+        assert!(instance.call(&[8.2_f64, 3_f64]).is_err());
+        assert!(instance.call(&empty_array::<f64>()).is_err())
+    }
+
+    #[test]
+    fn ln_test(){
+        let instance = LnFunction;
+
+        fn compute_ln(func: &LnFunction, value: f64){
+            assert_eq!(func.call(&[value]), Ok(value.ln()));
+        }
+
+        compute_ln(&instance, 25_f64);
+        compute_ln(&instance, 5_f64);
+
+        assert!(instance.call(&[0]).is_err());
+        assert!(instance.call(&[-5]).is_err());
+        assert!(instance.call(&[8.2_f64, 3_f64]).is_err());
+        assert!(instance.call(&empty_array::<f64>()).is_err())
+    }
+
+    #[test]
+    fn log_test(){
+        let instance = LogFunction;
+
+        fn compute_log10(func: &LogFunction, value: f64){
+            assert_eq!(func.call(&[value]), Ok(value.log10()), "Log({})", value);
+        }
+
+        fn compute_log(func: &LogFunction, value: f64, base: f64){
+            assert_eq!(func.call(&[value, base]), Ok(value.log(base)), "Log({}, base = {})", value, base);
+        }
+
+        compute_log10(&instance, 25_f64);
+        compute_log(&instance, 5_f64, 20_f64);
+
+        assert!(instance.call(&[0]).is_err());
+        assert!(instance.call(&[-25]).is_err());
+        assert!(instance.call(&[10_f64, 3_f64, 7_f64]).is_err());
+        assert!(instance.call(&empty_array::<f64>()).is_err())
+    }
+
+    #[test]
+    fn rand_test(){
+        const SAMPLES : usize = 1000;
+        let instance = RandFunction;
+
+        fn compute_random(rand: &RandFunction){
+            for _ in 0..SAMPLES{
+                let value : f64 = rand.call(&empty_array::<f64>()).unwrap();
+                assert!(value >= 0_f64 && value < 1_f64, "value out of range: {0} >= 0 && {0} < 1", value)
+            }
+        }
+
+        fn compute_random_range1(rand: &RandFunction, max: f64){
+            for _ in 0..SAMPLES{
+                let value : f64 = rand.call(&[max]).unwrap();
+                assert!(value >= 0_f64 && value < max, "value out of range: {0} >= 0 && {0} < {1}", value, max)
+            }
+        }
+
+        fn compute_random_range2(rand: &RandFunction, min: f64, max: f64){
+            for _ in 0..SAMPLES{
+                let value : f64 = rand.call(&[min, max]).unwrap();
+                assert!(value >= min && value < max, "value out of range: {0} >= {1} && {0} < {2}", value, min, max)
+            }
+        }
+
+        compute_random(&instance);
+        compute_random_range1(&instance, 10_f64);
+
+        compute_random_range2(&instance, 5_f64, 10_f64);
+        compute_random_range2(&instance, -10_f64, -5_f64);
+        compute_random_range2(&instance, -10_f64, 10_f64);
+
+        assert!(instance.call(&[-12]).is_err());
+        assert!(instance.call(&[20, 10]).is_err());
+        assert!(instance.call(&[10_f64, 3_f64, 7_f64]).is_err());
     }
 }

@@ -72,6 +72,10 @@ pub mod ops {
                 },
                 1 => {
                     let max = try_get_real(&args[0])?;
+                    if max.is_sign_negative(){
+                        return Err(Error::from(ErrorKind::NegativeValue))
+                    }
+
                     let re = random::<f64>() * max;
                     let im = random::<f64>() * max;
                     Ok(Complex64::new(re, im))
@@ -79,6 +83,13 @@ pub mod ops {
                 2 => {
                     let min = try_get_real(&args[0])?;
                     let max = try_get_real(&args[1])?;
+                    if min.is_sign_negative() || max.is_sign_negative(){
+                        return Err(Error::new(
+                            ErrorKind::InvalidInput,
+                            format!("Invalid `Random` arguments: `min > max`, {} > {}", min, max)
+                        ));
+                    }
+
                     let re = min + ((max - min) * random::<f64>());
                     let im = min + ((max - min) * random::<f64>());
                     Ok(Complex64::new(re, im))
