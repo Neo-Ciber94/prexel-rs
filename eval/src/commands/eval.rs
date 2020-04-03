@@ -2,13 +2,14 @@ use std::convert::TryFrom;
 use bigdecimal::BigDecimal;
 use math_engine::context::{Config, DefaultContext};
 use math_engine::evaluator::Evaluator;
-use crate::cmd::{Command, CommandArgs};
-use crate::cmd::error::*;
-use crate::cmd::commands::eval::utils::StringIterExt;
-use crate::cmd::commands::info::{NumberType, CommandInfo};
+use math_engine::Result;
+use crate::cli::{Command, CommandArgs};
+use crate::commands::info::{NumberType, CommandInfo};
+use crate::commands::eval::utils::StringIterExt;
+use math_engine::error::{Error, ErrorKind};
 
 pub struct EvalCommand;
-impl Command<String, Result> for EvalCommand {
+impl Command<String, Result<()>> for EvalCommand {
     fn name(&self) -> &str {
         CommandInfo::Eval.name()
     }
@@ -37,9 +38,12 @@ EXAMPLES:
     eval --b 100!"
     }
 
-    fn execute(&self, args: CommandArgs<'_, String>) -> Result {
+    fn execute(&self, args: CommandArgs<'_, String>) -> Result<()> {
         if args.len() == 0 {
-            return Err(Error::new("Empty expression. See `eval --help` for help information"));
+            return Err(Error::new(
+                ErrorKind::InvalidExpression,
+                "Empty expression. See `eval --help` for help information")
+            );
         }
 
         let number_type = NumberType::try_from(args[0].as_str());

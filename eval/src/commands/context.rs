@@ -1,13 +1,14 @@
-use crate::cmd::commands::info::NumberType;
-use crate::cmd::error::{Error, Result};
-use crate::cmd::{Command, CommandArgs};
 use bigdecimal::BigDecimal;
+use math_engine::Result;
 use math_engine::context::DefaultContext;
 use math_engine::utils::extensions::IteratorExt;
 use std::convert::TryFrom;
+use crate::cli::{Command, CommandArgs};
+use crate::commands::info::NumberType;
+use math_engine::error::{Error, ErrorKind};
 
 pub struct ContextCommand;
-impl Command<String, Result> for ContextCommand {
+impl Command<String, Result<()>> for ContextCommand {
     fn name(&self) -> &str {
         "--context"
     }
@@ -44,30 +45,17 @@ EXAMPLES:
     eval --ctx -c"
     }
 
-    fn execute(&self, args: CommandArgs<'_, String>) -> Result {
+    fn execute(&self, args: CommandArgs<'_, String>) -> Result<()> {
         if args.len() > 2 {
-            return Err(Error::new(format!(
-                "Invalid expression, expected: eval {} | {} [--OPTION]",
+            return Err(Error::new(
+                ErrorKind::InvalidExpression,
+                format!("Invalid expression, expected: eval {} | {} [--OPTION] [PRINT FORMAT]",
                 self.name(),
                 self.alias().unwrap()
             )));
         }
 
-        let mut i = 0;
-        let number_type = if args.len() == 0 {
-            NumberType::default()
-        } else {
-            NumberType::try_from(args[0].as_str())
-                .map(|n| { i += 1; n })
-                .unwrap_or_default()
-        };
-
-        let print_format = if i >= args.len(){
-            PrintFormat::default()
-        } else{
-            PrintFormat::try_from(args[i].as_str())
-                .unwrap_or_default()
-        };
+        let (number_type, print_format) = get_type_and_print_format(self, args)?;
 
         match number_type {
             NumberType::Decimal => {
@@ -83,6 +71,54 @@ EXAMPLES:
         }
 
         Ok(())
+    }
+}
+
+fn get_type_and_print_format(this: &ContextCommand, args: CommandArgs<'_, String>)
+                             -> std::result::Result<(NumberType, PrintFormat), Error>{
+    match args.len(){
+        2 => {
+            let num_type = NumberType::try_from(args[0].as_str())
+                .map_err(|_| Error::new(
+                    ErrorKind::InvalidExpression,
+                    format!(
+                        "Invalid expression, expected: eval {} | {} [--OPTION] [PRINT FORMAT]",
+                        this.name(),
+                        this.alias().unwrap()
+                    )
+                ))?;
+
+            let print_format = PrintFormat::try_from(args[1].as_str())
+                .map_err(|_| Error::new(
+                    ErrorKind::InvalidExpression,
+                    format!(
+                        "Invalid expression, expected: eval {} | {} [--OPTION] [PRINT FORMAT]",
+                        this.name(),
+                        this.alias().unwrap()
+                    )
+                ))?;
+
+            Ok((num_type, print_format))
+        },
+        1 => {
+            let num_type = NumberType::try_from(args[0].as_str());
+            let print_format = PrintFormat::try_from(args[0].as_str());
+
+            if num_type.is_err() && print_format.is_err(){
+                Err(Error::new(
+                    ErrorKind::InvalidExpression,
+                    format!(
+                        "Invalid expression, expected: eval {} | {} [--OPTION] [PRINT FORMAT]",
+                        this.name(),
+                        this.alias().unwrap()
+                    )
+                ))
+            }
+            else{
+                Ok((num_type.unwrap_or_default(), print_format.unwrap_or_default()))
+            }
+        },
+        _ => unreachable!()
     }
 }
 

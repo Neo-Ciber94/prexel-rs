@@ -1,6 +1,3 @@
-pub mod error;
-pub mod commands;
-
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::borrow::Borrow;

@@ -1,39 +1,41 @@
+use crate::cli::{Command, CommandArgs};
+use crate::commands::info::{CommandInfo, NumberType};
+use crate::custom_function::CustomFunction;
+use bigdecimal::BigDecimal;
+use crossterm::event::{self, Event, KeyCode};
+use crossterm::execute;
+use crossterm::style::{Color, Print, ResetColor, SetForegroundColor};
+use math_engine::context::validate::{check_token_name, TokenKind};
+use math_engine::context::{Config, Context, DefaultContext};
+use math_engine::error::{Error, ErrorKind};
+use math_engine::evaluator::Evaluator;
+use math_engine::Result;
 use std::convert::TryFrom;
 use std::fmt::{Debug, Display};
 use std::io::{stdout, Write};
 use std::iter::Iterator;
 use std::rc::Rc;
 use std::str::FromStr;
-use bigdecimal::BigDecimal;
-use crossterm::event::{self, Event, KeyCode};
-use crossterm::execute;
-use crossterm::style::{Color, Print, ResetColor, SetForegroundColor};
-use math_engine::context::{Config, Context, DefaultContext};
-use math_engine::context::validate::{check_token_name, TokenKind};
-use math_engine::error::{Error as MathError, ErrorKind};
-use math_engine::evaluator::Evaluator;
-use crate::cmd::{Command, CommandArgs};
-use crate::cmd::commands::info::{NumberType, CommandInfo};
-use crate::cmd::error::*;
-use crate::custom_function::CustomFunction;
 
 pub struct RunCommand;
-impl RunCommand{
+impl RunCommand {
     const TEXT_COLOR: Color = Color::Cyan;
     const RESULT_COLOR: Color = Color::White;
     const NEWLINE_COLOR: Color = Color::Green;
     const ERROR_COLOR: Color = Color::Red;
-    const RESULT_VAR_NAME : &'static str  = "result";
+    const RESULT_VAR_NAME: &'static str = "result";
     const BACKSPACE: &'static str = "\x08 \x08";
 
-    fn eval_expr<N>(buffer: &mut String, evaluator: &mut Rc<Evaluator<'_, N>>) where N: FromStr + Debug + Display + Clone {
-        if buffer.contains("="){
-            match Self::eval_assign(buffer, evaluator){
-                Ok(()) => {},
-                Err(e) => print_color(format!(" [Error] {}", e), Self::ERROR_COLOR)
+    fn eval_expr<N>(buffer: &mut String, evaluator: &mut Rc<Evaluator<'_, N>>)
+    where
+        N: FromStr + Debug + Display + Clone,
+    {
+        if buffer.contains("=") {
+            match Self::eval_assign(buffer, evaluator) {
+                Ok(()) => {}
+                Err(e) => print_color(format!(" [Error] {}", e), Self::ERROR_COLOR),
             }
-        }
-        else{
+        } else {
             match evaluator.eval(buffer) {
                 Ok(n) => {
                     print_color(format!(" = {}", n), Self::RESULT_COLOR);
@@ -41,9 +43,7 @@ impl RunCommand{
                         .mut_context()
                         .set_variable(Self::RESULT_VAR_NAME, n);
                 }
-                Err(e) => {
-                    print_color(format!(" [Error] {}", e), Self::ERROR_COLOR)
-                }
+                Err(e) => print_color(format!(" [Error] {}", e), Self::ERROR_COLOR),
             }
         }
 
@@ -51,8 +51,8 @@ impl RunCommand{
         buffer.clear();
     }
 
-    fn eval_assign<N>(expression: &str, evaluator: &mut Rc<Evaluator<'_, N>>) -> math_engine::Result<()>
-        where N: FromStr + Debug + Display + Clone {
+    fn eval_assign<N>(expression: &str, evaluator: &mut Rc<Evaluator<'_, N>>) -> Result<()>
+    where N: FromStr + Debug + Display + Clone, {
         // Could be a variable assignment or a function assignment
         // * Variable Assignment: `variable_name = expression`.
         //      Eg.: `x = 10`, `y = x ^ 2`
@@ -61,10 +61,10 @@ impl RunCommand{
         let assignment: Vec<&str> = expression.split("=").collect::<Vec<&str>>();
 
         // We only need 2 parts: `Variable` = `Expression`
-        if assignment.len() != 2{
-            return Err(MathError::new(
+        if assignment.len() != 2 {
+            return Err(Error::new(
                 ErrorKind::InvalidExpression,
-                "Invalid assignment expression"
+                "Invalid assignment expression",
             ));
         }
 
@@ -74,31 +74,27 @@ impl RunCommand{
         // If variable name contains parentheses we assume is a function
         if var.contains('(') && var.contains(')') {
             // Takes the entire expression
-            match CustomFunction::from_str(evaluator.clone(), expression){
+            match CustomFunction::from_str(evaluator.clone(), expression) {
                 Ok(f) => {
                     let ev = Rc::make_mut(evaluator);
                     let context = ev.mut_context();
 
                     // Checks the function do not exists
                     // `DefaultContext` panics if tries to add a function that exists.
-                    if context.is_function(f.name()){
-                        return Err(MathError::new(
+                    if context.is_function(f.name()) {
+                        return Err(Error::new(
                             ErrorKind::Other,
-                            format!("Function `{}` already exists in the context", f.name())
+                            format!("Function `{}` already exists in the context", f.name()),
                         ));
-                    }
-                    else{
+                    } else {
                         // Checks the function name is valid
                         check_token_name(TokenKind::Function, f.name())?;
                         context.add_function(f)
                     }
-                },
+                }
                 // Function parse failed
                 Err(e) => {
-                    return Err(MathError::new(
-                        ErrorKind::InvalidInput,
-                        e
-                    ));
+                    return Err(Error::new(ErrorKind::InvalidInput, e));
                 }
             }
         } else {
@@ -116,7 +112,7 @@ impl RunCommand{
     }
 }
 
-impl Command<String, Result> for RunCommand{
+impl Command<String, Result<()>> for RunCommand {
     fn name(&self) -> &str {
         CommandInfo::Run.name()
     }
@@ -145,22 +141,24 @@ EXAMPLES:
     eval --c --r"
     }
 
-    fn execute(&self, args: CommandArgs<'_, String>) -> Result {
+    fn execute(&self, args: CommandArgs<'_, String>) -> Result<()> {
         // Actual loop
-        fn run<N: FromStr + Display + Debug + Clone>(mut evaluator: Rc<Evaluator<'_, N>>){
+        fn run<N: FromStr + Display + Debug + Clone>(mut evaluator: Rc<Evaluator<'_, N>>) {
             let mut buffer = String::new();
             print_color(">> ", RunCommand::NEWLINE_COLOR);
 
             while let Event::Key(key) = event::read().unwrap() {
                 match key.code {
-                    KeyCode::Char(c) => if c.is_ascii_punctuation() || c.is_alphanumeric() || c == ' '{
-                        if c == ' ' && buffer.ends_with(' '){
-                            continue;
-                        }
+                    KeyCode::Char(c) => {
+                        if c.is_ascii_punctuation() || c.is_alphanumeric() || c == ' ' {
+                            if c == ' ' && buffer.ends_with(' ') {
+                                continue;
+                            }
 
-                        print_color(c, RunCommand::TEXT_COLOR);
-                        buffer.push(c);
-                    },
+                            print_color(c, RunCommand::TEXT_COLOR);
+                            buffer.push(c);
+                        }
+                    }
                     KeyCode::Backspace => {
                         if !buffer.is_empty() {
                             print_color(RunCommand::BACKSPACE, Color::White);
@@ -177,17 +175,18 @@ EXAMPLES:
         // eval [--run | --r] [--OPTION]
         if args.len() > 1 {
             return Err(Error::new(
+                ErrorKind::InvalidExpression,
                 format!(
-                    "Invalid arguments: expected: `eval [--option] [{}]`", self.name())
+                    "Invalid arguments: expected: `eval [--option] [{}]`",
+                    self.name()
+                ),
             ));
         }
 
-        let number_type = if args.is_empty(){
+        let number_type = if args.is_empty() {
             NumberType::default()
-        }
-        else{
-            NumberType::try_from(args[0].as_str())
-                .unwrap_or_default()
+        } else {
+            NumberType::try_from(args[0].as_str()).unwrap_or_default()
         };
 
         match number_type {
@@ -221,9 +220,10 @@ EXAMPLES:
 #[inline]
 fn print_color<T: Display + Clone>(value: T, color: Color) {
     execute!(
-            stdout(),
-            SetForegroundColor(color),
-            Print(value),
-            ResetColor
-        ).unwrap();
+        stdout(),
+        SetForegroundColor(color),
+        Print(value),
+        ResetColor
+    )
+    .unwrap();
 }
