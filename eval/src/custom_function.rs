@@ -10,6 +10,7 @@ use math_engine::token::Token::*;
 use math_engine::tokenizer::{Tokenize, Tokenizer};
 use std::rc::Rc;
 use std::error;
+use math_engine::context::Context;
 
 pub struct CustomFunction<'a, T> where T: Display + Debug + Clone + FromStr {
     function_name: String,
@@ -124,40 +125,20 @@ impl<'a, T> CustomFunction<'a, T> where T: Display + Debug + Clone + FromStr {
             return Err(ParseFunctionError::from(FunctionErrorKind::Empty));
         }
 
-        // Checking all the parameters are being used
+        let context = evaluator.context();
+
+        // Checking all the parameters are being used and are not constants in the context
         for p in params {
             if !expr.contains(p) {
                 return Err(ParseFunctionError::from(FunctionErrorKind::InvalidParam));
             }
-        }
 
-        let context = evaluator.context();
-        let tokenizer = Tokenizer::with_context(context);
-
-        match tokenizer.tokenize(expr) {
-            Err(_) => Err(ParseFunctionError::from(FunctionErrorKind::InvalidBody)),
-            Ok(tokens) => {
-                // Checking all the params are `unknown`, this means are unique params
-                // and are not considered a `variable`, `constant` or `function` in the context.
-                //
-                // Gets all the unknown values which should be equals to the number of params.
-                let locals = tokens
-                    .into_iter()
-                    .filter(|t| t.is_unknown())
-                    .map(|t| match t {
-                        Unknown(s) => s,
-                        _ => unreachable!(),
-                    })
-                    .collect::<Vec<String>>();
-
-                // If the length is different there are params values stored in the context.
-                if locals.len() != params.len() {
-                    return Err(ParseFunctionError::from(FunctionErrorKind::InvalidBody));
-                }
-
-                Ok(())
+            if context.is_constant(p){
+                return Err(ParseFunctionError::from(FunctionErrorKind::InvalidParam));
             }
         }
+        
+        Ok(())
     }
 }
 
