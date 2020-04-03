@@ -258,7 +258,16 @@ impl<'a, N> Context<'a, N> for DefaultContext<'a, N> {
         #[cfg(debug_assertions)]
         validate::check_token_name(TokenKind::Constant, name).or_panic();
 
-        self.constants.insert(IgnoreCaseString::from(name), value);
+        //self.constants.insert(IgnoreCaseString::from(name), value);
+        let string = IgnoreCaseString::from(name);
+        if self.variables.contains_key(&string) {
+            panic!(
+                "Invalid constant name, a variable named `{}` exists",
+                string
+            )
+        } else {
+            self.constants.insert(string, value);
+        }
     }
 
     #[inline]
@@ -269,7 +278,7 @@ impl<'a, N> Context<'a, N> for DefaultContext<'a, N> {
         let string = IgnoreCaseString::from(name);
         if self.constants.contains_key(&string) {
             panic!(
-                "Invalid variable name, a constant named '{}' already exists",
+                "Invalid variable name, a constant named `{}` exists",
                 string
             )
         } else {

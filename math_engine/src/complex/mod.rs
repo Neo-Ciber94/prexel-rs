@@ -7,6 +7,7 @@ pub mod ops {
     use crate::error::*;
     use crate::function::{Associativity, BinaryFunction, Function, Precedence};
     use crate::Result;
+    use rand::random;
 
     pub struct PowOperator;
     impl BinaryFunction<Complex64> for PowOperator {
@@ -40,6 +41,48 @@ pub mod ops {
                     n if n.is_zero() => Ok(args[0].log(args[1].re)),
                     _ => Err(Error::new(ErrorKind::InvalidInput, "Expected decimal base")),
                 },
+                _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
+            }
+        }
+    }
+
+    pub struct RandFunction;
+    impl Function<Complex64> for RandFunction{
+        fn name(&self) -> &str {
+            "random"
+        }
+
+        fn call(&self, args: &[Complex64]) -> Result<Complex64> {
+            fn try_get_real(c: &Complex64) -> Result<f64>{
+                if !c.im.is_zero(){
+                    Err(Error::new(
+                        ErrorKind::InvalidInput,
+                        "Random(...) only accepts real numbers as arguments")
+                    )
+                }else{
+                    Ok(c.re)
+                }
+            }
+
+            match args.len(){
+                0 => {
+                    let re = random::<f64>();
+                    let im = random::<f64>();
+                    Ok(Complex64::new(re, im))
+                },
+                1 => {
+                    let max = try_get_real(&args[0])?;
+                    let re = random::<f64>() * max;
+                    let im = random::<f64>() * max;
+                    Ok(Complex64::new(re, im))
+                },
+                2 => {
+                    let min = try_get_real(&args[0])?;
+                    let max = try_get_real(&args[1])?;
+                    let re = min + ((max - min) * random::<f64>());
+                    let im = min + ((max - min) * random::<f64>());
+                    Ok(Complex64::new(re, im))
+                }
                 _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
             }
         }
@@ -184,6 +227,8 @@ pub mod context {
     use crate::complex::ops::PowOperator;
     use crate::context::{Config, Context, DefaultContext};
     use crate::ops::unchecked::*;
+    use crate::ops::math::UnaryPlus;
+    use super::ops::*;
 
     impl<'a> DefaultContext<'a, Complex64> {
         #[inline]
@@ -203,8 +248,40 @@ pub mod context {
             context.add_binary_function(DivOperator);
             context.add_binary_function(ModOperator);
             context.add_binary_function(PowOperator);
+            context.add_unary_function(UnaryPlus);
+            context.add_unary_function(UnaryMinus);
             context.add_function(SumFunction);
+            context.add_function(AvgFunction);
             context.add_function(ProdFunction);
+            context.add_function(SqrtFunction);
+            context.add_function(LnFunction);
+            context.add_function(LogFunction);
+            context.add_function(RandFunction);
+            context.add_function(ExpFunction);
+            context.add_function(SinFunction);
+            context.add_function(CosFunction);
+            context.add_function(TanFunction);
+            context.add_function(CscFunction);
+            context.add_function(SecFunction);
+            context.add_function(CotFunction);
+            context.add_function(ASinFunction);
+            context.add_function(ACosFunction);
+            context.add_function(ATanFunction);
+            context.add_function(ACscFunction);
+            context.add_function(ASecFunction);
+            context.add_function(ACotFunction);
+            context.add_function(SinhFunction);
+            context.add_function(CoshFunction);
+            context.add_function(TanhFunction);
+            context.add_function(CschFunction);
+            context.add_function(SechFunction);
+            context.add_function(CothFunction);
+            context.add_function(ASinhFunction);
+            context.add_function(ACoshFunction);
+            context.add_function(ATanhFunction);
+            context.add_function(ACschFunction);
+            context.add_function(ASechFunction);
+            context.add_function(ACothFunction);
             context
         }
     }

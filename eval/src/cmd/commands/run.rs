@@ -12,8 +12,8 @@ use math_engine::context::{Config, Context, DefaultContext};
 use math_engine::context::validate::{check_token_name, TokenKind};
 use math_engine::error::{Error as MathError, ErrorKind};
 use math_engine::evaluator::Evaluator;
-use crate::cmd::Command;
-use crate::cmd::commands::eval_type::EvalType;
+use crate::cmd::{Command, CommandArgs};
+use crate::cmd::commands::info::{NumberType, CommandInfo};
 use crate::cmd::error::*;
 use crate::custom_function::CustomFunction;
 
@@ -118,14 +118,34 @@ impl RunCommand{
 
 impl Command<String, Result> for RunCommand{
     fn name(&self) -> &str {
-        "--run"
+        CommandInfo::Run.name()
     }
 
     fn alias(&self) -> Option<&str> {
-        Some("--r")
+        CommandInfo::Run.alias()
     }
 
-    fn execute(&self, args: &[String]) -> Result {
+    fn help_info(&self) -> &str {
+        "\
+Executes the evaluator in a loop
+
+USAGE:
+    eval --run | --r
+    eval [--OPTION] --run | --r
+
+OPTIONS:
+    --decimal, --d          Evaluates using a 128 bits decimal number. Used by default
+    --bigdecimal, --b       Evaluates using an arbitrary decimal number
+    --complex, --c          Evaluates using a complex number
+
+EXAMPLES:
+    eval --run
+    eval --r
+    eval --bigdecimal --run
+    eval --c --r"
+    }
+
+    fn execute(&self, args: CommandArgs<'_, String>) -> Result {
         // Actual loop
         fn run<N: FromStr + Display + Debug + Clone>(mut evaluator: Rc<Evaluator<'_, N>>){
             let mut buffer = String::new();
@@ -154,37 +174,35 @@ impl Command<String, Result> for RunCommand{
             }
         }
 
-        // eval --run | --r --[option]
+        // eval [--run | --r] [--OPTION]
         if args.len() > 1 {
             return Err(Error::new(
                 format!(
-                    "Invalid arguments: expected: eval {} | {} --[option]",
-                    self.name(),
-                    self.alias().unwrap()))
-            );
+                    "Invalid arguments: expected: `eval [--option] [{}]`", self.name())
+            ));
         }
 
-        let eval_type = if args.is_empty(){
-            EvalType::default()
+        let number_type = if args.is_empty(){
+            NumberType::default()
         }
         else{
-            EvalType::try_from(args[0].as_str())
+            NumberType::try_from(args[0].as_str())
                 .unwrap_or_default()
         };
 
-        match eval_type {
-            EvalType::Decimal => {
+        match number_type {
+            NumberType::Decimal => {
                 let config = Config::new().with_implicit_mul(true);
                 let context = DefaultContext::new_decimal_with_config(config);
                 run(Rc::new(Evaluator::with_context(context)));
             }
-            EvalType::BigDecimal => {
+            NumberType::BigDecimal => {
                 let config = Config::new().with_implicit_mul(true);
                 let context: DefaultContext<BigDecimal> =
                     DefaultContext::new_unchecked_with_config(config);
                 run(Rc::new(Evaluator::with_context(context)));
             }
-            EvalType::Complex => {
+            NumberType::Complex => {
                 let config = Config::new()
                     .with_implicit_mul(true)
                     .with_complex_number(true);
@@ -192,6 +210,9 @@ impl Command<String, Result> for RunCommand{
                 run(Rc::new(Evaluator::with_context(context)));
             }
         }
+
+        // Just add a newline at the end
+        println!();
 
         Ok(())
     }
