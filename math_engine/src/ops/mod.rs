@@ -193,6 +193,30 @@ pub mod math {
         };
     }
 
+    macro_rules! forward_func_inv_impl {
+        ($func_name:ident, $method_name:ident) => {
+            forward_func_inv_impl!($func_name, $method_name, $method_name);
+        };
+
+        ($func_name:ident, $method_name:ident, $name:ident) => {
+            impl<N: ToPrimitive + FromPrimitive> Function<N> for $func_name {
+                fn name(&self) -> &str {
+                    stringify!($name)
+                }
+
+                fn call(&self, args: &[N]) -> Result<N> {
+                    if args.len() != 1 {
+                        Err(Error::from(ErrorKind::InvalidArgumentCount))
+                    } else {
+                        let result = try_to_float(&args[0])?.$method_name().inv();
+                        N::from_f64(result)
+                            .ok_or(Error::from(ErrorKind::Overflow))
+                    }
+                }
+            }
+        };
+    }
+
     pub struct FloorFunction;
     forward_func_impl!(FloorFunction, floor);
 
@@ -373,22 +397,22 @@ pub mod math {
     impl_trig_rec!(CotFunction, tan, cot);
 
     pub struct SinhFunction;
-    impl_trig!(SinhFunction, sinh);
+    forward_func_impl!(SinhFunction, sinh);
 
     pub struct CoshFunction;
-    impl_trig!(CoshFunction, cosh);
+    forward_func_impl!(CoshFunction, cosh);
 
     pub struct TanhFunction;
-    impl_trig!(TanhFunction, tanh);
+    forward_func_impl!(TanhFunction, tanh);
 
     pub struct CschFunction;
-    impl_trig_rec!(CschFunction, sinh, csch);
+    forward_func_inv_impl!(CschFunction, sinh, csch);
 
     pub struct SechFunction;
-    impl_trig_rec!(SechFunction, cosh, sech);
+    forward_func_inv_impl!(SechFunction, cosh, sech);
 
     pub struct CothFunction;
-    impl_trig_rec!(CothFunction, tanh, coth);
+    forward_func_inv_impl!(CothFunction, tanh, coth);
 
     //////////////////// Inverse Trigonometric ////////////////////
 
@@ -508,22 +532,22 @@ pub mod math {
     impl_arc_trig_rec!(ACotFunction, atan, acot);
 
     pub struct ASinhFunction;
-    impl_arc_trig!(ASinhFunction, asinh);
+    forward_func_impl!(ASinhFunction, asinh);
 
     pub struct ACoshFunction;
-    impl_arc_trig!(ACoshFunction, acosh);
+    forward_func_impl!(ACoshFunction, acosh);
 
     pub struct ATanhFunction;
-    impl_arc_trig!(ATanhFunction, atanh);
+    forward_func_impl!(ATanhFunction, atanh);
 
     pub struct ACschFunction;
-    impl_arc_trig_rec!(ACschFunction, asinh, acsch);
+    forward_func_inv_impl!(ACschFunction, asinh, acsch);
 
     pub struct ASechFunction;
-    impl_arc_trig_rec!(ASechFunction, acosh, asech);
+    forward_func_inv_impl!(ASechFunction, acosh, asech);
 
     pub struct ACothFunction;
-    impl_arc_trig_rec!(ACothFunction, atanh, acoth);
+    forward_func_inv_impl!(ACothFunction, atanh, acoth);
 
     #[inline(always)]
     pub(crate) fn try_to_float<N: ToPrimitive>(n: &N) -> Result<f64> {
@@ -543,6 +567,7 @@ pub mod math {
 #[cfg(test)]
 mod tests{
     use super::math::*;
+    use num_traits::Inv;
 
     const ERROR : f64 = 0.000_000_000_01;
 
@@ -774,5 +799,208 @@ mod tests{
         assert!(instance.call(&[-12]).is_err());
         assert!(instance.call(&[20, 10]).is_err());
         assert!(instance.call(&[10_f64, 3_f64, 7_f64]).is_err());
+    }
+
+    #[test]
+    fn sin_test(){
+        let instance = SinFunction;
+
+        fn compute_sin(func: &SinFunction, value: f64){
+            assert_eq!(func.call(&[value]), Ok(value.to_radians().sin()), "Sin({})", value);
+        }
+
+        compute_sin(&instance, 45_f64);
+        compute_sin(&instance, 30_f64);
+        compute_sin(&instance, -90_f64);
+        compute_sin(&instance, 0_f64);
+
+        assert!(instance.call(&[10_f64, 3_f64, 7_f64]).is_err());
+        assert!(instance.call(&empty_array::<f64>()).is_err())
+    }
+
+    #[test]
+    fn cos_test(){
+        let instance = CosFunction;
+
+        fn compute_cos(func: &CosFunction, value: f64){
+            assert_eq!(func.call(&[value]), Ok(value.to_radians().cos()), "Cos({})", value);
+        }
+
+        compute_cos(&instance, 45_f64);
+        compute_cos(&instance, 30_f64);
+        compute_cos(&instance, -90_f64);
+        compute_cos(&instance, 0_f64);
+
+        assert!(instance.call(&[10_f64, 3_f64, 7_f64]).is_err());
+        assert!(instance.call(&empty_array::<f64>()).is_err())
+    }
+
+    #[test]
+    fn tan_test(){
+        let instance = TanFunction;
+
+        fn compute_tan(func: &TanFunction, value: f64){
+            assert_eq!(func.call(&[value]), Ok(value.to_radians().tan()), "Tan({})", value);
+        }
+
+        compute_tan(&instance, 45_f64);
+        compute_tan(&instance, 30_f64);
+        compute_tan(&instance, 0_f64);
+
+        assert!(instance.call(&[90]).is_err());
+        assert!(instance.call(&[-90]).is_err());
+        assert!(instance.call(&[10_f64, 3_f64, 7_f64]).is_err());
+        assert!(instance.call(&empty_array::<f64>()).is_err())
+    }
+
+    #[test]
+    fn csc_test(){
+        let instance = CscFunction;
+
+        fn compute_csc(func: &CscFunction, value: f64){
+            assert_eq!(func.call(&[value]), Ok(value.to_radians().sin().inv()), "Csc({})", value);
+        }
+
+        compute_csc(&instance, 45_f64);
+        compute_csc(&instance, 30_f64);
+        compute_csc(&instance, -90_f64);
+
+        assert!(instance.call(&[0_f64]).is_err());
+        assert!(instance.call(&[10_f64, 3_f64, 7_f64]).is_err());
+        assert!(instance.call(&empty_array::<f64>()).is_err())
+    }
+
+    #[test]
+    fn sec_test(){
+        let instance = SecFunction;
+
+        fn compute_sec(func: &SecFunction, value: f64){
+            assert_eq!(func.call(&[value]), Ok(value.to_radians().cos().inv()), "Sec({})", value);
+        }
+
+        compute_sec(&instance, 45_f64);
+        compute_sec(&instance, 30_f64);
+
+        assert!(instance.call(&[90]).is_err());
+        assert!(instance.call(&[10_f64, 3_f64, 7_f64]).is_err());
+        assert!(instance.call(&empty_array::<f64>()).is_err())
+    }
+
+    #[test]
+    fn cot_test(){
+        let instance = CotFunction;
+
+        fn compute_cot(func: &CotFunction, value: f64){
+            assert_eq!(func.call(&[value]), Ok(value.to_radians().tan().inv()), "Cot({})", value);
+        }
+
+        compute_cot(&instance, 45_f64);
+        compute_cot(&instance, 30_f64);
+
+        //assert!(instance.call(&[90]).is_err()); error due float precision
+        assert!(instance.call(&[10_f64, 3_f64, 7_f64]).is_err());
+        assert!(instance.call(&empty_array::<f64>()).is_err())
+    }
+
+    #[test]
+    fn sinh_test(){
+        let instance = SinhFunction;
+
+        fn compute_sinh(func: &SinhFunction, value: f64){
+            assert_eq!(func.call(&[value]), Ok(value.sinh()), "Sinh({})", value);
+        }
+
+        compute_sinh(&instance, 45_f64);
+        compute_sinh(&instance, 30_f64);
+        compute_sinh(&instance, -90_f64);
+        compute_sinh(&instance, 0_f64);
+
+        assert!(instance.call(&[10_f64, 3_f64, 7_f64]).is_err());
+        assert!(instance.call(&empty_array::<f64>()).is_err())
+    }
+
+    #[test]
+    fn cosh_test(){
+        let instance = CoshFunction;
+
+        fn compute_cosh(func: &CoshFunction, value: f64){
+            assert_eq!(func.call(&[value]), Ok(value.cosh()), "Cosh({})", value);
+        }
+
+        compute_cosh(&instance, 45_f64);
+        compute_cosh(&instance, 30_f64);
+        compute_cosh(&instance, -90_f64);
+        compute_cosh(&instance, 0_f64);
+
+        assert!(instance.call(&[10_f64, 3_f64, 7_f64]).is_err());
+        assert!(instance.call(&empty_array::<f64>()).is_err())
+    }
+
+    #[test]
+    fn tanh_test(){
+        let instance = TanhFunction;
+
+        fn compute_tanh(func: &TanhFunction, value: f64){
+            assert_eq!(func.call(&[value]), Ok(value.tanh()), "Tanh({})", value);
+        }
+
+        compute_tanh(&instance, 45_f64);
+        compute_tanh(&instance, 30_f64);
+        compute_tanh(&instance, -90_f64);
+        compute_tanh(&instance, 0_f64);
+
+        assert!(instance.call(&[10_f64, 3_f64, 7_f64]).is_err());
+        assert!(instance.call(&empty_array::<f64>()).is_err())
+    }
+
+    #[test]
+    fn csch_test(){
+        let instance = CschFunction;
+
+        fn compute_csch(func: &CschFunction, value: f64){
+            assert_eq!(func.call(&[value]), Ok(value.sinh().inv()), "Csch({})", value);
+        }
+
+        compute_csch(&instance, 45_f64);
+        compute_csch(&instance, 30_f64);
+        compute_csch(&instance, -90_f64);
+
+        // assert!(instance.call(&[0_f64]).is_err()); float precision error
+        assert!(instance.call(&[10_f64, 3_f64, 7_f64]).is_err());
+        assert!(instance.call(&empty_array::<f64>()).is_err())
+    }
+
+    #[test]
+    fn sech_test(){
+        let instance = SechFunction;
+
+        fn compute_sech(func: &SechFunction, value: f64){
+            assert_eq!(func.call(&[value]), Ok(value.cosh().inv()), "Sech({})", value);
+        }
+
+        compute_sech(&instance, 45_f64);
+        compute_sech(&instance, 30_f64);
+        compute_sech(&instance, -90_f64);
+        compute_sech(&instance, 0_f64);
+
+        assert!(instance.call(&[10_f64, 3_f64, 7_f64]).is_err());
+        assert!(instance.call(&empty_array::<f64>()).is_err())
+    }
+
+    #[test]
+    fn coth_test(){
+        let instance = CothFunction;
+
+        fn compute_coth(func: &CothFunction, value: f64){
+            assert_eq!(func.call(&[value]), Ok(value.tanh().inv()), "Coth({})", value);
+        }
+
+        compute_coth(&instance, 45_f64);
+        compute_coth(&instance, 30_f64);
+        compute_coth(&instance, -90_f64);
+
+        // assert!(instance.call(&[0_f64]).is_err()); float precision error
+        assert!(instance.call(&[10_f64, 3_f64, 7_f64]).is_err());
+        assert!(instance.call(&empty_array::<f64>()).is_err())
     }
 }

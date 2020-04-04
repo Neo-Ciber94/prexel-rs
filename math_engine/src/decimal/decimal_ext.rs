@@ -4,12 +4,13 @@ use rust_decimal::Decimal;
 use rust_decimal_macros::*;
 use std::ops::Neg;
 
-/// Extended math operations for `Decimal`.
+/// Extended methods for `Decimal`.
 pub trait DecimalExt {
     fn is_integer(&self) -> bool;
     fn to_radians(self) -> Decimal;
     fn to_degrees(self) -> Decimal;
     fn inv(self) -> Decimal;
+    fn checked_inv(self) -> Option<Decimal>;
     fn checked_pow(self, exponent: Decimal) -> Option<Decimal>;
     fn checked_pow_n(self, exponent: i64) -> Option<Decimal>;
     fn checked_sqrt(self) -> Option<Decimal>;
@@ -33,38 +34,6 @@ pub trait DecimalExt {
     fn atanh(self) -> Option<Decimal>;
 }
 
-pub trait ApproxEq {
-    fn approx_eq(&self, other: &Self, delta: &Self) -> bool;
-}
-
-pub trait ApproxDecimal {
-    fn approx(&self) -> Self;
-    fn approx_by(&self, delta: &Self) -> Self;
-}
-
-impl ApproxEq for Decimal {
-    #[inline]
-    fn approx_eq(&self, other: &Self, delta: &Self) -> bool {
-        (self - other).abs() < *delta
-    }
-}
-
-impl ApproxDecimal for Decimal {
-    #[inline]
-    fn approx(&self) -> Self {
-        Self::approx_by(self, &consts::PRECISION)
-    }
-
-    fn approx_by(&self, delta: &Self) -> Self {
-        let r = self.round();
-        if self.approx_eq(&r, &delta) {
-            r
-        } else {
-            *self
-        }
-    }
-}
-
 impl DecimalExt for Decimal {
     #[inline]
     fn is_integer(&self) -> bool {
@@ -84,6 +53,16 @@ impl DecimalExt for Decimal {
     #[inline]
     fn inv(self) -> Decimal {
         consts::ONE / self
+    }
+
+    #[inline]
+    fn checked_inv(self) -> Option<Decimal> {
+        if self.is_zero(){
+            None
+        }
+        else{
+            Some(self.inv())
+        }
     }
 
     fn checked_pow(self, exponent: Decimal) -> Option<Decimal> {
@@ -240,7 +219,7 @@ impl DecimalExt for Decimal {
             result = result.checked_add(y)?;
         }
 
-        Some(result)
+        Some(result.approx())
     }
 
     fn checked_exp(self) -> Option<Decimal> {
@@ -276,7 +255,7 @@ impl DecimalExt for Decimal {
         let div = xx.checked_div(result)?;
         result = consts::ONE.checked_add(div)?;
 
-        Some(result)
+        Some(result.approx())
     }
 
     fn checked_factorial(self) -> Option<Decimal> {
@@ -342,7 +321,7 @@ impl DecimalExt for Decimal {
             result += factor;
         }
 
-        result
+        result.approx()
     }
 
     fn cos(self) -> Decimal {
@@ -367,7 +346,7 @@ impl DecimalExt for Decimal {
             result += factor;
         }
 
-        result
+        result.approx()
     }
 
     fn tan(self) -> Option<Decimal> {
@@ -400,7 +379,7 @@ impl DecimalExt for Decimal {
             let a0 = Decimal::checked_sqrt(consts::ONE - xx).unwrap();
             let b0 = a0 + consts::ONE;
             let result: Decimal = consts::TWO * Decimal::atan(self / b0);
-            Some(result)
+            Some(result.approx())
         }
     }
 
@@ -424,7 +403,7 @@ impl DecimalExt for Decimal {
             let a0 = Decimal::checked_sqrt(consts::ONE - xx).unwrap();
             let b0 = consts::ONE + self;
             let result = consts::TWO * Decimal::atan(a0 / b0);
-            Some(result)
+            Some(result.approx())
         }
     }
 
@@ -464,7 +443,7 @@ impl DecimalExt for Decimal {
         }
 
         result = self / result;
-        result
+        result.approx()
     }
 
     fn atan2(self, x: Decimal) -> Decimal {
@@ -535,6 +514,38 @@ impl DecimalExt for Decimal {
         let x0 = consts::ONE + self;
         let x1 = consts::ONE - self;
         Decimal::checked_ln(x0 / x1)?.checked_mul(consts::HALF)
+    }
+}
+
+pub trait ApproxEq {
+    fn approx_eq(&self, other: &Self, delta: &Self) -> bool;
+}
+
+pub trait ApproxDecimal {
+    fn approx(&self) -> Self;
+    fn approx_by(&self, delta: &Self) -> Self;
+}
+
+impl ApproxEq for Decimal {
+    #[inline]
+    fn approx_eq(&self, other: &Self, delta: &Self) -> bool {
+        (self - other).abs() < *delta
+    }
+}
+
+impl ApproxDecimal for Decimal {
+    #[inline]
+    fn approx(&self) -> Self {
+        Self::approx_by(self, &consts::PRECISION)
+    }
+
+    fn approx_by(&self, delta: &Self) -> Self {
+        let r = self.round();
+        if self.approx_eq(&r, &delta) {
+            r
+        } else {
+            *self
+        }
     }
 }
 

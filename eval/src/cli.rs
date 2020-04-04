@@ -78,13 +78,6 @@ impl<Arg, R> CommandExecutor<Arg, R> {
     }
 }
 
-impl<Arg, R> Default for CommandExecutor<Arg, R>{
-    #[inline]
-    fn default() -> Self {
-        CommandExecutor::new()
-    }
-}
-
 /// Stores the arguments of a command.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct CommandArgs<'a, T>(pub &'a [T]);

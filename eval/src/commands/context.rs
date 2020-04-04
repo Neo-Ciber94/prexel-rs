@@ -10,11 +10,11 @@ use crate::commands::info::{CommandInfo, NumberType};
 pub struct ContextCommand;
 impl Command<String, Result<()>> for ContextCommand {
     fn name(&self) -> &str {
-        CommandInfo::Eval.name()
+        CommandInfo::Context.name()
     }
 
     fn alias(&self) -> Option<&str> {
-        CommandInfo::Eval.alias()
+        CommandInfo::Context.alias()
     }
 
     fn help_info(&self) -> &str {

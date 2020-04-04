@@ -14,7 +14,6 @@ mod info {
     pub enum CommandInfo {
         Eval,
         Run,
-        Help,
         Context,
     }
 
@@ -23,7 +22,6 @@ mod info {
             match self{
                 CommandInfo::Eval => "",
                 CommandInfo::Run => "--run",
-                CommandInfo::Help => "--help",
                 CommandInfo::Context => "--context",
             }
         }
@@ -32,7 +30,6 @@ mod info {
             match self{
                 CommandInfo::Eval => None,
                 CommandInfo::Run => Some("--r"),
-                CommandInfo::Help => Some("--h"),
                 CommandInfo::Context => Some("--ctx"),
             }
         }

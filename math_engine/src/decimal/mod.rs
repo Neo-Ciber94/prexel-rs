@@ -346,7 +346,34 @@ pub mod ops {
         };
 
         ($struct_name:ident, $method_name:ident) => {
-            forward_checked_func_impl!($struct_name, $method_name, $method_name)
+            forward_checked_func_impl!($struct_name, $method_name, $method_name);
+        };
+    }
+
+    macro_rules! forward_checked_func_inv_impl {
+        ($struct_name:ident, $method_name:ident, $name:ident) => {
+            impl Function<Decimal> for $struct_name {
+                #[inline]
+                fn name(&self) -> &str {
+                    stringify!($name)
+                }
+
+                #[inline]
+                fn call(&self, args: &[Decimal]) -> Result<Decimal> {
+                    match args.len() {
+                        1 => args[0]
+                            .$method_name()
+                            .map(Decimal::checked_inv)
+                            .flatten()
+                            .ok_or(Error::from(ErrorKind::Overflow)),
+                        _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
+                    }
+                }
+            }
+        };
+
+        ($struct_name:ident, $method_name:ident) => {
+            forward_checked_func_inv_impl!($struct_name, $method_name, $method_name)
         };
     }
 
@@ -370,6 +397,29 @@ pub mod ops {
 
         ($struct_name:ident, $method_name:ident) => {
             forward_func_impl!($struct_name, $method_name, $method_name);
+        };
+    }
+
+    macro_rules! forward_func_inv_impl {
+        ($struct_name:ident, $method_name:ident, $name:ident) => {
+            impl Function<Decimal> for $struct_name {
+                #[inline]
+                fn name(&self) -> &str {
+                    stringify!($name)
+                }
+
+                #[inline]
+                fn call(&self, args: &[Decimal]) -> Result<Decimal> {
+                    match args.len() {
+                        1 => Ok(args[0].$method_name().inv()),
+                        _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
+                    }
+                }
+            }
+        };
+
+        ($struct_name:ident, $method_name:ident) => {
+            forward_func_inv_impl!($struct_name, $method_name, $method_name);
         };
     }
 
@@ -419,7 +469,24 @@ pub mod ops {
     //////////////////// Trigonometric ////////////////////
     macro_rules! impl_checked_trig {
         ($struct_name:ident, $method_name:ident, $name:ident) => {
-            forward_checked_func_impl!($struct_name, $method_name, $name);
+            impl Function<Decimal> for $struct_name {
+                #[inline]
+                fn name(&self) -> &str {
+                    stringify!($name)
+                }
+
+                #[inline]
+                fn call(&self, args: &[Decimal]) -> Result<Decimal> {
+                    match args.len() {
+                        1 => {
+                            args[0].to_radians()
+                                .$method_name()
+                                .ok_or(Error::from(ErrorKind::Overflow))
+                        },
+                        _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
+                    }
+                }
+            }
         };
 
         ($struct_name:ident, $method_name:ident) => {
@@ -438,9 +505,9 @@ pub mod ops {
                 #[inline]
                 fn call(&self, args: &[Decimal]) -> Result<Decimal> {
                     match args.len() {
-                        1 => args[0]
+                        1 => args[0].to_radians()
                             .$method_name()
-                            .map(Decimal::inv)
+                            //.map(Decimal::checked_inv)
                             .ok_or(Error::from(ErrorKind::Overflow)),
                         _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
                     }
@@ -455,7 +522,20 @@ pub mod ops {
 
     macro_rules! impl_trig {
         ($struct_name:ident, $method_name:ident, $name:ident) => {
-            forward_func_impl!($struct_name, $method_name, $name);
+            impl Function<Decimal> for $struct_name {
+                #[inline]
+                fn name(&self) -> &str {
+                    stringify!($name)
+                }
+
+                #[inline]
+                fn call(&self, args: &[Decimal]) -> Result<Decimal> {
+                    match args.len() {
+                        1 => Ok(args[0].to_radians().$method_name()),
+                        _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
+                    }
+                }
+            }
         };
 
         ($struct_name:ident, $method_name:ident) => {
@@ -474,7 +554,7 @@ pub mod ops {
                 #[inline]
                 fn call(&self, args: &[Decimal]) -> Result<Decimal> {
                     match args.len() {
-                        1 => Ok(args[0].$method_name().inv()),
+                        1 => Ok(args[0].to_radians().$method_name().inv()),
                         _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
                     }
                 }
@@ -588,41 +668,41 @@ pub mod ops {
 
     //////////////////// Hyperbolic Trigonometric ////////////////////
     pub struct SinhFunction;
-    impl_trig!(SinhFunction, sinh);
+    forward_func_impl!(SinhFunction, sinh);
 
     pub struct CoshFunction;
-    impl_trig!(CoshFunction, cosh);
+    forward_func_impl!(CoshFunction, cosh);
 
     pub struct TanhFunction;
-    impl_trig!(TanhFunction, tanh);
+    forward_func_impl!(TanhFunction, tanh);
 
     pub struct CschFunction;
-    impl_trig_rec!(CschFunction, sinh, csch);
+    forward_func_inv_impl!(CschFunction, sinh, csch);
 
     pub struct SechFunction;
-    impl_trig_rec!(SechFunction, cosh, sech);
+    forward_func_inv_impl!(SechFunction, cosh, sech);
 
     pub struct CothFunction;
-    impl_trig_rec!(CothFunction, tanh, coth);
+    forward_func_inv_impl!(CothFunction, tanh, coth);
 
     //////////////////// Inverse Hyperbolic Trigonometric ////////////////////
     pub struct ASinhFunction;
-    impl_trig!(ASinhFunction, asinh);
+    forward_func_impl!(ASinhFunction, asinh);
 
     pub struct ACoshFunction;
-    impl_checked_trig!(ACoshFunction, acosh);
+    forward_checked_func_impl!(ACoshFunction, acosh);
 
     pub struct ATanhFunction;
-    impl_checked_trig!(ATanhFunction, atanh);
+    forward_checked_func_impl!(ATanhFunction, atanh);
 
     pub struct ACschFunction;
-    impl_arc_trig_rec!(ACschFunction, asinh, acsch);
+    forward_func_inv_impl!(ACschFunction, asinh, acsch);
 
     pub struct ASechFunction;
-    impl_checked_arc_trig_rec!(ASechFunction, acosh, asech);
+    forward_checked_func_inv_impl!(ASechFunction, acosh, asech);
 
     pub struct ACothFunction;
-    impl_checked_arc_trig_rec!(ACothFunction, atanh, acoth);
+    forward_checked_func_inv_impl!(ACothFunction, atanh, acoth);
 }
 
 pub mod context {
