@@ -8,6 +8,7 @@ use crate::num::unchecked::UncheckedNum;
 use crate::ops::math::*;
 use crate::utils::ignore_case_string::IgnoreCaseString;
 use crate::context::validate::{TokenKind, OrPanic};
+use crate::utils::static_store::StaticStore;
 
 /// Trait to provides the variables, constants and functions used for evaluate an expression.
 pub trait Context<'a, N> {
@@ -318,21 +319,8 @@ impl<'a, N: CheckedNum> DefaultContext<'a, N> {
     /// # Safety
     /// Stores a cache of the `DefaultContext` used as raw pointers.
     pub unsafe fn instance() -> &'static DefaultContext<'a, N> {
-        use crate::utils::lazy::Lazy;
-        use crate::utils::untyped::Untyped;
-        use std::any::TypeId;;
-
-        static mut CACHE: Lazy<HashMap<TypeId, Untyped>> = Lazy::new(HashMap::new);
-        let type_id = TypeId::of::<N>();
-
-        match (*CACHE).get(&type_id) {
-            Some(p) => p.cast::<DefaultContext<'a, N>>(),
-            None => {
-                let context = Box::leak(Box::new(DefaultContext::new_checked()));
-                CACHE.insert(type_id, Untyped::new(context));
-                context
-            }
-        }
+        static STATIC_DEFAULT_CONTEXT : StaticStore = StaticStore::new();
+        STATIC_DEFAULT_CONTEXT.load(|| DefaultContext::new_checked())
     }
 
     /// Constructs a new `Context` with checked functions.

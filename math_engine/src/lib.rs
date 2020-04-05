@@ -54,8 +54,8 @@ where
     use evaluator::Evaluator;
     use std::any::TypeId;
     use std::cell::RefCell;
-    use std::collections::HashMap;
     use std::panic::*;
+    use crate::utils::static_store::StaticStore;
 
     /// Allow to catch `panic`s without print error messages.
     fn catch_panic<F: FnOnce() -> R + UnwindSafe, R>(
@@ -68,24 +68,10 @@ where
         result
     }
 
-    /// Gets a `static` value initialized with the given function.
-    fn load_static<T: UnwindSafe, F: FnOnce() -> T>(f: F) -> &'static T {
-        thread_local! {
-            static STATIC_DATA: RefCell<HashMap<TypeId, *const ()>> = RefCell::new(HashMap::new());
-        }
-
-        STATIC_DATA.with(|map| {
-            let raw = *map
-                .borrow_mut()
-                .entry(TypeId::of::<T>())
-                .or_insert(Box::into_raw(Box::new(f())) as *const ());
-
-            unsafe { &*(raw as *const T) }
-        })
-    }
+    static STATIC_EVALUATOR : StaticStore = StaticStore::new();
 
     let result = catch_panic(move || {
-        let evaluator = load_static(move || {
+        let evaluator = STATIC_EVALUATOR.load(move || {
             let config = Config::new()
                 .with_implicit_mul(true)
                 .with_group_symbol('[', ']');
