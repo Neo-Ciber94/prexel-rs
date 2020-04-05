@@ -7,8 +7,8 @@ use std::ops::Neg;
 /// Extended methods for `Decimal`.
 pub trait DecimalExt {
     fn is_integer(&self) -> bool;
-    fn to_radians(self) -> Decimal;
-    fn to_degrees(self) -> Decimal;
+    fn to_radians(&self) -> Decimal;
+    fn to_degrees(&self) -> Decimal;
     fn inv(self) -> Decimal;
     fn checked_inv(self) -> Option<Decimal>;
     fn checked_pow(self, exponent: Decimal) -> Option<Decimal>;
@@ -41,12 +41,12 @@ impl DecimalExt for Decimal {
     }
 
     #[inline]
-    fn to_radians(self) -> Decimal {
+    fn to_radians(&self) -> Decimal {
         (self * (consts::PI / dec!(180))).approx()
     }
 
     #[inline]
-    fn to_degrees(self) -> Decimal {
+    fn to_degrees(&self) -> Decimal {
         (self * (dec!(180) / consts::PI)).approx()
     }
 

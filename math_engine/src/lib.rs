@@ -52,8 +52,6 @@ where
     use context::Config;
     use context::DefaultContext;
     use evaluator::Evaluator;
-    use std::any::TypeId;
-    use std::cell::RefCell;
     use std::panic::*;
     use crate::utils::static_store::StaticStore;
 
@@ -68,6 +66,7 @@ where
         result
     }
 
+    // Holds the data of the evaluators
     static STATIC_EVALUATOR : StaticStore = StaticStore::new();
 
     let result = catch_panic(move || {

@@ -431,7 +431,7 @@ pub mod math {
                     if args.len() != 1 {
                         Err(Error::from(ErrorKind::InvalidArgumentCount))
                     } else {
-                        match args[0].to_f64().map(f64::$method_name) {
+                        match args[0].to_f64().map(f64::$method_name).map(f64::to_degrees) {
                             Some(n) => {
                                 if n.is_nan() || n.is_infinite() {
                                     Err(Error::from(ErrorKind::NAN))
@@ -462,7 +462,10 @@ pub mod math {
                     if args.len() != 1 {
                         Err(Error::from(ErrorKind::InvalidArgumentCount))
                     } else {
-                        match args[0].to_f64().map(f64::inv).map(f64::$method_name) {
+                        match args[0].to_f64()
+                            .map(f64::inv)
+                            .map(f64::$method_name)
+                            .map(f64::to_degrees){
                             Some(n) => {
                                 if n.is_nan() || n.is_infinite() {
                                     Err(Error::from(ErrorKind::NAN))
@@ -492,7 +495,7 @@ pub mod math {
 
         fn call(&self, args: &[N]) -> Result<N> {
             match args.len() {
-                1 => match args[0].to_f64().map(f64::atan) {
+                1 => match args[0].to_f64().map(f64::atan).map(f64::to_degrees) {
                     Some(n) => {
                         if n.is_nan() || n.is_infinite() {
                             Err(Error::from(ErrorKind::NAN))
@@ -503,18 +506,19 @@ pub mod math {
                     None => Err(Error::from(ErrorKind::Overflow)),
                 },
                 2 => {
-                    let opy = args[0].to_f64();
-                    let opx = args[1].to_f64();
+                    if let (Some(y), Some(x)) = (args[0].to_f64(), args[1].to_f64()){
+                        if y.is_zero() && x.is_zero(){
+                            return Err(Error::from(ErrorKind::NAN));
+                        }
 
-                    if opy.is_none() || opx.is_none() {
-                        Err(Error::from(ErrorKind::Overflow))
-                    } else {
-                        let result = opy.unwrap().atan2(opx.unwrap());
+                        let result = y.atan2(x).to_degrees();
                         if result.is_nan() || result.is_infinite() {
                             Err(Error::from(ErrorKind::NAN))
                         } else {
                             N::from_f64(result).ok_or(Error::from(ErrorKind::Overflow))
                         }
+                    } else{
+                        Err(Error::from(ErrorKind::Overflow))
                     }
                 }
                 _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
@@ -532,22 +536,22 @@ pub mod math {
     impl_arc_trig_rec!(ACotFunction, atan, acot);
 
     pub struct ASinhFunction;
-    forward_func_impl!(ASinhFunction, asinh);
+    impl_arc_trig!(ASinhFunction, asinh);
 
     pub struct ACoshFunction;
-    forward_func_impl!(ACoshFunction, acosh);
+    impl_arc_trig!(ACoshFunction, acosh);
 
     pub struct ATanhFunction;
-    forward_func_impl!(ATanhFunction, atanh);
+    impl_arc_trig!(ATanhFunction, atanh);
 
     pub struct ACschFunction;
-    forward_func_inv_impl!(ACschFunction, asinh, acsch);
+    impl_arc_trig_rec!(ACschFunction, asinh, acsch);
 
     pub struct ASechFunction;
-    forward_func_inv_impl!(ASechFunction, acosh, asech);
+    impl_arc_trig_rec!(ASechFunction, acosh, asech);
 
     pub struct ACothFunction;
-    forward_func_inv_impl!(ACothFunction, atanh, acoth);
+    impl_arc_trig_rec!(ACothFunction, atanh, acoth);
 
     #[inline(always)]
     pub(crate) fn try_to_float<N: ToPrimitive>(n: &N) -> Result<f64> {
@@ -815,7 +819,7 @@ mod tests{
         compute_sin(&instance, 0_f64);
 
         assert!(instance.call(&[10_f64, 3_f64, 7_f64]).is_err());
-        assert!(instance.call(&empty_array::<f64>()).is_err())
+        assert!(instance.call(&empty_array::<f64>()).is_err());
     }
 
     #[test]
@@ -832,7 +836,7 @@ mod tests{
         compute_cos(&instance, 0_f64);
 
         assert!(instance.call(&[10_f64, 3_f64, 7_f64]).is_err());
-        assert!(instance.call(&empty_array::<f64>()).is_err())
+        assert!(instance.call(&empty_array::<f64>()).is_err());
     }
 
     #[test]
@@ -850,7 +854,7 @@ mod tests{
         assert!(instance.call(&[90]).is_err());
         assert!(instance.call(&[-90]).is_err());
         assert!(instance.call(&[10_f64, 3_f64, 7_f64]).is_err());
-        assert!(instance.call(&empty_array::<f64>()).is_err())
+        assert!(instance.call(&empty_array::<f64>()).is_err());
     }
 
     #[test]
@@ -867,7 +871,7 @@ mod tests{
 
         assert!(instance.call(&[0_f64]).is_err());
         assert!(instance.call(&[10_f64, 3_f64, 7_f64]).is_err());
-        assert!(instance.call(&empty_array::<f64>()).is_err())
+        assert!(instance.call(&empty_array::<f64>()).is_err());
     }
 
     #[test]
@@ -883,7 +887,7 @@ mod tests{
 
         assert!(instance.call(&[90]).is_err());
         assert!(instance.call(&[10_f64, 3_f64, 7_f64]).is_err());
-        assert!(instance.call(&empty_array::<f64>()).is_err())
+        assert!(instance.call(&empty_array::<f64>()).is_err());
     }
 
     #[test]
@@ -899,7 +903,7 @@ mod tests{
 
         //assert!(instance.call(&[90]).is_err()); error due float precision
         assert!(instance.call(&[10_f64, 3_f64, 7_f64]).is_err());
-        assert!(instance.call(&empty_array::<f64>()).is_err())
+        assert!(instance.call(&empty_array::<f64>()).is_err());
     }
 
     #[test]
@@ -916,7 +920,7 @@ mod tests{
         compute_sinh(&instance, 0_f64);
 
         assert!(instance.call(&[10_f64, 3_f64, 7_f64]).is_err());
-        assert!(instance.call(&empty_array::<f64>()).is_err())
+        assert!(instance.call(&empty_array::<f64>()).is_err());
     }
 
     #[test]
@@ -933,7 +937,7 @@ mod tests{
         compute_cosh(&instance, 0_f64);
 
         assert!(instance.call(&[10_f64, 3_f64, 7_f64]).is_err());
-        assert!(instance.call(&empty_array::<f64>()).is_err())
+        assert!(instance.call(&empty_array::<f64>()).is_err());
     }
 
     #[test]
@@ -950,7 +954,7 @@ mod tests{
         compute_tanh(&instance, 0_f64);
 
         assert!(instance.call(&[10_f64, 3_f64, 7_f64]).is_err());
-        assert!(instance.call(&empty_array::<f64>()).is_err())
+        assert!(instance.call(&empty_array::<f64>()).is_err());
     }
 
     #[test]
@@ -967,7 +971,7 @@ mod tests{
 
         // assert!(instance.call(&[0_f64]).is_err()); float precision error
         assert!(instance.call(&[10_f64, 3_f64, 7_f64]).is_err());
-        assert!(instance.call(&empty_array::<f64>()).is_err())
+        assert!(instance.call(&empty_array::<f64>()).is_err());
     }
 
     #[test]
@@ -984,7 +988,7 @@ mod tests{
         compute_sech(&instance, 0_f64);
 
         assert!(instance.call(&[10_f64, 3_f64, 7_f64]).is_err());
-        assert!(instance.call(&empty_array::<f64>()).is_err())
+        assert!(instance.call(&empty_array::<f64>()).is_err());
     }
 
     #[test]
@@ -1001,6 +1005,227 @@ mod tests{
 
         // assert!(instance.call(&[0_f64]).is_err()); float precision error
         assert!(instance.call(&[10_f64, 3_f64, 7_f64]).is_err());
-        assert!(instance.call(&empty_array::<f64>()).is_err())
+        assert!(instance.call(&empty_array::<f64>()).is_err());
+    }
+
+    #[test]
+    fn asin_test(){
+        let instance = ASinFunction;
+
+        fn compute_asin(func: &ASinFunction, value: f64){
+            assert_eq!(func.call(&[value]), Ok(value.asin().to_degrees()), "ASin({})", value);
+        }
+
+        compute_asin(&instance, -1_f64);
+        compute_asin(&instance, 1_f64);
+        compute_asin(&instance, 0.3_f64);
+
+        assert!(instance.call(&[10]).is_err());
+        assert!(instance.call(&[-20]).is_err());
+        assert!(instance.call(&[10_f64, 3_f64, 7_f64]).is_err());
+        assert!(instance.call(&empty_array::<f64>()).is_err());
+    }
+
+    #[test]
+    fn acos_test(){
+        let instance = ACosFunction;
+
+        fn compute_acos(func: &ACosFunction, value: f64){
+            assert_eq!(func.call(&[value]), Ok(value.acos().to_degrees()), "Acos({})", value);
+        }
+
+        compute_acos(&instance, -1_f64);
+        compute_acos(&instance, 1_f64);
+        compute_acos(&instance, 0.3_f64);
+
+        assert!(instance.call(&[10]).is_err());
+        assert!(instance.call(&[-20]).is_err());
+        assert!(instance.call(&[10_f64, 3_f64, 7_f64]).is_err());
+        assert!(instance.call(&empty_array::<f64>()).is_err());
+    }
+
+    #[test]
+    fn atan_test(){
+        let instance = ATanFunction;
+
+        fn compute_atan(func: &ATanFunction, value: f64){
+            assert_eq!(func.call(&[value]), Ok(value.atan().to_degrees()), "Atan({})", value);
+        }
+
+        fn compute_atan2(func: &ATanFunction, y: f64, x: f64){
+            assert_eq!(func.call(&[y, x]), Ok(y.atan2(x).to_degrees()), "Atan({}, {})", y, x);
+        }
+
+        compute_atan(&instance, -1_f64);
+        compute_atan(&instance, 1_f64);
+        compute_atan(&instance, 0.3_f64);
+        compute_atan(&instance, 19_f64);
+        compute_atan(&instance, -21_f64);
+
+        compute_atan2(&instance, -1_f64, 2_f64);
+        compute_atan2(&instance, 1_f64, -3_f64);
+        compute_atan2(&instance, 0.3_f64, 0.4_f64);
+
+        assert!(instance.call(&[0_f64, 0_f64]).is_err());
+        assert!(instance.call(&[10_f64, 3_f64, 7_f64]).is_err());
+        assert!(instance.call(&empty_array::<f64>()).is_err());
+    }
+
+    #[test]
+    fn acsc_test(){
+        let instance = ACscFunction;
+
+        fn compute_acsc(func: &ACscFunction, value: f64){
+            assert_eq!(func.call(&[value]), Ok(value.inv().asin().to_degrees()), "ACsc({})", value);
+        }
+
+        compute_acsc(&instance, -1_f64);
+        compute_acsc(&instance, 1_f64);
+        compute_acsc(&instance, -22_f64);
+        compute_acsc(&instance, 13_f64);
+
+        assert!(instance.call(&[0]).is_err());
+        assert!(instance.call(&[10_f64, 3_f64, 7_f64]).is_err());
+        assert!(instance.call(&empty_array::<f64>()).is_err());
+    }
+
+    #[test]
+    fn asec_test(){
+        let instance = ASecFunction;
+
+        fn compute_asec(func: &ASecFunction, value: f64){
+            assert_eq!(func.call(&[value]), Ok(value.inv().acos().to_degrees()), "ASec({})", value);
+        }
+
+        compute_asec(&instance, -1_f64);
+        compute_asec(&instance, 1_f64);
+        compute_asec(&instance, -22_f64);
+        compute_asec(&instance, 13_f64);
+
+        assert!(instance.call(&[0]).is_err());
+        assert!(instance.call(&[10_f64, 3_f64, 7_f64]).is_err());
+        assert!(instance.call(&empty_array::<f64>()).is_err());
+    }
+
+    #[test]
+    fn acot_test(){
+        let instance = ACotFunction;
+
+        fn compute_atan(func: &ACotFunction, value: f64){
+            assert_eq!(func.call(&[value]), Ok(value.inv().atan().to_degrees()), "ACot({})", value);
+        }
+
+        compute_atan(&instance, -1_f64);
+        compute_atan(&instance, 1_f64);
+        compute_atan(&instance, 0.3_f64);
+        compute_atan(&instance, 19_f64);
+        compute_atan(&instance, -21_f64);
+
+        assert!(instance.call(&[10_f64, 3_f64, 7_f64]).is_err());
+        assert!(instance.call(&empty_array::<f64>()).is_err());
+    }
+
+    #[test]
+    fn asinh_test(){
+        let instance = ASinhFunction;
+
+        fn compute_asinh(func: &ASinhFunction, value: f64){
+            assert_eq!(func.call(&[value]), Ok(value.asinh().to_degrees()), "ASinh({})", value);
+        }
+
+        compute_asinh(&instance, -1_f64);
+        compute_asinh(&instance, 1_f64);
+        compute_asinh(&instance, 0.3_f64);
+        compute_asinh(&instance, 20_f64);
+
+        assert!(instance.call(&[10_f64, 3_f64, 7_f64]).is_err());
+        assert!(instance.call(&empty_array::<f64>()).is_err());
+    }
+
+    #[test]
+    fn acosh_test(){
+        let instance = ACoshFunction;
+
+        fn compute_acosh(func: &ACoshFunction, value: f64){
+            assert_eq!(func.call(&[value]), Ok(value.acosh().to_degrees()), "ACosh({})", value);
+        }
+
+        compute_acosh(&instance, 1_f64);
+        compute_acosh(&instance, 20_f64);
+
+        assert!(instance.call(&[0_f64]).is_err());
+        assert!(instance.call(&[-7_f64]).is_err());
+        assert!(instance.call(&[10_f64, 3_f64, 7_f64]).is_err());
+        assert!(instance.call(&empty_array::<f64>()).is_err());
+    }
+
+    #[test]
+    fn atanh_test(){
+        let instance = ATanhFunction;
+
+        fn compute_atanh(func: &ATanhFunction, value: f64){
+            assert_eq!(func.call(&[value]), Ok(value.atanh().to_degrees()), "ATanh({})", value);
+        }
+
+        compute_atanh(&instance, 0_f64);
+        compute_atanh(&instance, 0.9_f64);
+
+        assert!(instance.call(&[1]).is_err());
+        assert!(instance.call(&[-1]).is_err());
+        assert!(instance.call(&[10_f64, 3_f64, 7_f64]).is_err());
+        assert!(instance.call(&empty_array::<f64>()).is_err());
+    }
+
+    #[test]
+    fn acsch_test(){
+        let instance = ACschFunction;
+
+        fn compute_acsch(func: &ACschFunction, value: f64){
+            assert_eq!(func.call(&[value]), Ok(value.inv().asinh().to_degrees()), "ACsch({})", value);
+        }
+
+        compute_acsch(&instance, -1_f64);
+        compute_acsch(&instance, 1_f64);
+        compute_acsch(&instance, -30_f64);
+        compute_acsch(&instance, 20_f64);
+
+        assert!(instance.call(&[0]).is_err());
+        assert!(instance.call(&[10_f64, 3_f64, 7_f64]).is_err());
+        assert!(instance.call(&empty_array::<f64>()).is_err());
+    }
+
+    #[test]
+    fn asech_test(){
+        let instance = ASechFunction;
+
+        fn compute_asech(func: &ASechFunction, value: f64){
+            assert_eq!(func.call(&[value]), Ok(value.inv().acosh().to_degrees()), "ASech({})", value);
+        }
+
+        compute_asech(&instance, 0.1_f64);
+        compute_asech(&instance, 1_f64);
+
+        assert!(instance.call(&[0]).is_err());
+        assert!(instance.call(&[2]).is_err());
+        assert!(instance.call(&[10_f64, 3_f64, 7_f64]).is_err());
+        assert!(instance.call(&empty_array::<f64>()).is_err());
+    }
+
+    #[test]
+    fn acoth_test(){
+        let instance = ACothFunction;
+
+        fn compute_acoth(func: &ACothFunction, value: f64){
+            assert_eq!(func.call(&[value]), Ok(value.inv().atanh().to_degrees()), "ACoth({})", value);
+        }
+
+        compute_acoth(&instance, -23_f64);
+        compute_acoth(&instance, 50_f64);
+
+        assert!(instance.call(&[0]).is_err());
+        assert!(instance.call(&[1]).is_err());
+        assert!(instance.call(&[-1]).is_err());
+        assert!(instance.call(&[10_f64, 3_f64, 7_f64]).is_err());
+        assert!(instance.call(&empty_array::<f64>()).is_err());
     }
 }

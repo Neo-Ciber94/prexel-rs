@@ -23,9 +23,9 @@ use std::sync::Once;
 /// use math_engine::utils::static_store::StaticStore;
 ///
 /// fn add<T: 'static>(value: T) -> usize{
-///     static STORE : StaticStore = StaticStore::new();
+///     static mut STORE : StaticStore = StaticStore::new();
 ///
-///     let vec = STORE.load_mut(|| Vec::new());
+///     let vec = unsafe { STORE.load_mut(|| Vec::new()) };
 ///     vec.push(value);
 ///     vec.len()
 /// }
@@ -71,7 +71,7 @@ impl StaticStore<HashMap<TypeId, *const ()>> {
     /// # Parameters
     /// - f: the function that provides the value to store.
     #[inline]
-    pub fn load_mut<T: 'static, F: FnOnce() -> T>(&self, f: F) -> &'static mut T{
+    pub fn load_mut<T: 'static, F: FnOnce() -> T>(&mut self, f: F) -> &'static mut T{
         let map = Self::get_or_init(self);
         let raw = map.entry(TypeId::of::<T>())
             .or_insert_with(|| Box::into_raw(Box::new(f())) as *const ())
@@ -155,7 +155,7 @@ mod tests{
 
     #[test]
     fn load_mut_test(){
-        let store = StaticStore::new();
+        let mut store = StaticStore::new();
 
         let vec = store.load_mut(|| Vec::<i32>::new());
         vec.push(10);
@@ -190,9 +190,9 @@ mod tests{
     }
 
     fn add<T: 'static>(value: T) -> usize{
-        static STORE : StaticStore = StaticStore::new();
+        static mut STORE : StaticStore = StaticStore::new();
 
-        let vec = STORE.load_mut(|| Vec::new());
+        let vec = unsafe { STORE.load_mut(|| Vec::new()) };
         vec.push(value);
         vec.len()
     }
