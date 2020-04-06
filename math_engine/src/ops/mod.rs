@@ -185,7 +185,10 @@ pub mod math {
                     if args.len() != 1 {
                         Err(Error::from(ErrorKind::InvalidArgumentCount))
                     } else {
-                        let result = try_to_float(&args[0])?.$method_name();
+                        let result = try_to_float(&args[0])
+                            .map(|n| n.approx())?
+                            .$method_name();
+
                         N::from_f64(result)
                             .ok_or(Error::from(ErrorKind::Overflow))
                     }
@@ -209,7 +212,11 @@ pub mod math {
                     if args.len() != 1 {
                         Err(Error::from(ErrorKind::InvalidArgumentCount))
                     } else {
-                        let result = try_to_float(&args[0])?.$method_name().inv();
+                        let result = try_to_float(&args[0])
+                            .map(|n| n.approx())?
+                            .$method_name()
+                            .inv();
+
                         N::from_f64(result)
                             .ok_or(Error::from(ErrorKind::Overflow))
                     }
@@ -331,7 +338,10 @@ pub mod math {
                     if args.len() != 1 {
                         Err(Error::from(ErrorKind::InvalidArgumentCount))
                     } else {
-                        match args[0].to_f64().map(f64::to_radians).map(f64::$method_name) {
+                        match args[0].to_f64()
+                            .map(f64::to_radians)
+                            .map(f64::$method_name)
+                            .map(|n| n.approx()){
                             Some(n) => {
                                 if n.is_nan() || n.is_infinite() {
                                     Err(Error::from(ErrorKind::NAN))
@@ -362,6 +372,7 @@ pub mod math {
                             .to_f64()
                             .map(f64::to_radians)
                             .map(f64::$method_name)
+                            .map(|n| n.approx())
                             .map(f64::inv)
                         {
                             Some(n) => {
@@ -432,7 +443,10 @@ pub mod math {
                     if args.len() != 1 {
                         Err(Error::from(ErrorKind::InvalidArgumentCount))
                     } else {
-                        match args[0].to_f64().map(f64::$method_name).map(f64::to_degrees) {
+                        match args[0].to_f64()
+                            .map(f64::$method_name)
+                            .map(f64::to_degrees)
+                            .map(|n| n.approx()){
                             Some(n) => {
                                 if n.is_nan() || n.is_infinite() {
                                     Err(Error::from(ErrorKind::NAN))
@@ -466,7 +480,8 @@ pub mod math {
                         match args[0].to_f64()
                             .map(f64::inv)
                             .map(f64::$method_name)
-                            .map(f64::to_degrees){
+                            .map(f64::to_degrees)
+                            .map(|n| n.approx()){
                             Some(n) => {
                                 if n.is_nan() || n.is_infinite() {
                                     Err(Error::from(ErrorKind::NAN))
@@ -593,6 +608,7 @@ pub mod math {
 mod tests{
     use super::math::*;
     use num_traits::Inv;
+    use crate::utils::approx::Approx;
 
     const ERROR : f64 = 0.000_000_000_01;
 
@@ -848,7 +864,7 @@ mod tests{
         let instance = CosFunction;
 
         fn compute_cos(func: &CosFunction, value: f64){
-            assert_eq!(func.call(&[value]), Ok(value.to_radians().cos()), "Cos({})", value);
+            assert_eq!(func.call(&[value]), Ok(value.to_radians().cos().approx()), "Cos({})", value);
         }
 
         compute_cos(&instance, 45_f64);
@@ -865,7 +881,7 @@ mod tests{
         let instance = TanFunction;
 
         fn compute_tan(func: &TanFunction, value: f64){
-            assert_eq!(func.call(&[value]), Ok(value.to_radians().tan()), "Tan({})", value);
+            assert_eq!(func.call(&[value]), Ok(value.to_radians().tan().approx()), "Tan({})", value);
         }
 
         compute_tan(&instance, 45_f64);
@@ -916,7 +932,7 @@ mod tests{
         let instance = CotFunction;
 
         fn compute_cot(func: &CotFunction, value: f64){
-            assert_eq!(func.call(&[value]), Ok(value.to_radians().tan().inv()), "Cot({})", value);
+            assert_eq!(func.call(&[value]), Ok(value.to_radians().tan().approx().inv()), "Cot({})", value);
         }
 
         compute_cot(&instance, 45_f64);

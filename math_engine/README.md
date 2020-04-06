@@ -65,7 +65,7 @@ This library is waiting for an stable version of the [Specialization RFC](https:
 which enable a more generic use `DefaultContext::new()`, currently the library
 have:
 
-- `DefaultContext::new_unchedked()`
+- `DefaultContext::new_unchecked()`
 - `DefaultContext::new_checked()`
 - `DefaultContext::new_decimal()`
 - `DefaultContext::new_complex()`

@@ -16,7 +16,7 @@ use std::sync::Once;
 /// let x = store.load(|| 10);
 ///
 /// assert_eq!(*x, 10);
-/// assert_eq!(*store.get::<i32>(), 10);
+/// assert_eq!(*store.get::<i32>().unwrap(), 10);
 /// ```
 /// Or using static local variables
 /// ```
