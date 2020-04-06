@@ -3,6 +3,7 @@ use rust_decimal::prelude::{FromPrimitive, One, ToPrimitive, Zero};
 use rust_decimal::Decimal;
 use rust_decimal_macros::*;
 use std::ops::Neg;
+use crate::utils::approx::{ApproxEq, Approx};
 
 /// Extended methods for `Decimal`.
 pub trait DecimalExt {
@@ -517,15 +518,6 @@ impl DecimalExt for Decimal {
     }
 }
 
-pub trait ApproxEq {
-    fn approx_eq(&self, other: &Self, delta: &Self) -> bool;
-}
-
-pub trait ApproxDecimal {
-    fn approx(&self) -> Self;
-    fn approx_by(&self, delta: &Self) -> Self;
-}
-
 impl ApproxEq for Decimal {
     #[inline]
     fn approx_eq(&self, other: &Self, delta: &Self) -> bool {
@@ -533,7 +525,7 @@ impl ApproxEq for Decimal {
     }
 }
 
-impl ApproxDecimal for Decimal {
+impl Approx for Decimal {
     #[inline]
     fn approx(&self) -> Self {
         Self::approx_by(self, &consts::PRECISION)

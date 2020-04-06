@@ -11,6 +11,7 @@ pub mod math {
     use crate::function::{Associativity, Notation, Precedence};
     use crate::utils::gamma::gamma;
     use crate::Result;
+    use crate::utils::approx::Approx;
 
     pub struct UnaryPlus;
     impl<N> UnaryFunction<N> for UnaryPlus {
@@ -564,6 +565,26 @@ pub mod math {
                 }
             }
             None => Err(Error::from(ErrorKind::Overflow)),
+        }
+    }
+
+    /// For reduce errors as: `0.1 + 0.2 ≠ 0.3`.
+    impl Approx for f64{
+        #[inline]
+        fn approx(&self) -> Self {
+            const ERROR : f64 = 0.000_000_000_1_f64;
+            self.approx_by(&ERROR)
+        }
+
+        fn approx_by(&self, delta: &Self) -> Self {
+            let r = self.round();
+
+            if (self - r).abs() < *delta{
+                r
+            }
+            else{
+                *self
+            }
         }
     }
 }
