@@ -11,7 +11,7 @@ using the given option.
 ##### Sub Commands:
 - `--help | --h`: Get help information for the command.
 - `--run | --r`: Runs the evaluator in loop mode.
-- `--context | ctx`: Gets the constants, functions and operators of the 
+- `--context | --ctx`: Gets the constants, functions and operators of the 
 math context used for evaluations.
 
 ##### Options:
