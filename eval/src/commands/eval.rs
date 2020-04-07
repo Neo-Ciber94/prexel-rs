@@ -20,7 +20,7 @@ impl Command<String, Result<()>> for EvalCommand {
 
     fn help_info(&self) -> &str {
         "\
-Evaluates an expression
+Evaluates a math expression
 
 USAGE:
     eval [EXPRESSION]
