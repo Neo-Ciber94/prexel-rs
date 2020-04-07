@@ -27,9 +27,9 @@ pub trait DecimalExt {
     fn acos(self) -> Option<Decimal>;
     fn atan(self) -> Decimal;
     fn atan2(self, other: Decimal) -> Decimal;
-    fn sinh(self) -> Decimal;
-    fn cosh(self) -> Decimal;
-    fn tanh(self) -> Decimal;
+    fn sinh(self) -> Option<Decimal>;
+    fn cosh(self) -> Option<Decimal>;
+    fn tanh(self) -> Option<Decimal>;
     fn asinh(self) -> Decimal;
     fn acosh(self) -> Option<Decimal>;
     fn atanh(self) -> Option<Decimal>;
@@ -472,22 +472,25 @@ impl DecimalExt for Decimal {
         }
     }
 
-    fn sinh(self) -> Decimal {
+    fn sinh(self) -> Option<Decimal> {
         // formula: sinh(x) = (e^x - e^-x)/2
-        let e0 = self.checked_exp().unwrap();
-        let e1 = self.neg().checked_exp().unwrap();
-        (e0 - e1) / consts::TWO
+        let e0 = self.checked_exp()?;
+        let e1 = self.neg().checked_exp()?;
+        let result = (e0 - e1) / consts::TWO;
+        Some(result)
     }
 
-    fn cosh(self) -> Decimal {
+    fn cosh(self) -> Option<Decimal> {
         // formula: cosh(x) = (e^x + e^-x)/2
-        let e0 = self.checked_exp().unwrap();
-        let e1 = self.neg().checked_exp().unwrap();
-        (e0 + e1) / consts::TWO
+        let e0 = self.checked_exp()?;
+        let e1 = self.neg().checked_exp()?;
+        let result = (e0 + e1) / consts::TWO;
+        Some(result)
     }
 
-    fn tanh(self) -> Decimal {
-        self.sinh() / self.cosh()
+    fn tanh(self) -> Option<Decimal> {
+        let result = self.sinh()? / self.cosh()?;
+        Some(result)
     }
 
     fn asinh(self) -> Decimal {

@@ -668,22 +668,22 @@ pub mod ops {
 
     //////////////////// Hyperbolic Trigonometric ////////////////////
     pub struct SinhFunction;
-    forward_func_impl!(SinhFunction, sinh);
+    forward_checked_func_impl!(SinhFunction, sinh);
 
     pub struct CoshFunction;
-    forward_func_impl!(CoshFunction, cosh);
+    forward_checked_func_impl!(CoshFunction, cosh);
 
     pub struct TanhFunction;
-    forward_func_impl!(TanhFunction, tanh);
+    forward_checked_func_impl!(TanhFunction, tanh);
 
     pub struct CschFunction;
-    forward_func_inv_impl!(CschFunction, sinh, csch);
+    forward_checked_func_inv_impl!(CschFunction, sinh, csch);
 
     pub struct SechFunction;
-    forward_func_inv_impl!(SechFunction, cosh, sech);
+    forward_checked_func_inv_impl!(SechFunction, cosh, sech);
 
     pub struct CothFunction;
-    forward_func_inv_impl!(CothFunction, tanh, coth);
+    forward_checked_func_inv_impl!(CothFunction, tanh, coth);
 
     //////////////////// Inverse Hyperbolic Trigonometric ////////////////////
     pub struct ASinhFunction;

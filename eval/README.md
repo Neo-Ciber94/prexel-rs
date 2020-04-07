@@ -4,8 +4,8 @@ A command line program for evaluate math expressions.
 ## Usage
 ##### Commands
 - `eval [EXPRESSION]`: Evaluates the specified expression
-- `eval [--SUBCOMMAND] [ARGS]`: Runs the specified subcommand.
 - `eval [--OPTION] [EXPRESSION]`: Evaluates the specified expression
+- `eval [--SUBCOMMAND] [ARGS]`: Runs the specified subcommand.
 using the given option.
 
 ##### Sub Commands:

@@ -19,13 +19,13 @@ impl IgnoreCaseString {
         self.0
     }
 
-    /// Gets this instance value as `str`.
+    /// Gets this instance inner value as a `&str`.
     #[inline]
-    pub fn as_str(&self) -> &str {
+    pub fn as_raw_str(&self) -> &str {
         self.0.as_str()
     }
 
-    /// Gets this instance `String` as mutable.
+    /// Gets this instance inner value.
     #[inline]
     pub fn get_mut(&mut self) -> &mut String {
         &mut self.0

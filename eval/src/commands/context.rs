@@ -173,7 +173,7 @@ fn print_context_as_table<N>(context: &DefaultContext<N>) {
     let mut iter1 = context
         .functions()
         .iter()
-        .sorted_by_key(|c| c.0.as_str().chars().nth(0).unwrap());
+        .sorted_by_key(|c| c.0.as_raw_str().chars().nth(0).unwrap());
 
     let mut iter2 = context.binary_functions().iter();
     let mut iter3 = context.unary_functions().iter();
@@ -189,10 +189,10 @@ fn print_context_as_table<N>(context: &DefaultContext<N>) {
             break;
         }
 
-        let s1 = item1.map_or("", |s| s.as_str());
-        let s2 = item2.map_or("", |s| s.as_str());
-        let s3 = item3.map_or("", |s| s.as_str());
-        let s4 = item4.map_or("", |s| s.as_str());
+        let s1 = item1.map_or("", |s| s.as_raw_str());
+        let s2 = item2.map_or("", |s| s.as_raw_str());
+        let s3 = item3.map_or("", |s| s.as_raw_str());
+        let s4 = item4.map_or("", |s| s.as_raw_str());
 
         buffer.push_str(&format!(
             "{1:0$} | {2:0$} | {3:0$} | {4:0$}\n",
@@ -206,7 +206,7 @@ fn print_context_as_table<N>(context: &DefaultContext<N>) {
 fn print_context_as_row<N>(context: &DefaultContext<N>){
     println!("Functions: ");
     context.functions().iter()
-        .sorted_by_key(|c| c.0.as_str().chars().nth(0).unwrap())
+        .sorted_by_key(|c| c.0.as_raw_str().chars().nth(0).unwrap())
         .for_each(|s| print!("{} ", s.0));
     println!("\n");
 
@@ -226,7 +226,7 @@ fn print_context_as_row<N>(context: &DefaultContext<N>){
 fn print_context_as_column<N>(context: &DefaultContext<N>){
     println!("Functions: ");
     context.functions().iter()
-        .sorted_by_key(|c| c.0.as_str().chars().nth(0).unwrap())
+        .sorted_by_key(|c| c.0.as_raw_str().chars().nth(0).unwrap())
         .for_each(|s| println!("{}", s.0));
     println!();
 
