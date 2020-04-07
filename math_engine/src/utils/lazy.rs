@@ -31,10 +31,6 @@ pub struct Lazy<T, F = fn() -> T> {
     once: Once,
 }
 
-unsafe impl<T, F> Sync for Lazy<T, F> {}
-
-unsafe impl<T, F> Send for Lazy<T, F> {}
-
 impl<T, F> Lazy<T, F> {
     /// Creates a new `Lazy<T>` where `init` provides the value of the instance.
     ///
@@ -144,6 +140,17 @@ impl<T, F: FnOnce() -> T> Lazy<T, F> {
     }
 }
 
+impl<T: Default> Default for Lazy<T> {
+    #[inline]
+    fn default() -> Self {
+        Lazy::new(T::default)
+    }
+}
+
+unsafe impl<T, F> Sync for Lazy<T, F> {}
+
+unsafe impl<T, F> Send for Lazy<T, F> {}
+
 impl<T: Clone, F: FnOnce() -> T> Lazy<T, F> {
     /// Gets a copy of the inner value.
     ///
@@ -152,10 +159,10 @@ impl<T: Clone, F: FnOnce() -> T> Lazy<T, F> {
     /// use math_engine::utils::lazy::Lazy;
     ///
     /// let number = Lazy::new(|| 22);
-    /// assert_eq!(number.inner(), 22);
+    /// assert_eq!(number.clone_inner(), 22);
     /// ```
     #[inline]
-    pub fn inner(&self) -> T {
+    pub fn clone_inner(&self) -> T {
         self.get().clone()
     }
 }
@@ -211,13 +218,6 @@ impl<T, F: FnOnce() -> T> DerefMut for Lazy<T, F> {
     #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.get_mut()
-    }
-}
-
-impl<T: Default> Default for Lazy<T> {
-    #[inline]
-    fn default() -> Self {
-        Lazy::new(T::default)
     }
 }
 
@@ -309,7 +309,7 @@ mod tests {
     #[test]
     fn lazy_default_test() {
         let number: Lazy<u32> = Lazy::default();
-        assert_eq!(number.inner(), 0);
+        assert_eq!(number.clone_inner(), 0);
     }
 
     //#[test]
