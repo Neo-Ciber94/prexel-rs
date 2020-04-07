@@ -118,7 +118,7 @@ fn get_type_and_print_format(this: &ContextCommand, args: CommandArgs<'_, String
                 Ok((num_type.unwrap_or_default(), print_format.unwrap_or_default()))
             }
         },
-        _ => unreachable!()
+        _ => Ok((NumberType::default(), PrintFormat::default()))
     }
 }
 
