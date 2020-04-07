@@ -426,7 +426,6 @@ mod tests {
 
         #[cfg(feature = "complex")]
         {
-            use num_complex::Complex;
             use num_complex::Complex64;
             let context: &DefaultContext<Complex64> = &DefaultContext::new_complex();
             let complex_tokenizer = Tokenizer::with_context(context);

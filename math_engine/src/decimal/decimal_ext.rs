@@ -813,23 +813,23 @@ mod tests {
 
     #[test]
     fn sinh_test() {
-        assert_almost_eq(dec!(2).sinh(), dec!(3.62686040784701876766821));
-        assert_almost_eq(dec!(0).sinh(), dec!(0));
-        assert_almost_eq(dec!(-1).sinh(), dec!(-1.175201193643801456882))
+        assert_almost_eq(dec!(2).sinh().unwrap(), dec!(3.62686040784701876766821));
+        assert_almost_eq(dec!(0).sinh().unwrap(), dec!(0));
+        assert_almost_eq(dec!(-1).sinh().unwrap(), dec!(-1.175201193643801456882))
     }
 
     #[test]
     fn cosh_test() {
-        assert_almost_eq(dec!(2).cosh(), dec!(3.7621956910836314595622134));
-        assert_almost_eq(dec!(0).cosh(), dec!(1));
-        assert_almost_eq(dec!(-1).cosh(), dec!(1.543080634815243778477905))
+        assert_almost_eq(dec!(2).cosh().unwrap(), dec!(3.7621956910836314595622134));
+        assert_almost_eq(dec!(0).cosh().unwrap(), dec!(1));
+        assert_almost_eq(dec!(-1).cosh().unwrap(), dec!(1.543080634815243778477905))
     }
 
     #[test]
     fn tanh_test() {
-        assert_almost_eq(dec!(2).tanh(), dec!(0.9640275800758168839464137));
-        assert_almost_eq(dec!(0).tanh(), dec!(0));
-        assert_almost_eq(dec!(-1).tanh(), dec!(-0.76159415595576488811945))
+        assert_almost_eq(dec!(2).tanh().unwrap(), dec!(0.9640275800758168839464137));
+        assert_almost_eq(dec!(0).tanh().unwrap(), dec!(0));
+        assert_almost_eq(dec!(-1).tanh().unwrap(), dec!(-0.76159415595576488811945))
     }
 
     #[test]

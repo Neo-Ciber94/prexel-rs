@@ -736,10 +736,15 @@ pub mod context {
             context.add_function(ProdFunction);
             context.add_function(MaxFunction);
             context.add_function(MinFunction);
+            context.add_function(CbrtFunction);
             context.add_function(SqrtFunction);
             context.add_function(LnFunction);
             context.add_function(LogFunction);
             context.add_function(RandFunction);
+            context.add_function(CeilFunction);
+            context.add_function(FloorFunction);
+            context.add_function(TruncateFunction);
+            context.add_function(RoundFunction);
             context.add_function(ExpFunction);
             context.add_function(SinFunction);
             context.add_function(CosFunction);

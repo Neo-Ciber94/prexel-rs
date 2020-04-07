@@ -7,8 +7,8 @@ use crate::num::checked::CheckedNum;
 use crate::num::unchecked::UncheckedNum;
 use crate::ops::math::*;
 use crate::utils::ignore_case_string::IgnoreCaseString;
-use crate::context::validate::{TokenKind, OrPanic};
 use crate::utils::static_store::StaticStore;
+use validate::{OrPanic, TokenKind};
 
 /// Trait to provides the variables, constants and functions used for evaluate an expression.
 pub trait Context<'a, N> {

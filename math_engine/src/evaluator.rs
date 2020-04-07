@@ -310,9 +310,6 @@ mod shunting_yard {
                 Token::BinaryOperator(name) => {
                     push_binary_function(context, &mut output, &mut operators, token, name, )?;
                 }
-                // Token::InfixFunction(name) => {
-                //     push_binary_function(context, &mut output, &mut operators, token, name)?
-                // }
                 Token::UnaryOperator(name) => {
                     push_unary_function(
                         context,
@@ -375,41 +372,7 @@ mod shunting_yard {
                     }
                 }
                 Token::Comma => {
-                    // TODO: Moves this comma checks to its own function
-                    if pos == 0 {
-                        return Err(Error::new(ErrorKind::InvalidInput, "misplaced comma"));
-                    }
-
-                    if tokens
-                        .iter()
-                        .nth(pos - 1)
-                        .map_or(false, |t| t.is_grouping_open())
-                    {
-                        // Invalid expression: `(,`
-                        return Err(Error::new(ErrorKind::InvalidInput, "misplaced comma: `(,`"));
-                    }
-
-                    if tokens
-                        .iter()
-                        .nth(pos + 1)
-                        .map_or(false, |t| t.is_grouping_close())
-                    {
-                        // Invalid expression: `,)`
-                        return Err(Error::new(ErrorKind::InvalidInput, "misplaced comma: `,)`"));
-                    }
-
-                    // We avoid all function arguments wrapped by grouping symbols,
-                    // eg: Max((1,2,3))
-                    if !grouping_count.is_empty() {
-                        if !tokens
-                            .iter()
-                            .nth(*grouping_count.last().unwrap() - 1)
-                            .map_or(false, |t| t.is_function())
-                        {
-                            return Err(Error::new(ErrorKind::InvalidInput, "misplaced comma"));
-                        }
-                    }
-
+                    check_comma_position(tokens, &grouping_count, pos)?;
                     push_comma(&mut output, &mut operators, &mut arg_count)?
                 }
                 _ => {
@@ -460,6 +423,42 @@ mod shunting_yard {
         }
 
         Ok(output)
+    }
+
+    fn check_comma_position<N>(tokens: &[Token<N>], grouping_count: &[usize], pos: usize) -> Result<()>{
+        // TODO: Moves this comma checks to its own function
+        if pos == 0 {
+            return Err(Error::new(ErrorKind::InvalidInput, "misplaced comma"));
+        }
+
+        if tokens
+            .iter()
+            .nth(pos - 1)
+            .map_or(false, |t| t.is_grouping_open()) {
+            // Invalid expression: `(,`
+            return Err(Error::new(ErrorKind::InvalidInput, "misplaced comma: `(,`"));
+        }
+
+        if tokens
+            .iter()
+            .nth(pos + 1)
+            .map_or(false, |t| t.is_grouping_close()) {
+            // Invalid expression: `,)`
+            return Err(Error::new(ErrorKind::InvalidInput, "misplaced comma: `,)`"));
+        }
+
+        // We avoid all function arguments wrapped by grouping symbols,
+        // eg: Max((1,2,3))
+        if !grouping_count.is_empty() {
+            if !tokens
+                .iter()
+                .nth(*grouping_count.last().unwrap() - 1)
+                .map_or(false, |t| t.is_function()) {
+                return Err(Error::new(ErrorKind::InvalidInput, "misplaced comma"));
+            }
+        }
+
+        Ok(())
     }
 
     fn push_number<'a, N: Clone + Debug>(

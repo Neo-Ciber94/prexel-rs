@@ -20,3 +20,8 @@ num-complex = { version = "0.2.4", optional = true}
 
 [dev-dependencies]
 bigdecimal = "0.1.0"
+bencher = "0.1.5"
+
+[[bench]]
+name = "trait_object_vs_generic"
+harness = false
