@@ -16,6 +16,7 @@ use std::io::{stdout, Write};
 use std::iter::Iterator;
 use std::rc::Rc;
 use std::str::FromStr;
+use math_engine::complex::Complex;
 
 pub struct RunCommand;
 impl RunCommand {
@@ -205,7 +206,7 @@ EXAMPLES:
                 let config = Config::new()
                     .with_implicit_mul(true)
                     .with_complex_number(true);
-                let context = DefaultContext::new_complex_with_config(config);
+                let context = DefaultContext::<Complex<f64>>::new_complex_with_config(config);
                 run(Rc::new(Evaluator::with_context(context)));
             }
         }

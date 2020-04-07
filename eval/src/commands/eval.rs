@@ -7,6 +7,7 @@ use crate::cli::{Command, CommandArgs};
 use crate::commands::info::{NumberType, CommandInfo};
 use crate::commands::eval::utils::StringIterExt;
 use math_engine::error::{Error, ErrorKind};
+use math_engine::complex::Complex;
 
 pub struct EvalCommand;
 impl Command<String, Result<()>> for EvalCommand {
@@ -79,7 +80,7 @@ EXAMPLES:
                     .with_implicit_mul(true)
                     .with_complex_number(true);
 
-                let context = DefaultContext::new_complex_with_config(config);
+                let context = DefaultContext::<Complex<f64>>::new_complex_with_config(config);
                 let evaluator = Evaluator::with_context(context);
                 match evaluator.eval(&buffer) {
                     Ok(n) => println!("{}", n),

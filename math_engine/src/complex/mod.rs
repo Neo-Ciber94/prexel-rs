@@ -1,16 +1,17 @@
-pub type Complex64 = num_complex::Complex64;
+pub type Complex<T> = num_complex::Complex<T>;
 
 pub mod ops {
-    use num_complex::{Complex, Complex64};
-    use num_traits::Zero;
+    use num_complex::Complex;
+    use num_traits::{Float, FromPrimitive};
 
     use crate::error::*;
     use crate::function::{Associativity, BinaryFunction, Function, Precedence};
     use crate::Result;
     use rand::random;
+    use std::fmt::{Display, Debug};
 
     pub struct PowOperator;
-    impl BinaryFunction<Complex64> for PowOperator {
+    impl<T> BinaryFunction<Complex<T>> for PowOperator where T: Float{
         fn name(&self) -> &str {
             "^"
         }
@@ -23,22 +24,28 @@ pub mod ops {
             Associativity::Right
         }
 
-        fn call(&self, left: Complex64, right: Complex64) -> Result<Complex64> {
+        fn call(&self, left: Complex<T>, right: Complex<T>) -> Result<Complex<T>> {
             Ok(Complex::powc(&left, right))
         }
     }
 
     pub struct LogFunction;
-    impl Function<Complex64> for LogFunction {
+    impl<T> Function<Complex<T>> for LogFunction where T: Float + FromPrimitive{
         fn name(&self) -> &str {
             "log"
         }
 
-        fn call(&self, args: &[Complex64]) -> Result<Complex64> {
+        fn call(&self, args: &[Complex<T>]) -> Result<Complex<T>> {
             match args.len() {
-                1 => Ok(args[0].log(10_f64)),
+                1 => {
+                    let base = T::from_f64(10_f64)
+                        .ok_or(Error::from(ErrorKind::Overflow))?;
+                   Ok(args[0].log(base))
+                },
                 2 => match args[1].im {
-                    n if n.is_zero() => Ok(args[0].log(args[1].re)),
+                    n if !n.is_zero() => {
+                        Ok(args[0].log(args[1].re))
+                    },
                     _ => Err(Error::new(ErrorKind::InvalidInput, "Expected decimal base")),
                 },
                 _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
@@ -47,13 +54,13 @@ pub mod ops {
     }
 
     pub struct RandFunction;
-    impl Function<Complex64> for RandFunction{
+    impl<T> Function<Complex<T>> for RandFunction where T: Float + FromPrimitive + Debug + Display{
         fn name(&self) -> &str {
             "random"
         }
 
-        fn call(&self, args: &[Complex64]) -> Result<Complex64> {
-            fn try_get_real(c: &Complex64) -> Result<f64>{
+        fn call(&self, args: &[Complex<T>]) -> Result<Complex<T>> {
+            fn try_get_real<N: Float>(c: &Complex<N>) -> Result<N>{
                 if !c.im.is_zero(){
                     Err(Error::new(
                         ErrorKind::InvalidInput,
@@ -64,11 +71,16 @@ pub mod ops {
                 }
             }
 
+            fn random_t<N: FromPrimitive>() -> Result<N>{
+                N::from_f64(random::<f64>())
+                    .ok_or(Error::from(ErrorKind::Overflow))
+            }
+
             match args.len(){
                 0 => {
-                    let re = random::<f64>();
-                    let im = random::<f64>();
-                    Ok(Complex64::new(re, im))
+                    let re = random_t::<T>()?;
+                    let im = random_t::<T>()?;
+                    Ok(Complex::new(re, im))
                 },
                 1 => {
                     let max = try_get_real(&args[0])?;
@@ -76,9 +88,9 @@ pub mod ops {
                         return Err(Error::from(ErrorKind::NegativeValue))
                     }
 
-                    let re = random::<f64>() * max;
-                    let im = random::<f64>() * max;
-                    Ok(Complex64::new(re, im))
+                    let re = random_t::<T>()? * max;
+                    let im = random_t::<T>()? * max;
+                    Ok(Complex::new(re, im))
                 },
                 2 => {
                     let min = try_get_real(&args[0])?;
@@ -90,9 +102,9 @@ pub mod ops {
                         ));
                     }
 
-                    let re = min + ((max - min) * random::<f64>());
-                    let im = min + ((max - min) * random::<f64>());
-                    Ok(Complex64::new(re, im))
+                    let re = min + ((max - min) * random_t::<T>()?);
+                    let im = min + ((max - min) * random_t::<T>()?);
+                    Ok(Complex::new(re, im))
                 }
                 _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
             }
@@ -105,12 +117,12 @@ pub mod ops {
         };
 
         ($t:ty, $method_name:ident, $name:ident) => {
-            impl Function<Complex64> for $t {
+            impl<T> Function<Complex<T>> for $t where T: Float{
                 fn name(&self) -> &str {
                     stringify!($name)
                 }
 
-                fn call(&self, args: &[Complex64]) -> Result<Complex64> {
+                fn call(&self, args: &[Complex<T>]) -> Result<Complex<T>> {
                     match args.len() {
                         1 => Ok(args[0].$method_name()),
                         _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
@@ -126,12 +138,12 @@ pub mod ops {
         };
 
         ($t:ty, $method_name:ident, $name:ident) => {
-            impl Function<Complex64> for $t {
+            impl<T> Function<Complex<T>> for $t where T: Float {
                 fn name(&self) -> &str {
                     stringify!($name)
                 }
 
-                fn call(&self, args: &[Complex64]) -> Result<Complex64> {
+                fn call(&self, args: &[Complex<T>]) -> Result<Complex<T>> {
                     match args.len() {
                         1 => Ok(args[0].$method_name().inv()),
                         _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
@@ -232,16 +244,17 @@ pub mod ops {
 }
 
 pub mod context {
-    use num_complex::Complex64;
-    use num_traits::FromPrimitive;
+    use num_complex::Complex;
+    use num_traits::{FromPrimitive, Float};
 
     use crate::complex::ops::PowOperator;
     use crate::context::{Config, Context, DefaultContext};
     use crate::ops::unchecked::*;
     use crate::ops::math::UnaryPlus;
     use super::ops::*;
+    use std::fmt::{Debug, Display};
 
-    impl<'a> DefaultContext<'a, Complex64> {
+    impl<'a, T> DefaultContext<'a, Complex<T>> where T: Float + FromPrimitive + Debug + Display {
         #[inline]
         pub fn new_complex() -> Self {
             Self::new_complex_with_config(Config::new()
@@ -250,9 +263,9 @@ pub mod context {
 
         pub fn new_complex_with_config(config: Config) -> Self {
             let mut context = DefaultContext::empty_with_config(config.with_complex_number(true));
-            context.add_constant("PI", Complex64::from_f64(std::f64::consts::PI).unwrap());
-            context.add_constant("E", Complex64::from_f64(std::f64::consts::E).unwrap());
-            context.add_constant("i", Complex64::i());
+            context.add_constant("PI", Complex::from_f64(std::f64::consts::PI).unwrap());
+            context.add_constant("E", Complex::from_f64(std::f64::consts::E).unwrap());
+            context.add_constant("i", Complex::i());
             context.add_binary_function(AddOperator);
             context.add_binary_function(SubOperator);
             context.add_binary_function(MulOperator);

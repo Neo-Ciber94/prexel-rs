@@ -1,5 +1,7 @@
+/// The decimal type.
 pub type Decimal = rust_decimal::Decimal;
 
+///
 pub mod decimal_ext;
 
 pub mod consts {

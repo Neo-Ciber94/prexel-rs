@@ -6,6 +6,7 @@ use math_engine::Result;
 use math_engine::utils::extensions::IteratorExt;
 use crate::cli::{Command, CommandArgs};
 use crate::commands::info::{CommandInfo, NumberType};
+use math_engine::complex::Complex;
 
 pub struct ContextCommand;
 impl Command<String, Result<()>> for ContextCommand {
@@ -66,7 +67,7 @@ EXAMPLES:
                 print_context(&ctx, print_format);
             }
             NumberType::Complex => {
-                print_context(&DefaultContext::new_complex(), print_format)
+                print_context(&DefaultContext::<Complex<f64>>::new_complex(), print_format)
             },
         }
 
