@@ -169,7 +169,7 @@ impl DecimalExt for Decimal {
     fn checked_log(self, base: Decimal) -> Option<Decimal> {
         let a = Self::checked_ln(self)?;
         if base == consts::TEN {
-            return a.checked_div(consts::LN_10_INV);
+            return a.checked_div(consts::LN_10);
         }
 
         let b = Self::checked_ln(base)?;
