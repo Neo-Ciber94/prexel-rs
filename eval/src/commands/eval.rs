@@ -6,10 +6,8 @@ use math_engine::Result;
 use math_engine::error::{Error, ErrorKind};
 use math_engine::complex::Complex;
 use crate::cli::{Command, CommandArgs};
-use crate::commands::internal::{NumberType, CommandInfo, StdKind};
+use crate::commands::internal::{NumberType, CommandInfo};
 use crate::commands::eval::utils::StringIterExt;
-use crate::commands::internal;
-use crossterm::style::Color;
 
 pub struct EvalCommand;
 impl Command<String, Result<()>> for EvalCommand {
