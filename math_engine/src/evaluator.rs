@@ -131,7 +131,7 @@ where
                     .get_variable(&name)
                     .ok_or(Error::new(
                         ErrorKind::InvalidInput,
-                        format!("variable `{}` not found", name),
+                        format!("Variable `{}` not found", name),
                     ))?
                     .clone();
 
@@ -142,7 +142,7 @@ where
                     .get_constant(&name)
                     .ok_or(Error::new(
                         ErrorKind::InvalidInput,
-                        format!("constant `{}` not found", name),
+                        format!("Constant `{}` not found", name),
                     ))?
                     .clone();
 
@@ -155,7 +155,7 @@ where
             UnaryOperator(name) => {
                 let func = context.get_unary_function(name).ok_or(Error::new(
                     ErrorKind::InvalidInput,
-                    format!("unary operator `{}` not found", name),
+                    format!("Unary operator `{}` not found", name),
                 ))?;
 
                 match values.pop() {
@@ -174,7 +174,7 @@ where
             BinaryOperator(name) => {
                 let func = context.get_binary_function(name).ok_or(Error::new(
                     ErrorKind::InvalidInput,
-                    format!("binary operator `{}` not found", name),
+                    format!("Binary operator `{}` not found", name),
                 ))?;
 
                 match (values.pop(), values.pop()) {
@@ -194,14 +194,14 @@ where
                 // A reference to the function
                 let func = context.get_function(&name).ok_or(Error::new(
                     ErrorKind::InvalidInput,
-                    format!("function `{}` not found", name),
+                    format!("Function `{}` not found", name),
                 ))?;
 
                 // The number of arguments the function takes
                 let n = arg_count.ok_or(Error::new(
                     ErrorKind::InvalidInput,
                     format!(
-                        "cannot evaluate function `{}`, unknown number of arguments",
+                        "Cannot evaluate function `{}`, unknown number of arguments",
                         name
                     ),
                 ))?;
@@ -232,7 +232,7 @@ where
             _ => {
                 return Err(Error::new(
                     ErrorKind::InvalidInput,
-                    format!("unknown token: `{:?}`", token),
+                    format!("Unknown token: `{:?}`", token),
                 ));
             }
         }
@@ -330,7 +330,7 @@ mod shunting_yard {
                         {
                             return Err(Error::new(
                                 ErrorKind::InvalidInput,
-                                format!("function arguments (if any) for `{}` are not within a parentheses", name)));
+                                format!("Function arguments of `{}` are not within a parentheses", name)));
                         }
                     }
 
@@ -353,12 +353,14 @@ mod shunting_yard {
                                 if context
                                     .config()
                                     .get_group_open_for(*c)
-                                    .map_or(false, |v| v == s)
-                                {
+                                    .map_or(false, |v| v == s){
                                     if !tokens[pos - 2].is_function() {
                                         return Err(Error::new(
                                             ErrorKind::InvalidInput,
-                                            "empty grouping: `()`",
+                                            format!(
+                                                // Empty grouping symbols: ()
+                                                "Empty grouping symbols: {}{}",
+                                                context.config().get_group_open_for(*c).unwrap(), c),
                                         ));
                                     }
                                 }
@@ -378,7 +380,7 @@ mod shunting_yard {
                 _ => {
                     return Err(Error::new(
                         ErrorKind::InvalidInput,
-                        format!("invalid token: {:?}", token),
+                        format!("Invalid token: {:?}", token),
                     ))
                 }
             }
@@ -415,7 +417,7 @@ mod shunting_yard {
             if t.is_grouping_close() || t.is_grouping_close() {
                 return Err(Error::new(
                     ErrorKind::InvalidExpression,
-                    "misplace parentheses",
+                    "Misplace parentheses",
                 ));
             }
 
@@ -428,7 +430,7 @@ mod shunting_yard {
     fn check_comma_position<N>(tokens: &[Token<N>], grouping_count: &[usize], pos: usize) -> Result<()>{
         // TODO: Moves this comma checks to its own function
         if pos == 0 {
-            return Err(Error::new(ErrorKind::InvalidInput, "misplaced comma"));
+            return Err(Error::new(ErrorKind::InvalidInput, "Misplaced comma"));
         }
 
         if tokens
@@ -436,7 +438,7 @@ mod shunting_yard {
             .nth(pos - 1)
             .map_or(false, |t| t.is_grouping_open()) {
             // Invalid expression: `(,`
-            return Err(Error::new(ErrorKind::InvalidInput, "misplaced comma: `(,`"));
+            return Err(Error::new(ErrorKind::InvalidInput, "Misplaced comma: `(,`"));
         }
 
         if tokens
@@ -444,7 +446,7 @@ mod shunting_yard {
             .nth(pos + 1)
             .map_or(false, |t| t.is_grouping_close()) {
             // Invalid expression: `,)`
-            return Err(Error::new(ErrorKind::InvalidInput, "misplaced comma: `,)`"));
+            return Err(Error::new(ErrorKind::InvalidInput, "Misplaced comma: `,)`"));
         }
 
         // We avoid all function arguments wrapped by grouping symbols,
@@ -454,7 +456,7 @@ mod shunting_yard {
                 .iter()
                 .nth(*grouping_count.last().unwrap() - 1)
                 .map_or(false, |t| t.is_function()) {
-                return Err(Error::new(ErrorKind::InvalidInput, "misplaced comma"));
+                return Err(Error::new(ErrorKind::InvalidInput, "Misplaced comma"));
             }
         }
 
@@ -497,7 +499,7 @@ mod shunting_yard {
                     } else {
                         return Err(Error::new(
                             ErrorKind::InvalidExpression,
-                            "misplace unary operator",
+                            "Misplace unary operator",
                         ));
                     }
                 }
@@ -507,7 +509,7 @@ mod shunting_yard {
         } else {
             Err(Error::new(
                 ErrorKind::InvalidInput,
-                format!("unary operator `{}` not found", name),
+                format!("Unary operator `{}` not found", name),
             ))
         }
     }
@@ -521,7 +523,7 @@ mod shunting_yard {
     ) -> Result<()> {
         let operator = context.get_binary_function(name).ok_or(Error::new(
             ErrorKind::InvalidInput,
-            format!("binary function `{}` not found", name),
+            format!("Binary function `{}` not found", name),
         ))?;
 
         while let Some(t) = operators.last() {
@@ -638,7 +640,7 @@ mod shunting_yard {
         }
 
         if !is_group_open {
-            Err(Error::new(ErrorKind::InvalidExpression, "misplace comma"))
+            Err(Error::new(ErrorKind::InvalidExpression, "Misplace comma"))
         } else {
             Ok(())
         }

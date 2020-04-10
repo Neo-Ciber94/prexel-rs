@@ -2,8 +2,8 @@ use std::cmp::Ordering;
 use std::fmt::{Debug, Display, Formatter};
 use std::hash::{Hash, Hasher};
 use super::ignore_case_str::partial_cmp_by;
-use std::borrow::Borrow;
-use crate::utils::ignore_case_str::IgnoreCaseStr;
+//use std::borrow::Borrow;
+//use crate::utils::ignore_case_str::IgnoreCaseStr;
 
 /// Represents `String` that will ignore case when comparing.
 #[derive(Clone)]

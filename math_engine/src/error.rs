@@ -55,17 +55,17 @@ impl ErrorKind {
     /// Gets a `&str` representation of the `ErrorKind`.
     pub fn as_str(&self) -> &'static str {
         match *self {
-            ErrorKind::Overflow => "value has overflow",
-            ErrorKind::Zero => "value is zero",
-            ErrorKind::NAN => "value is 'not a number'",
-            ErrorKind::InvalidInput => "invalid input",
-            ErrorKind::InvalidArgumentCount => "invalid number of arguments",
-            ErrorKind::DivisionByZero => "cannot divide by zero",
-            ErrorKind::NegativeValue => "value is negative",
-            ErrorKind::PositiveValue => "value is positive",
-            ErrorKind::Empty => "empty input",
-            ErrorKind::InvalidExpression => "invalid expression",
-            ErrorKind::Other => "other error",
+            ErrorKind::Overflow => "Value has overflow",
+            ErrorKind::Zero => "Value is zero",
+            ErrorKind::NAN => "Value is 'not a number'",
+            ErrorKind::InvalidInput => "Invalid input",
+            ErrorKind::InvalidArgumentCount => "Invalid number of arguments",
+            ErrorKind::DivisionByZero => "Cannot divide by zero",
+            ErrorKind::NegativeValue => "Value is negative",
+            ErrorKind::PositiveValue => "Value is positive",
+            ErrorKind::Empty => "Empty input",
+            ErrorKind::InvalidExpression => "Invalid expression",
+            ErrorKind::Other => "Other error",
         }
     }
 }

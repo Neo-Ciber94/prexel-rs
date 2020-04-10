@@ -140,7 +140,15 @@ EXAMPLES:
     eval --run
     eval --r
     eval --bigdecimal --run
-    eval --c --r"
+    eval --c --r
+
+REMARKS:
+    There are some unique behaviours when the evaluator runs using `--r | --run`:
+    - The result of last operation is store in a variable called `result`.
+    - You can assign variables: `variable_name = expression`.
+        Eg.: x = 10, y = Sin(45)
+    - You can create functions: `function_name(arguments) = expression`.
+        Eg.: double(x) = x * 2, getThree() = 3"
     }
 
     fn execute(&self, args: CommandArgs<'_, String>) -> Result<()> {

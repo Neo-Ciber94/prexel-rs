@@ -152,7 +152,7 @@ where
                         return Err(Error::new(
                             ErrorKind::InvalidExpression,
                             format!(
-                                "binary operations need 2 operands: {:?} {} {:?}",
+                                "Binary operations need 2 operands: {:?} {} {:?}",
                                 prev, string, next
                             ),
                         ));
