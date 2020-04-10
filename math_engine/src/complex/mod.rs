@@ -60,6 +60,7 @@ pub mod ops {
         }
 
         fn call(&self, args: &[Complex<T>]) -> Result<Complex<T>> {
+            #[inline(always)]
             fn try_get_real<N: Float>(c: &Complex<N>) -> Result<N>{
                 if !c.im.is_zero(){
                     Err(Error::new(
@@ -71,6 +72,7 @@ pub mod ops {
                 }
             }
 
+            #[inline(always)]
             fn random_t<N: FromPrimitive>() -> Result<N>{
                 N::from_f64(random::<f64>())
                     .ok_or(Error::from(ErrorKind::Overflow))

@@ -230,7 +230,6 @@ impl<N: CheckedAdd + CheckedDiv + FromPrimitive + Clone> Function<N> for AvgFunc
 #[cfg(test)]
 mod tests{
     use super::*;
-
     fn empty_array<T>() -> Box<[T]>{
         vec![].into_boxed_slice()
     }

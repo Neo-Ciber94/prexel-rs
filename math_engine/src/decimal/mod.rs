@@ -468,6 +468,12 @@ pub mod ops {
         }
     }
 
+    pub struct ToRadiansFunction;
+    forward_func_impl!(ToRadiansFunction, to_radians, toRadians);
+
+    pub struct ToDegreesFunction;
+    forward_func_impl!(ToDegreesFunction, to_degrees, toDegrees);
+
     //////////////////// Trigonometric ////////////////////
     macro_rules! impl_checked_trig {
         ($struct_name:ident, $method_name:ident, $name:ident) => {
@@ -748,6 +754,8 @@ pub mod context {
             context.add_function(TruncateFunction);
             context.add_function(RoundFunction);
             context.add_function(ExpFunction);
+            context.add_function(ToRadiansFunction);
+            context.add_function(ToDegreesFunction);
             context.add_function(SinFunction);
             context.add_function(CosFunction);
             context.add_function(TanFunction);

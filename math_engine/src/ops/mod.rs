@@ -325,6 +325,12 @@ pub mod math {
         }
     }
 
+    pub struct ToRadiansFunction;
+    forward_func_impl!(ToRadiansFunction, to_radians, toRadians);
+
+    pub struct ToDegreesFunction;
+    forward_func_impl!(ToDegreesFunction, to_degrees, toDegrees);
+
     //////////////////// Trigonometric ////////////////////
 
     macro_rules! impl_trig {
@@ -840,6 +846,26 @@ mod tests{
         assert!(instance.call(&[-12]).is_err());
         assert!(instance.call(&[20, 10]).is_err());
         assert!(instance.call(&[10_f64, 3_f64, 7_f64]).is_err());
+    }
+
+    #[test]
+    fn to_radians_test(){
+        let instance = ToRadiansFunction;
+
+        assert_eq!(instance.call(&[90_f64]), Ok(90_f64.to_radians()));
+        assert_eq!(instance.call(&[180_f64]), Ok(180_f64.to_radians()));
+
+        assert!(instance.call(empty_array::<i64>().as_ref()).is_err());
+    }
+
+    #[test]
+    fn to_degrees_test(){
+        let instance = ToDegreesFunction;
+
+        assert_eq!(instance.call(&[90_f64]), Ok(90_f64.to_degrees()));
+        assert_eq!(instance.call(&[180_f64]), Ok(180_f64.to_degrees()));
+
+        assert!(instance.call(empty_array::<i64>().as_ref()).is_err());
     }
 
     #[test]

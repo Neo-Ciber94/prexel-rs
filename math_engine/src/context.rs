@@ -369,6 +369,8 @@ impl<'a, N: CheckedNum> DefaultContext<'a, N> {
         context.add_function(RoundFunction);
         context.add_function(SignFunction);
         context.add_function(RandFunction);
+        context.add_function(ToRadiansFunction);
+        context.add_function(ToDegreesFunction);
         context.add_function(SinFunction);
         context.add_function(CosFunction);
         context.add_function(TanFunction);
@@ -435,6 +437,8 @@ impl<'a, N: UncheckedNum> DefaultContext<'a, N> {
         context.add_function(LnFunction);
         context.add_function(LogFunction);
         context.add_function(RandFunction);
+        context.add_function(ToRadiansFunction);
+        context.add_function(ToDegreesFunction);
         context.add_function(ExpFunction);
         context.add_function(SinFunction);
         context.add_function(CosFunction);
