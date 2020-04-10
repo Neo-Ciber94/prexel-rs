@@ -73,12 +73,8 @@ EXAMPLES:
                     DefaultContext::new_unchecked_with_config(config);
                 let evaluator = Evaluator::with_context(context);
                 match evaluator.eval(&buffer) {
-                    Ok(n) => {
-                        internal::print_color(n, Color::Green, StdKind::Output)
-                    },
-                    Err(e) => {
-                        internal::print_color(e.to_string(), Color::Red, StdKind::Error)
-                    },
+                    Ok(n) => println!("{}", n),
+                    Err(e) => eprintln!("{}", e)
                 }
             }
             NumberType::Complex => {
@@ -89,12 +85,8 @@ EXAMPLES:
                 let context = DefaultContext::<Complex<f64>>::new_complex_with_config(config);
                 let evaluator = Evaluator::with_context(context);
                 match evaluator.eval(&buffer) {
-                    Ok(n) => {
-                        internal::print_color(n, Color::Green, StdKind::Output)
-                    },
-                    Err(e) => {
-                        internal::print_color(e.to_string(), Color::Red, StdKind::Error)
-                    },
+                    Ok(n) => println!("{}", n),
+                    Err(e) => eprintln!("{}", e)
                 }
             }
         }
