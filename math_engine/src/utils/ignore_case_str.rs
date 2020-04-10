@@ -15,7 +15,7 @@ impl<'a> IgnoreCaseStr<'a> {
 
     /// Gets a reference to the inner value.
     #[inline]
-    pub fn get_ref(&self) -> &'a str {
+    pub fn as_raw_str(&self) -> &'a str {
         self.0
     }
 
@@ -91,7 +91,7 @@ unsafe impl<'a> Send for IgnoreCaseStr<'a> {}
 unsafe impl<'a> Sync for IgnoreCaseStr<'a> {}
 
 // Copied from iterator.rs
-fn partial_cmp_by<I, O, F>(mut iterator: I, other: O, mut partial_cmp: F) -> Option<Ordering>
+pub(crate) fn partial_cmp_by<I, O, F>(mut iterator: I, other: O, mut partial_cmp: F) -> Option<Ordering>
 where
     I: Iterator + Sized,
     O: IntoIterator,

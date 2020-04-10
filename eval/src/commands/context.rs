@@ -5,7 +5,7 @@ use math_engine::error::{Error, ErrorKind};
 use math_engine::Result;
 use math_engine::utils::extensions::IteratorExt;
 use crate::cli::{Command, CommandArgs};
-use crate::commands::info::{CommandInfo, NumberType};
+use crate::commands::internal::{CommandInfo, NumberType};
 use math_engine::complex::Complex;
 
 pub struct ContextCommand;

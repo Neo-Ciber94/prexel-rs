@@ -1,6 +1,9 @@
 use std::cmp::Ordering;
 use std::fmt::{Debug, Display, Formatter};
 use std::hash::{Hash, Hasher};
+use super::ignore_case_str::partial_cmp_by;
+use std::borrow::Borrow;
+use crate::utils::ignore_case_str::IgnoreCaseStr;
 
 /// Represents `String` that will ignore case when comparing.
 #[derive(Clone)]
@@ -25,7 +28,7 @@ impl IgnoreCaseString {
         self.0.as_str()
     }
 
-    /// Gets this instance inner value.
+    /// Gets a reference to this instance inner value.
     #[inline]
     pub fn get_mut(&mut self) -> &mut String {
         &mut self.0
@@ -93,42 +96,15 @@ impl AsRef<IgnoreCaseString> for IgnoreCaseString {
     }
 }
 
+// impl<'a> Borrow<IgnoreCaseStr<'a>> for IgnoreCaseString{
+//     fn borrow(&self) -> &IgnoreCaseStr<'a> {
+//         unimplemented!()
+//     }
+// }
+
 unsafe impl Send for IgnoreCaseString {}
 
 unsafe impl Sync for IgnoreCaseString {}
-
-// Copied from iterator.rs
-fn partial_cmp_by<I, O, F>(mut iterator: I, other: O, mut partial_cmp: F) -> Option<Ordering>
-where
-    I: Iterator + Sized,
-    O: IntoIterator,
-    F: FnMut(I::Item, O::Item) -> Option<Ordering>,
-{
-    let mut other = other.into_iter();
-
-    loop {
-        let x = match iterator.next() {
-            None => {
-                if other.next().is_none() {
-                    return Some(Ordering::Equal);
-                } else {
-                    return Some(Ordering::Less);
-                }
-            }
-            Some(val) => val,
-        };
-
-        let y = match other.next() {
-            None => return Some(Ordering::Greater),
-            Some(val) => val,
-        };
-
-        match partial_cmp(x, y) {
-            Some(Ordering::Equal) => (),
-            non_eq => return non_eq,
-        }
-    }
-}
 
 #[cfg(test)]
 mod tests {

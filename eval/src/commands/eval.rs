@@ -3,11 +3,13 @@ use bigdecimal::BigDecimal;
 use math_engine::context::{Config, DefaultContext};
 use math_engine::evaluator::Evaluator;
 use math_engine::Result;
-use crate::cli::{Command, CommandArgs};
-use crate::commands::info::{NumberType, CommandInfo};
-use crate::commands::eval::utils::StringIterExt;
 use math_engine::error::{Error, ErrorKind};
 use math_engine::complex::Complex;
+use crate::cli::{Command, CommandArgs};
+use crate::commands::internal::{NumberType, CommandInfo, StdKind};
+use crate::commands::eval::utils::StringIterExt;
+use crate::commands::internal;
+use crossterm::style::Color;
 
 pub struct EvalCommand;
 impl Command<String, Result<()>> for EvalCommand {
@@ -62,7 +64,7 @@ EXAMPLES:
                 let evaluator = Evaluator::with_context(context);
                 match evaluator.eval(&buffer) {
                     Ok(n) => println!("{}", n),
-                    Err(e) => eprintln!("{}", e),
+                    Err(e) => eprintln!("{}", e)
                 }
             }
             NumberType::BigDecimal => {
@@ -71,8 +73,12 @@ EXAMPLES:
                     DefaultContext::new_unchecked_with_config(config);
                 let evaluator = Evaluator::with_context(context);
                 match evaluator.eval(&buffer) {
-                    Ok(n) => println!("{}", n),
-                    Err(e) => eprintln!("{}", e),
+                    Ok(n) => {
+                        internal::print_color(n, Color::Green, StdKind::Output)
+                    },
+                    Err(e) => {
+                        internal::print_color(e.to_string(), Color::Red, StdKind::Error)
+                    },
                 }
             }
             NumberType::Complex => {
@@ -83,8 +89,12 @@ EXAMPLES:
                 let context = DefaultContext::<Complex<f64>>::new_complex_with_config(config);
                 let evaluator = Evaluator::with_context(context);
                 match evaluator.eval(&buffer) {
-                    Ok(n) => println!("{}", n),
-                    Err(e) => eprintln!("{}", e),
+                    Ok(n) => {
+                        internal::print_color(n, Color::Green, StdKind::Output)
+                    },
+                    Err(e) => {
+                        internal::print_color(e.to_string(), Color::Red, StdKind::Error)
+                    },
                 }
             }
         }

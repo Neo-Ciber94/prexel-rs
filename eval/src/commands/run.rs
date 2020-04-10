@@ -1,10 +1,8 @@
 use crate::cli::{Command, CommandArgs};
-use crate::commands::info::{CommandInfo, NumberType};
+use crate::commands::internal::{CommandInfo, NumberType, StdKind};
 use crate::custom_function::CustomFunction;
 use bigdecimal::BigDecimal;
 use crossterm::event::{self, Event, KeyCode};
-use crossterm::execute;
-use crossterm::style::{Color, Print, ResetColor, SetForegroundColor};
 use math_engine::context::validate::{check_token_name, TokenKind};
 use math_engine::context::{Config, Context, DefaultContext};
 use math_engine::error::{Error, ErrorKind};
@@ -12,11 +10,12 @@ use math_engine::evaluator::Evaluator;
 use math_engine::Result;
 use std::convert::TryFrom;
 use std::fmt::{Debug, Display};
-use std::io::{stdout, Write};
 use std::iter::Iterator;
 use std::rc::Rc;
 use std::str::FromStr;
 use math_engine::complex::Complex;
+use crate::commands::internal;
+use crossterm::style::Color;
 
 pub struct RunCommand;
 impl RunCommand {
@@ -34,21 +33,23 @@ impl RunCommand {
         if buffer.contains("=") {
             match Self::eval_assign(buffer, evaluator) {
                 Ok(()) => {}
-                Err(e) => print_color(format!(" [Error] {}", e), Self::ERROR_COLOR),
+                Err(e) => {
+                    internal::print_color(format!(" [Error] {}", e), Self::ERROR_COLOR, StdKind::Error)
+                },
             }
         } else {
             match evaluator.eval(buffer) {
                 Ok(n) => {
-                    print_color(format!(" = {}", n), Self::RESULT_COLOR);
+                    internal::print_color(format!(" = {}", n), Self::RESULT_COLOR, StdKind::Output);
                     Rc::make_mut(evaluator)
                         .mut_context()
                         .set_variable(Self::RESULT_VAR_NAME, n);
                 }
-                Err(e) => print_color(format!(" [Error] {}", e), Self::ERROR_COLOR),
+                Err(e) => internal::print_color(format!(" [Error] {}", e), Self::ERROR_COLOR, StdKind::Error),
             }
         }
 
-        print_color("\n>> ", Self::NEWLINE_COLOR);
+        internal::print_color("\n>> ", Self::NEWLINE_COLOR, StdKind::Output);
         buffer.clear();
     }
 
@@ -146,7 +147,7 @@ EXAMPLES:
         // Actual loop
         fn run<N: FromStr + Display + Debug + Clone>(mut evaluator: Rc<Evaluator<'_, N>>) {
             let mut buffer = String::new();
-            print_color(">> ", RunCommand::NEWLINE_COLOR);
+            internal::print_color(">> ", RunCommand::NEWLINE_COLOR, StdKind::Output);
 
             while let Event::Key(key) = event::read().unwrap() {
                 match key.code {
@@ -156,13 +157,13 @@ EXAMPLES:
                                 continue;
                             }
 
-                            print_color(c, RunCommand::TEXT_COLOR);
+                            internal::print_color(c, RunCommand::TEXT_COLOR, StdKind::Output);
                             buffer.push(c);
                         }
                     }
                     KeyCode::Backspace => {
                         if !buffer.is_empty() {
-                            print_color(RunCommand::BACKSPACE, Color::White);
+                            internal::print_color(RunCommand::BACKSPACE, Color::White, StdKind::Output);
                             buffer.pop();
                         }
                     }
@@ -216,15 +217,4 @@ EXAMPLES:
 
         Ok(())
     }
-}
-
-#[inline]
-fn print_color<T: Display + Clone>(value: T, color: Color) {
-    execute!(
-        stdout(),
-        SetForegroundColor(color),
-        Print(value),
-        ResetColor
-    )
-    .unwrap();
 }
