@@ -1,8 +1,7 @@
 use crate::Result;
-use std::panic::RefUnwindSafe;
 
 /// A trait for a function that take a variable number of arguments.
-pub trait Function<N>: RefUnwindSafe {
+pub trait Function<N> {
     /// Gets the name of the function.
     fn name(&self) -> &str;
     /// Calls this function with the given number of arguments.
@@ -10,7 +9,7 @@ pub trait Function<N>: RefUnwindSafe {
 }
 
 /// A trait for a function that takes 2 arguments.
-pub trait BinaryFunction<N>: RefUnwindSafe {
+pub trait BinaryFunction<N> {
     /// Gets the name of the function.
     fn name(&self) -> &str;
     /// Gets the `Precedence` of the function.
@@ -22,7 +21,7 @@ pub trait BinaryFunction<N>: RefUnwindSafe {
 }
 
 /// A trait a function that takes 1 argument.
-pub trait UnaryFunction<N>: RefUnwindSafe {
+pub trait UnaryFunction<N> {
     /// Gets the name of the function.
     fn name(&self) -> &str;
     /// Gets the `Notation` of this function.
