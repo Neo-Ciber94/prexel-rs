@@ -7,7 +7,6 @@ use crate::num::checked::CheckedNum;
 use crate::num::unchecked::UncheckedNum;
 use crate::ops::math::*;
 use crate::utils::ignore_case_string::IgnoreCaseString;
-use crate::utils::static_store::StaticStore;
 use validate::{OrPanic, TokenKind};
 
 /// Trait to provides the variables, constants and functions used for evaluate an expression.
@@ -314,15 +313,6 @@ impl<'a, N> Context<'a, N> for DefaultContext<'a, N> {
 }
 
 impl<'a, N: CheckedNum> DefaultContext<'a, N> {
-    /// Gets an instance of a `DefaultContext`.
-    ///
-    /// # Safety
-    /// Stores a cache of the `DefaultContext` used as raw pointers.
-    pub unsafe fn instance() -> &'static DefaultContext<'a, N> {
-        static STATIC_DEFAULT_CONTEXT : StaticStore = StaticStore::new();
-        STATIC_DEFAULT_CONTEXT.load(|| DefaultContext::new_checked())
-    }
-
     /// Constructs a new `Context` with checked functions.
     ///
     /// # Remarks
@@ -330,7 +320,7 @@ impl<'a, N: CheckedNum> DefaultContext<'a, N> {
     /// ensures will return an error instead of throws an exception.
     #[inline]
     pub fn new_checked() -> Self {
-        Self::new_checked_with_config(Config::new())
+        Self::with_config_checked(Config::new())
     }
 
     /// Constructs a new `Context` using the given `Config` with checked functions.
@@ -338,7 +328,7 @@ impl<'a, N: CheckedNum> DefaultContext<'a, N> {
     /// # Remarks
     /// Some functions may cause overflow exceptions, the functions of this context
     /// ensures will return an error instead of throws an exception.
-    pub fn new_checked_with_config(config: Config) -> Self {
+    pub fn with_config_checked(config: Config) -> Self {
         use crate::ops::checked::*;
 
         let mut context = Self::empty_with_config(config);
@@ -406,14 +396,14 @@ impl<'a, N: UncheckedNum> DefaultContext<'a, N> {
     /// Functions of this context may panic when the value overflows.
     #[inline]
     pub fn new_unchecked() -> Self {
-        Self::new_unchecked_with_config(Config::new())
+        Self::with_config_unchecked(Config::new())
     }
 
     /// Constructs a new `Context` using the given `Config` with unchecked functions.
     ///
     /// # Remarks
     /// Functions of this context may panic when the value overflows.
-    pub fn new_unchecked_with_config(config: Config) -> Self {
+    pub fn with_config_unchecked(config: Config) -> Self {
         use crate::ops::unchecked::*;
 
         let mut context = Self::empty_with_config(config);

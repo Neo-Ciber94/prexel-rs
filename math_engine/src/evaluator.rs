@@ -848,7 +848,7 @@ mod shunting_yard {
         #[test]
         fn implicit_mul_test1() {
             let config = Config::new().with_implicit_mul(true);
-            let context = DefaultContext::new_checked_with_config(config);
+            let context = DefaultContext::with_config_checked(config);
 
             let infix = &[Token::Number(10), Token::Constant("PI".to_string())];
             let rpn = infix_to_rpn(infix, &context).unwrap();
@@ -865,7 +865,7 @@ mod shunting_yard {
         #[test]
         fn implicit_mul_test2() {
             let config = Config::new().with_implicit_mul(true);
-            let context = DefaultContext::new_checked_with_config(config);
+            let context = DefaultContext::with_config_checked(config);
 
             let infix = &[
                 Token::GroupingOpen('('),
@@ -898,7 +898,7 @@ mod tests {
     fn eval_test() {
         let config = Config::new().with_group_symbol('[', ']');
         let evaluator: Evaluator<i64> =
-            Evaluator::with_context(DefaultContext::new_checked_with_config(config));
+            Evaluator::with_context(DefaultContext::with_config_checked(config));
 
         assert_eq!(evaluator.eval("(2 ^ 3) ^ 4").unwrap(), 4096);
         assert_eq!(evaluator.eval("Min(10, 2) + Max(10, 2)").unwrap(), 12);
@@ -947,7 +947,7 @@ mod tests {
     #[test]
     fn eval_implicit_mul_test() {
         let config = Config::new().with_implicit_mul(true);
-        let context = DefaultContext::new_checked_with_config(config);
+        let context = DefaultContext::with_config_checked(config);
         let mut evaluator: Evaluator<i64> = Evaluator::with_context(context);
 
         evaluator.mut_context().set_variable("x", 10);

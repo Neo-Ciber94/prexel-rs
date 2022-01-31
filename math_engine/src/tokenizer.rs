@@ -21,8 +21,10 @@ pub trait Tokenize<N> {
 /// ```
 /// use math_engine::tokenizer::{Tokenizer, Tokenize};
 /// use math_engine::token::Token::*;
+/// use math_engine::context::DefaultContext;
 ///
-/// let t : Tokenizer<i32> = Tokenizer::new();
+/// let context = DefaultContext::new_checked();
+/// let t : Tokenizer<i32> = Tokenizer::with_context(&context);
 /// let tokens = t.tokenize("2 + 3").unwrap();
 /// assert_eq!(&[Number(2_i32), BinaryOperator('+'.to_string()), Number(3_i32)], tokens.as_slice());
 /// ```
@@ -40,14 +42,15 @@ impl<'a, N> Tokenizer<'a, N, DefaultContext<'a, N>>
 where
     N: CheckedNum + 'static,
 {
-    /// Constructs a new `Tokenizer` using the default checked context.
-    #[inline]
-    pub fn new() -> Self {
-        Tokenizer {
-            context: unsafe { DefaultContext::instance() },
-            _marker: PhantomData,
-        }
-    }
+    // Constructs a new `Tokenizer` using the default checked context.
+    // TODO: Remove
+    // #[inline]
+    // pub fn new() -> Self {
+    //     Tokenizer {
+    //         context: DefaultContext::<UncheckedNum>::new(),
+    //         _marker: PhantomData,
+    //     }
+    // }
 }
 
 impl<'a, N, C> Tokenizer<'a, N, C>
