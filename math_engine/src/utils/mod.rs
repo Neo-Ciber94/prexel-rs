@@ -5,5 +5,4 @@ pub mod lazy;
 pub mod string_tokenizer;
 pub mod untyped;
 pub mod extensions;
-pub mod static_store;
 pub mod approx;

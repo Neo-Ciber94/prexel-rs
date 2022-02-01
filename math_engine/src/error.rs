@@ -47,8 +47,8 @@ pub enum ErrorKind {
     InvalidExpression,
     /// The expression is empty.
     Empty,
-    /// Other type of error.
-    Other,
+    /// An unknown error.
+    Unknown,
 }
 
 impl ErrorKind {
@@ -65,7 +65,7 @@ impl ErrorKind {
             ErrorKind::PositiveValue => "Value is positive",
             ErrorKind::Empty => "Empty input",
             ErrorKind::InvalidExpression => "Invalid expression",
-            ErrorKind::Other => "Other error",
+            ErrorKind::Unknown => "Unknown error",
         }
     }
 }
@@ -95,8 +95,8 @@ impl Error {
     /// ```
     /// use math_engine::error::{Error, ErrorKind};
     ///
-    /// let custom_error = Error::new(ErrorKind::Other, "my error");
-    /// assert_eq!(ErrorKind::Other, custom_error.kind());
+    /// let custom_error = Error::new(ErrorKind::Unknown, "my error");
+    /// assert_eq!(ErrorKind::Unknown, custom_error.kind());
     /// assert_eq!("my error", custom_error.to_string());
     /// ```
     #[inline]
@@ -122,7 +122,7 @@ impl Error {
     /// ```
     #[inline]
     pub fn other(msg: &str) -> Error {
-        Self::new(ErrorKind::Other, msg)
+        Self::new(ErrorKind::Unknown, msg)
     }
 
     /// Gets the `ErrorKind` of this error.
@@ -144,7 +144,7 @@ impl Error {
     ///Consumes the `Error`, returning its inner error (if any).
     ///
     /// # Example
-    /// ```
+    ///```
     /// use math_engine::error::Error;
     /// use math_engine::error::ErrorKind;
     ///
@@ -161,7 +161,7 @@ impl Error {
     ///     // No inner error
     ///     print_error(Error::from(ErrorKind::InvalidInput));
     ///     // With inner error
-    ///     print_error(Error::new(ErrorKind::Other, "custom error"))
+    ///     print_error(Error::new(ErrorKind::Unknown, "custom error"))
     /// }
     /// ```
     #[inline]
@@ -246,9 +246,9 @@ mod tests {
 
     #[test]
     fn custom_error_test() {
-        let error = Error::new(ErrorKind::Other, "Just a test");
+        let error = Error::new(ErrorKind::Unknown, "Just a test");
         if let Detail::Custom(e) = error.detail {
-            assert_eq!(ErrorKind::Other, e.kind);
+            assert_eq!(ErrorKind::Unknown, e.kind);
             assert_eq!("Just a test", e.error.to_string())
         } else {
             unreachable!()
