@@ -72,7 +72,7 @@ where
     ///
     /// # Example
     /// ```
-    /// use math_engine::evaluator::Evaluator;
+    /// use prexel::evaluator::Evaluator;
     ///
     /// let evaluator : Evaluator<f64> = Evaluator::new();
     /// match evaluator.eval("3 + 2 * 5"){
@@ -254,9 +254,9 @@ where
 ///
 /// # Example
 /// ```
-/// use math_engine::token::Token::*;
-/// use math_engine::evaluator;
-/// use math_engine::context::DefaultContext;
+/// use prexel::token::Token::*;
+/// use prexel::evaluator;
+/// use prexel::context::DefaultContext;
 ///
 /// let tokens = [Number(5), BinaryOperator("+".to_string()), Number(2)];
 /// let context = DefaultContext::new_checked();

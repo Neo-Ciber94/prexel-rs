@@ -1,7 +1,7 @@
-use math_engine::context::{Context, DefaultContext};
-use math_engine::evaluator::Evaluator;
-use math_engine::function::{Associativity, BinaryFunction, Precedence};
-use math_engine::Result;
+use prexel::context::{Context, DefaultContext};
+use prexel::evaluator::Evaluator;
+use prexel::function::{Associativity, BinaryFunction, Precedence};
+use prexel::Result;
 
 fn main() {
     const USE_U8: bool = true;

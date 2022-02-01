@@ -14,7 +14,7 @@ pub enum TokenizeKind {
 ///
 /// # Example
 /// ```
-/// use math_engine::utils::string_tokenizer::StringTokenizer;
+/// use prexel::utils::string_tokenizer::StringTokenizer;
 /// let tokenizer = StringTokenizer::default();
 /// let tokens = tokenizer.get_tokens("2 + 3");
 /// assert_eq!(["2", "+", "3"].to_vec(), tokens);

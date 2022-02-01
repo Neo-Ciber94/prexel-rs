@@ -1,7 +1,7 @@
 use bigdecimal::BigDecimal;
-use math_engine::num::unchecked::UncheckedNum;
-use math_engine::context::DefaultContext;
-use math_engine::evaluator::Evaluator;
+use prexel::num::unchecked::UncheckedNum;
+use prexel::context::DefaultContext;
+use prexel::evaluator::Evaluator;
 
 fn main(){
     compute::<BigDecimal>("100!");

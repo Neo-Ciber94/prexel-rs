@@ -1,5 +1,4 @@
 /target
 /.idea
-/math_engine.
 main.rs
 Cargo.lock

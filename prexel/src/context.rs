@@ -157,8 +157,8 @@ impl<'a, N> DefaultContext<'a, N> {
     ///
     /// # Examples
     /// ```
-    /// use math_engine::context::{DefaultContext, Context};
-    /// use math_engine::ops::math::MaxFunction;
+    /// use prexel::context::{DefaultContext, Context};
+    /// use prexel::ops::math::MaxFunction;
     ///
     /// let mut context : DefaultContext<f64> = DefaultContext::new();
     /// context.add_function(MaxFunction);
@@ -201,8 +201,8 @@ impl<'a, N> DefaultContext<'a, N> {
     ///
     /// # Examples
     /// ```
-    /// use math_engine::context::{DefaultContext, Context};
-    /// use math_engine::ops::unchecked::AddOperator;
+    /// use prexel::context::{DefaultContext, Context};
+    /// use prexel::ops::unchecked::AddOperator;
     ///
     /// let mut context : DefaultContext<f64> = DefaultContext::new();
     /// context.add_binary_function(AddOperator);
@@ -516,7 +516,7 @@ impl Config {
     ///
     /// # Example
     /// ```
-    /// use math_engine::context::Config;
+    /// use prexel::context::Config;
     ///
     /// // `Default` allows to create an empty config
     /// let mut config = Config::default()
@@ -542,7 +542,7 @@ impl Config {
     ///
     /// # Examples
     /// ```
-    /// use math_engine::context::Config;
+    /// use prexel::context::Config;
     ///
     /// let mut config = Config::new().with_group_symbol('[', ']');
     /// assert_eq!(('(', ')'), config.get_group_symbol('(').unwrap().as_tuple());
@@ -556,7 +556,7 @@ impl Config {
     ///
     /// # Example
     /// ```
-    /// use math_engine::context::Config;
+    /// use prexel::context::Config;
     ///
     /// let config = Config::default()
     ///     .with_group_symbol('(', ')')
@@ -578,7 +578,7 @@ impl Config {
     ///
     /// # Example
     /// ```
-    /// use math_engine::context::Config;
+    /// use prexel::context::Config;
     ///
     /// let config = Config::default()
     ///     .with_group_symbol('(', ')')

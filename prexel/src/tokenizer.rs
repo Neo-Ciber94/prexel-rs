@@ -19,9 +19,9 @@ pub trait Tokenize<N> {
 ///
 /// # Example
 /// ```
-/// use math_engine::tokenizer::{Tokenizer, Tokenize};
-/// use math_engine::token::Token::*;
-/// use math_engine::context::DefaultContext;
+/// use prexel::tokenizer::{Tokenizer, Tokenize};
+/// use prexel::token::Token::*;
+/// use prexel::context::DefaultContext;
 ///
 /// let context = DefaultContext::new_checked();
 /// let t : Tokenizer<i32> = Tokenizer::with_context(&context);
