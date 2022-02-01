@@ -95,7 +95,7 @@ pub struct DefaultContext<'a, N> {
 impl<'a, N> DefaultContext<'a, N> {
     /// Constructs a new `Context` with no variables, constants or functions.
     #[inline]
-    pub fn empty() -> Self {
+    pub fn new() -> Self {
         DefaultContext {
             variables: Default::default(),
             constants: Default::default(),
@@ -109,7 +109,7 @@ impl<'a, N> DefaultContext<'a, N> {
     /// Constructs a new `Context` with no variables, constants or functions, using the
     /// specified `Config`.
     #[inline]
-    pub fn empty_with_config(config: Config) -> Self {
+    pub fn with_config(config: Config) -> Self {
         DefaultContext {
             variables: Default::default(),
             constants: Default::default(),
@@ -160,7 +160,7 @@ impl<'a, N> DefaultContext<'a, N> {
     /// use math_engine::context::{DefaultContext, Context};
     /// use math_engine::ops::math::MaxFunction;
     ///
-    /// let mut context : DefaultContext<f64> = DefaultContext::empty();
+    /// let mut context : DefaultContext<f64> = DefaultContext::new();
     /// context.add_function(MaxFunction);
     /// context.add_function_as(MaxFunction, "Maximum");
     /// ```
@@ -204,7 +204,7 @@ impl<'a, N> DefaultContext<'a, N> {
     /// use math_engine::context::{DefaultContext, Context};
     /// use math_engine::ops::unchecked::AddOperator;
     ///
-    /// let mut context : DefaultContext<f64> = DefaultContext::empty();
+    /// let mut context : DefaultContext<f64> = DefaultContext::new();
     /// context.add_binary_function(AddOperator);
     /// context.add_binary_function_as(AddOperator, "Plus");
     /// ```
@@ -331,7 +331,7 @@ impl<'a, N: CheckedNum> DefaultContext<'a, N> {
     pub fn with_config_checked(config: Config) -> Self {
         use crate::ops::checked::*;
 
-        let mut context = Self::empty_with_config(config);
+        let mut context = Self::with_config(config);
         context.add_constant("PI", N::from_f64(std::f64::consts::PI).unwrap());
         context.add_constant("E", N::from_f64(std::f64::consts::E).unwrap());
         context.add_binary_function(AddOperator);
@@ -406,7 +406,7 @@ impl<'a, N: UncheckedNum> DefaultContext<'a, N> {
     pub fn with_config_unchecked(config: Config) -> Self {
         use crate::ops::unchecked::*;
 
-        let mut context = Self::empty_with_config(config);
+        let mut context = Self::with_config(config);
         context.add_constant("PI", N::from_f64(std::f64::consts::PI).unwrap());
         context.add_constant("E", N::from_f64(std::f64::consts::E).unwrap());
         context.add_binary_function(AddOperator);
@@ -852,7 +852,7 @@ mod tests {
     #[test]
     fn operators_symbols_test(){
         let mut context : DefaultContext<f64> = DefaultContext::new_unchecked();
-        context.add_constant("∞", std::f64::INFINITY);
+        context.add_constant("∞", f64::INFINITY);
         context.add_constant("π", std::f64::consts::PI);
         context.add_binary_function(Dummy("√".to_string()));
         context.add_binary_function(Dummy("∋".to_string()));

@@ -7,7 +7,7 @@ fn main() {
     const USE_U8: bool = true;
 
     if USE_U8 {
-        let mut context: DefaultContext<u8> = DefaultContext::empty();
+        let mut context: DefaultContext<u8> = DefaultContext::new();
         context.add_constant("true", 1);
         context.add_constant("false", 0);
         context.add_binary_function(AndOperator);
@@ -26,7 +26,7 @@ fn main() {
         println!("{} = {}", expression1, evaluator.eval(expression1).unwrap());
         println!("{} = {}", expression2, evaluator.eval(expression2).unwrap());
     } else {
-        let mut context: DefaultContext<bool> = DefaultContext::empty();
+        let mut context: DefaultContext<bool> = DefaultContext::new();
         context.add_constant("true", true);
         context.add_constant("false", false);
         context.add_binary_function(AndOperator);

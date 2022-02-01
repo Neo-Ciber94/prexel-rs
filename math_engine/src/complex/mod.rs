@@ -264,7 +264,7 @@ pub mod context {
         }
 
         pub fn new_complex_with_config(config: Config) -> Self {
-            let mut context = DefaultContext::empty_with_config(config.with_complex_number(true));
+            let mut context = DefaultContext::with_config(config.with_complex_number(true));
             context.add_constant("PI", Complex::from_f64(std::f64::consts::PI).unwrap());
             context.add_constant("E", Complex::from_f64(std::f64::consts::E).unwrap());
             context.add_constant("i", Complex::i());
