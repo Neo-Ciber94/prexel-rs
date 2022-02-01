@@ -3,23 +3,16 @@ use std::str::FromStr;
 use crate::context::{Context, DefaultContext};
 use crate::error::{Error, ErrorKind};
 use crate::function::Notation;
-use crate::num::checked::CheckedNum;
 use crate::Result;
 use crate::token::Token;
 use crate::utils::extensions::{ OptionStrExt, StrExt };
 use crate::utils::string_tokenizer::{StringTokenizer, TokenizeKind};
 
-/// Provides a way to retrieve the tokens of an expression.
-pub trait Tokenize<N> {
-    /// Gets the tokens of the specified expression.
-    fn tokenize(&self, expression: &str) -> Result<Vec<Token<N>>>;
-}
-
 /// The default `Tokenizer`.
 ///
 /// # Example
 /// ```
-/// use prexel::tokenizer::{Tokenizer, Tokenize};
+/// use prexel::tokenizer::Tokenizer;
 /// use prexel::token::Token::*;
 /// use prexel::context::DefaultContext;
 ///
@@ -38,21 +31,6 @@ where
     _marker: PhantomData<N>,
 }
 
-impl<'a, N> Tokenizer<'a, N, DefaultContext<'a, N>>
-where
-    N: CheckedNum + 'static,
-{
-    // Constructs a new `Tokenizer` using the default checked context.
-    // TODO: Remove
-    // #[inline]
-    // pub fn new() -> Self {
-    //     Tokenizer {
-    //         context: DefaultContext::<UncheckedNum>::new(),
-    //         _marker: PhantomData,
-    //     }
-    // }
-}
-
 impl<'a, N, C> Tokenizer<'a, N, C>
 where
     C: Context<'a, N>,
@@ -66,14 +44,8 @@ where
             _marker: PhantomData,
         }
     }
-}
 
-impl<'a, N, C> Tokenize<N> for Tokenizer<'a, N, C>
-where
-    C: Context<'a, N>,
-    N: FromStr,
-{
-    fn tokenize(&self, expression: &str) -> Result<Vec<Token<N>>> {
+    pub fn tokenize(&self, expression: &str) -> Result<Vec<Token<N>>> {
         const STRING_TOKENIZER: StringTokenizer =
             StringTokenizer::new(TokenizeKind::RemoveWhiteSpaces);
         const COMMA: &str = ",";

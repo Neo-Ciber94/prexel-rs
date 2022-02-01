@@ -93,7 +93,7 @@ impl Error {
     ///
     /// # Example
     /// ```
-    /// use math_engine::error::{Error, ErrorKind};
+    /// use prexel::error::{Error, ErrorKind};
     ///
     /// let custom_error = Error::new(ErrorKind::Unknown, "my error");
     /// assert_eq!(ErrorKind::Unknown, custom_error.kind());
@@ -116,7 +116,7 @@ impl Error {
     ///
     /// # Example
     /// ```
-    /// use math_engine::error::Error;
+    /// use prexel::error::Error;
     /// let error = Error::other("custom error");
     /// assert_eq!("custom error", error.to_string());
     /// ```
@@ -129,7 +129,7 @@ impl Error {
     ///
     /// # Example
     /// ```
-    /// use math_engine::error::{Error, ErrorKind};
+    /// use prexel::error::{Error, ErrorKind};
     /// let error = Error::from(ErrorKind::InvalidInput);
     /// assert_eq!(ErrorKind::InvalidInput, error.kind());
     /// ```
@@ -145,8 +145,8 @@ impl Error {
     ///
     /// # Example
     ///```
-    /// use math_engine::error::Error;
-    /// use math_engine::error::ErrorKind;
+    /// use prexel::error::Error;
+    /// use prexel::error::ErrorKind;
     ///
     /// fn print_error(error: Error){
     ///     if let Some(inner_error) = error.into_inner(){
@@ -176,7 +176,7 @@ impl Error {
     ///
     /// # Example
     /// ```
-    /// use math_engine::error::{Error, ErrorKind};
+    /// use prexel::error::{Error, ErrorKind};
     /// let error = Error::new(ErrorKind::Overflow, "value has overflow");
     /// let inner_error = error.get_ref().unwrap();
     /// ```
@@ -192,7 +192,7 @@ impl Error {
     ///
     /// # Example
     /// ```
-    /// use math_engine::error::{Error, ErrorKind};
+    /// use prexel::error::{Error, ErrorKind};
     /// let mut error = Error::new(ErrorKind::Overflow, "value has overflow");
     /// let inner_error = error.get_mut().unwrap();
     /// ```

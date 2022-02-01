@@ -7,8 +7,10 @@ use crate::error::{Error, ErrorKind};
 use crate::num::checked::CheckedNum;
 use crate::token::Token;
 use crate::token::Token::*;
-use crate::tokenizer::{Tokenize, Tokenizer};
+use crate::tokenizer::Tokenizer;
 use crate::Result;
+
+// FIXME: Do we really need provide a way to change the evaluator? the user should always use the default one.
 
 /// A trait for evaluate an expression of `Token`.
 pub trait Evaluate<N> {
@@ -87,7 +89,7 @@ where
     pub fn eval(&'a self, expression: &str) -> Result<N> {
         let context = self.context();
         let tokenizer = Tokenizer::with_context(context);
-        let tokens = Tokenize::tokenize(&tokenizer, expression)?;
+        let tokens = tokenizer.tokenize(expression)?;
         rpn_eval(&tokens, context)
     }
 }
