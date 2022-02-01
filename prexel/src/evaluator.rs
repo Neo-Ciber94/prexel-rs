@@ -10,16 +10,6 @@ use crate::token::Token::*;
 use crate::tokenizer::Tokenizer;
 use crate::Result;
 
-// FIXME: Do we really need provide a way to change the evaluator? the user should always use the default one.
-
-/// A trait for evaluate an expression of `Token`.
-pub trait Evaluate<N> {
-    /// The result of the evaluation.
-    type Output;
-    /// Evaluates the expression provided as `Token`s.
-    fn eval_tokens(&self, tokens: &[Token<N>]) -> Self::Output;
-}
-
 /// Represents the default `Evaluator`.
 #[derive(Clone)]
 pub struct Evaluator<'a, N, C: Context<'a, N> = DefaultContext<'a, N>> {
@@ -94,14 +84,13 @@ where
     }
 }
 
-impl<'a, C, N> Evaluate<N> for Evaluator<'a, N, C>
+impl<'a, C, N>  Evaluator<'a, N, C>
 where
     C: Context<'a, N>,
     N: Debug + Clone,
 {
-    type Output = Result<N>;
     #[inline]
-    fn eval_tokens(&self, tokens: &[Token<N>]) -> Self::Output {
+    pub fn eval_tokens(&self, tokens: &[Token<N>]) -> Result<N> {
         rpn_eval(tokens, self.context())
     }
 }
