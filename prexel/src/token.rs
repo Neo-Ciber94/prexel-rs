@@ -70,55 +70,37 @@ impl<N> Token<N> {
     /// Checks if the token is a number.
     #[inline]
     pub fn is_number(&self) -> bool {
-        match self {
-            Token::Number(_) => true,
-            _ => false,
-        }
+        matches!(self, Token::Number(_))
     }
 
     /// Checks if the token is a variable.
     #[inline]
     pub fn is_variable(&self) -> bool {
-        match self {
-            Token::Variable(_) => true,
-            _ => false,
-        }
+        matches!(self, Token::Variable(_))
     }
 
     /// Checks if the token is a constant.
     #[inline]
     pub fn is_constant(&self) -> bool {
-        match self {
-            Token::Constant(_) => true,
-            _ => false,
-        }
+        matches!(self, Token::Constant(_))
     }
 
     /// Checks if the token is a function.
     #[inline]
     pub fn is_function(&self) -> bool {
-        match self {
-            Token::Function(_) => true,
-            _ => false,
-        }
+        matches!(self, Token::Function(_))
     }
 
     /// Checks if the token is an unary operator.
     #[inline]
     pub fn is_unary_operator(&self) -> bool {
-        match self {
-            Token::UnaryOperator(_) => true,
-            _ => false,
-        }
+        matches!(self, Token::UnaryOperator(_))
     }
 
     /// Checks if the token is a binary operator.
     #[inline]
     pub fn is_binary_operator(&self) -> bool {
-        match self {
-            Token::BinaryOperator(_) => true,
-            _ => false,
-        }
+        matches!(self, Token::BinaryOperator(_))
     }
 
     /// Checks if the token represents an argument count.
@@ -127,37 +109,25 @@ impl<N> Token<N> {
     /// This is used internally to insert the argument count of a function.
     #[inline]
     pub fn is_arg_count(&self) -> bool {
-        match self {
-            Token::ArgCount(_) => true,
-            _ => false,
-        }
+        matches!(self, Token::ArgCount(_))
     }
 
     /// Checks if the token is a grouping open.
     #[inline]
     pub fn is_grouping_open(&self) -> bool {
-        match self {
-            Token::GroupingOpen(_) => true,
-            _ => false,
-        }
+        matches!(self, Token::GroupingOpen(_))
     }
 
     /// Checks if the token is a grouping close.
     #[inline]
     pub fn is_grouping_close(&self) -> bool {
-        match self {
-            Token::GroupingClose(_) => true,
-            _ => false,
-        }
+        matches!(self, Token::GroupingClose(_))
     }
 
     /// Checks if the token is a comma.
     #[inline]
     pub fn is_comma(&self) -> bool {
-        match self {
-            Token::Comma => true,
-            _ => false,
-        }
+        matches!(self, Token::Comma)
     }
 
     /// Checks if the token is an unknown value.
@@ -167,10 +137,7 @@ impl<N> Token<N> {
     /// cannot be found in the context used for tokenize an expression.
     #[inline]
     pub fn is_unknown(&self) -> bool {
-        match self {
-            Token::Unknown(_) => true,
-            _ => false,
-        }
+        matches!(self, Token::Unknown(_))
     }
 
     /// Checks if the token contains a symbol with the specified value.

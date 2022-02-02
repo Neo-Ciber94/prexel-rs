@@ -14,7 +14,7 @@ pub trait IteratorExt: Iterator {
         Self: Sized,
         Self::Item: Ord,
     {
-        let mut vec = Vec::from_iter(self.into_iter());
+        let mut vec = Vec::from_iter(self);
         vec.sort();
         vec.into_iter()
     }
@@ -29,7 +29,7 @@ pub trait IteratorExt: Iterator {
         Self: Sized,
         F: FnMut(&Self::Item, &Self::Item) -> Ordering,
     {
-        let mut vec = Vec::from_iter(self.into_iter());
+        let mut vec = Vec::from_iter(self);
         vec.sort_by(compare);
         vec.into_iter()
     }
@@ -45,7 +45,7 @@ pub trait IteratorExt: Iterator {
         R: Ord,
         F: FnMut(&Self::Item) -> R,
     {
-        let mut vec = Vec::from_iter(self.into_iter());
+        let mut vec = Vec::from_iter(self);
         vec.sort_by_key(f);
         vec.into_iter()
     }

@@ -77,9 +77,9 @@ impl Precedence {
     }
 }
 
-impl Into<u32> for Precedence {
+impl From<u32> for Precedence {
     #[inline]
-    fn into(self) -> u32 {
-        self.0
+    fn from(value: u32) -> Self {
+        Precedence(value)
     }
 }

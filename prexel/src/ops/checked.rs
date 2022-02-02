@@ -23,7 +23,7 @@ impl<N: CheckedAdd> BinaryFunction<N> for AddOperator {
 
     fn call(&self, left: N, right: N) -> Result<N> {
         left.checked_add(&right)
-            .ok_or(Error::from(ErrorKind::Overflow))
+            .ok_or_else(|| Error::from(ErrorKind::Overflow))
     }
 }
 
@@ -43,7 +43,7 @@ impl<N: CheckedSub> BinaryFunction<N> for SubOperator {
 
     fn call(&self, left: N, right: N) -> Result<N> {
         left.checked_sub(&right)
-            .ok_or(Error::from(ErrorKind::Overflow))
+            .ok_or_else(|| Error::from(ErrorKind::Overflow))
     }
 }
 
@@ -63,7 +63,7 @@ impl<N: CheckedMul> BinaryFunction<N> for MulOperator {
 
     fn call(&self, left: N, right: N) -> Result<N> {
         left.checked_mul(&right)
-            .ok_or(Error::from(ErrorKind::Overflow))
+            .ok_or_else(|| Error::from(ErrorKind::Overflow))
     }
 }
 
@@ -87,7 +87,7 @@ impl<N: CheckedDiv + Zero> BinaryFunction<N> for DivOperator {
         }
 
         left.checked_div(&right)
-            .ok_or(Error::from(ErrorKind::Overflow))
+            .ok_or_else(|| Error::from(ErrorKind::Overflow))
     }
 }
 
@@ -111,7 +111,7 @@ impl<N: CheckedRem + Zero> BinaryFunction<N> for ModOperator {
         }
 
         left.checked_rem(&right)
-            .ok_or(Error::from(ErrorKind::Overflow))
+            .ok_or_else(|| Error::from(ErrorKind::Overflow))
     }
 }
 
@@ -126,7 +126,7 @@ impl<N: CheckedNeg> UnaryFunction<N> for UnaryMinus {
     }
 
     fn call(&self, value: N) -> Result<N> {
-        value.checked_neg().ok_or(Error::from(ErrorKind::Overflow))
+        value.checked_neg().ok_or_else(|| Error::from(ErrorKind::Overflow))
     }
 }
 
@@ -144,7 +144,7 @@ impl<N: Zero + PartialOrd + CheckedNeg + Clone> Function<N> for AbsFunction {
         } else {
             args[0]
                 .checked_neg()
-                .ok_or(Error::from(ErrorKind::Overflow))
+                .ok_or_else(|| Error::from(ErrorKind::Overflow))
         }
     }
 }
@@ -162,13 +162,13 @@ impl<N: CheckedAdd + Clone> Function<N> for SumFunction {
             match result {
                 None => result = Some(cur.clone()),
                 Some(ref n) => {
-                    result = Some(n.checked_add(&cur)
-                        .ok_or(Error::from(ErrorKind::Overflow))?);
+                    result = Some(n.checked_add(cur)
+                        .ok_or_else(|| Error::from(ErrorKind::Overflow))?);
                 }
             }
         }
 
-        result.ok_or(Error::from(ErrorKind::InvalidArgumentCount))
+        result.ok_or_else(|| Error::from(ErrorKind::InvalidArgumentCount))
     }
 }
 
@@ -185,13 +185,13 @@ impl<N: CheckedMul + Clone> Function<N> for ProdFunction {
             match result {
                 None => result = Some(cur.clone()),
                 Some(ref n) => {
-                    result = Some(n.checked_mul(&cur)
-                        .ok_or(Error::from(ErrorKind::Overflow))?);
+                    result = Some(n.checked_mul(cur)
+                        .ok_or_else(|| Error::from(ErrorKind::Overflow))?);
                 }
             }
         }
 
-        result.ok_or(Error::from(ErrorKind::InvalidArgumentCount))
+        result.ok_or_else(|| Error::from(ErrorKind::InvalidArgumentCount))
     }
 }
 
@@ -208,8 +208,8 @@ impl<N: CheckedAdd + CheckedDiv + FromPrimitive + Clone> Function<N> for AvgFunc
             match sum {
                 None => sum = Some(cur.clone()),
                 Some(ref n) => {
-                    sum = Some(n.checked_add(&cur)
-                        .ok_or(Error::from(ErrorKind::Overflow))?);
+                    sum = Some(n.checked_add(cur)
+                        .ok_or_else(|| Error::from(ErrorKind::Overflow))?);
                 }
             }
         }
@@ -218,7 +218,7 @@ impl<N: CheckedAdd + CheckedDiv + FromPrimitive + Clone> Function<N> for AvgFunc
             Some(n) => {
                 let result = n
                     .checked_div(&N::from_usize(args.len()).unwrap())
-                    .ok_or(Error::from(ErrorKind::Overflow))?;
+                    .ok_or_else(|| Error::from(ErrorKind::Overflow))?;
 
                 Ok(result)
             }
@@ -240,7 +240,7 @@ mod tests{
 
         assert_eq!(instance.call(10_f64, 4_f64), Ok(14_f64));
         assert_eq!(instance.call(3, 7), Ok(10));
-        assert!(instance.call(i32::max_value(), 10).is_err());
+        assert!(instance.call(i32::MAX, 10).is_err());
     }
 
     #[test]
@@ -249,7 +249,7 @@ mod tests{
 
         assert_eq!(instance.call(10_f64, 4_f64), Ok(6_f64));
         assert_eq!(instance.call(3, 7), Ok(-4));
-        assert!(instance.call(i32::min_value(), 10).is_err());
+        assert!(instance.call(i32::MIN, 10).is_err());
     }
 
     #[test]
@@ -258,7 +258,7 @@ mod tests{
 
         assert_eq!(instance.call(10_f64, 4_f64), Ok(40_f64));
         assert_eq!(instance.call(3, 7), Ok(21));
-        assert!(instance.call(i32::max_value(), 10).is_err());
+        assert!(instance.call(i32::MAX, 10).is_err());
     }
 
     #[test]
@@ -286,7 +286,7 @@ mod tests{
         assert_eq!(instance.call(10_f64), Ok(-10_f64));
         assert_eq!(instance.call(-5), Ok(5));
 
-        assert!(instance.call(i32::min_value()).is_err());
+        assert!(instance.call(i32::MIN).is_err());
     }
 
     #[test]
@@ -296,7 +296,7 @@ mod tests{
         assert_eq!(instance.call(&[-5_f64]), Ok(5_f64));
         assert_eq!(instance.call(&[3]), Ok(3));
 
-        assert!(instance.call(&[i32::min_value()]).is_err());
+        assert!(instance.call(&[i32::MIN]).is_err());
     }
 
     #[test]
@@ -308,7 +308,7 @@ mod tests{
 
         assert!(instance.call(&[2]).is_ok());
         assert!(instance.call(empty_array::<i64>().as_ref()).is_err());
-        assert!(instance.call(&[i32::max_value(), 10, 20]).is_err());
+        assert!(instance.call(&[i32::MAX, 10, 20]).is_err());
     }
 
     #[test]
@@ -320,7 +320,7 @@ mod tests{
 
         assert!(instance.call(&[2]).is_ok());
         assert!(instance.call(empty_array::<i64>().as_ref()).is_err());
-        assert!(instance.call(&[i32::max_value(), 10, 20]).is_err());
+        assert!(instance.call(&[i32::MAX, 10, 20]).is_err());
     }
 
     #[test]
@@ -332,6 +332,6 @@ mod tests{
 
         assert!(instance.call(&[2]).is_ok());
         assert!(instance.call(empty_array::<i64>().as_ref()).is_err());
-        assert!(instance.call(&[i32::max_value(), 10, 20, 30]).is_err());
+        assert!(instance.call(&[i32::MAX, 10, 20, 30]).is_err());
     }
 }

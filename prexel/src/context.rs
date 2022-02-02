@@ -92,6 +92,7 @@ pub struct DefaultContext<'a, N> {
     config: Config,
 }
 
+#[allow(clippy::map_entry)]
 impl<'a, N> DefaultContext<'a, N> {
     /// Constructs a new `Context` with no variables, constants or functions.
     #[inline]
@@ -212,10 +213,9 @@ impl<'a, N> DefaultContext<'a, N> {
     pub fn add_binary_function_as<F: BinaryFunction<N> + 'a>(&mut self, func: F, name: &str) {
         #[cfg(debug_assertions)]
         {
-            if name.chars().count() == 1{
+            if name.chars().count() == 1 {
                 validate::check_token_name(TokenKind::Operator, name).or_panic();
-            }
-            else{
+            } else {
                 validate::check_token_name(TokenKind::Function, name).or_panic();
             }
         }
@@ -226,6 +226,13 @@ impl<'a, N> DefaultContext<'a, N> {
         } else {
             self.binary_functions.insert(function_name, Rc::new(func));
         }
+    }
+}
+
+impl<'a, N> Default for DefaultContext<'a, N> {
+    #[inline]
+    fn default() -> Self {
+        DefaultContext::new()
     }
 }
 
@@ -459,7 +466,7 @@ impl<'a, N: UncheckedNum> DefaultContext<'a, N> {
 }
 
 /// Represents the configuration used by a `Context`.
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Default, Clone, Eq, PartialEq)]
 pub struct Config {
     /// Allows implicit multiplication.
     pub implicit_mul: bool,
@@ -599,27 +606,17 @@ impl Config {
     /// Checks a value indicating if the given `char` is a group close symbol.
     #[inline]
     pub fn is_group_close(&self, group_close: char) -> bool {
-        self.grouping.get(&group_close)
+        self.grouping
+            .get(&group_close)
             .map_or(false, |s| s.group_close == group_close)
     }
 
     /// Checks a value indicating if the given `char` is a group open symbol.
     #[inline]
-    pub fn is_group_open(&self, group_open: char) -> bool{
-        self.grouping.get(&group_open)
+    pub fn is_group_open(&self, group_open: char) -> bool {
+        self.grouping
+            .get(&group_open)
             .map_or(false, |s| s.group_open == group_open)
-    }
-}
-
-impl Default for Config {
-    #[inline]
-    fn default() -> Self {
-        Config {
-            implicit_mul: false,
-            complex_number: false,
-            custom_function_call: false,
-            grouping: Default::default(),
-        }
     }
 }
 
@@ -652,19 +649,22 @@ impl GroupingSymbol {
 
 /// Provides a function for validate token names.
 pub mod validate {
-    use crate::Result;
     use crate::error::*;
+    use crate::Result;
+    use std::fmt::{Debug, Display, Formatter};
     use std::result;
-    use std::fmt::{Display, Formatter, Debug};
 
     #[derive(Debug, Copy, Clone, Eq, PartialEq)]
-    pub enum TokenKind{
-        Variable, Constant, Operator, Function
+    pub enum TokenKind {
+        Variable,
+        Constant,
+        Operator,
+        Function,
     }
 
-    impl Display for TokenKind{
+    impl Display for TokenKind {
         fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-            match self{
+            match self {
                 TokenKind::Variable => write!(f, "Variable"),
                 TokenKind::Constant => write!(f, "Constant"),
                 TokenKind::Operator => write!(f, "Operator"),
@@ -673,48 +673,51 @@ pub mod validate {
         }
     }
 
-    pub fn check_token_name(kind: TokenKind, name: &str) -> Result<()>{
-        if name.is_empty(){
+    #[allow(clippy::redundant_closure)]
+    pub fn check_token_name(kind: TokenKind, name: &str) -> Result<()> {
+        if name.is_empty() {
             return Err(Error::new(
                 ErrorKind::Empty,
-                format!("{} name is empty", kind))
-            );
+                format!("{} name is empty", kind),
+            ));
         }
 
-        if name.chars().any(char::is_whitespace){
+        if name.chars().any(char::is_whitespace) {
             return Err(Error::new(
                 ErrorKind::InvalidInput,
-                format!("{} names cannot contain whitespaces: `{}`", kind, name))
-            );
+                format!("{} names cannot contain whitespaces: `{}`", kind, name),
+            ));
         }
 
-        if name.chars().any(char::is_control){
+        if name.chars().any(char::is_control) {
             return Err(Error::new(
                 ErrorKind::InvalidInput,
-                format!("{} names cannot contain control characters: `{}`", kind, name))
-            );
+                format!(
+                    "{} names cannot contain control characters: `{}`",
+                    kind, name
+                ),
+            ));
         }
 
         let name_length = name.chars().count();
 
-        match kind{
+        match kind {
             // ∞, π, x, Σ, +, -, *, /, %, √
             TokenKind::Constant | TokenKind::Variable | TokenKind::Operator if name_length == 1 => {
                 let c = name.chars().next().unwrap();
-                if c.is_ascii_digit(){
+                if c.is_ascii_digit() {
                     return Err(Error::new(
                         ErrorKind::InvalidInput,
-                        format!(
-                            "{}s names cannot be an ASCII number: `{}`",
-                            kind,
-                            name
-                        ))
-                    );
+                        format!("{}s names cannot be an ASCII number: `{}`", kind, name),
+                    ));
                 }
-            },
+            }
             // PI, Sum, Mod, Sqrt, f, √(10, 2)
-            TokenKind::Variable | TokenKind::Constant | TokenKind::Function | TokenKind::Operator => {
-                if !name.chars().any(|ref c| char::is_ascii_alphanumeric(c)){
+            TokenKind::Variable
+            | TokenKind::Constant
+            | TokenKind::Function
+            | TokenKind::Operator => {
+                if !name.chars().any(|ref c| char::is_ascii_alphanumeric(c)) {
                     return Err(Error::new(
                         ErrorKind::InvalidInput,
                         format!(
@@ -725,7 +728,11 @@ pub mod validate {
                     );
                 }
 
-                if !name.chars().next().map_or(false, |ref c| char::is_ascii_alphabetic(c)){
+                if !name
+                    .chars()
+                    .next()
+                    .map_or(false, |ref c| char::is_ascii_alphabetic(c))
+                {
                     return Err(Error::new(
                         ErrorKind::InvalidInput,
                         format!(
@@ -733,20 +740,20 @@ pub mod validate {
                         ))
                     );
                 }
-            },
+            }
         }
 
         Ok(())
     }
 
-    pub trait OrPanic<T, E>{
+    pub trait OrPanic<T, E> {
         fn or_panic(self) -> T;
     }
 
-    impl<T, E : Debug> OrPanic<T, E> for result::Result<T, E>{
+    impl<T, E: Debug> OrPanic<T, E> for result::Result<T, E> {
         #[inline]
-        fn or_panic(self) -> T{
-            if self.is_err(){
+        fn or_panic(self) -> T {
+            if self.is_err() {
                 panic!("{:?}", self.err().unwrap())
             }
 
@@ -758,12 +765,12 @@ pub mod validate {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::function::{Associativity, Notation, Precedence};
     use crate::Result;
-    use crate::function::{Associativity, Precedence, Notation};
 
     struct Dummy(String);
 
-    impl BinaryFunction<f64> for Dummy{
+    impl BinaryFunction<f64> for Dummy {
         fn name(&self) -> &str {
             &self.0
         }
@@ -781,7 +788,7 @@ mod tests {
         }
     }
 
-    impl UnaryFunction<f64> for Dummy{
+    impl UnaryFunction<f64> for Dummy {
         fn name(&self) -> &str {
             &self.0
         }
@@ -795,7 +802,7 @@ mod tests {
         }
     }
 
-    impl Function<f64> for Dummy{
+    impl Function<f64> for Dummy {
         fn name(&self) -> &str {
             &self.0
         }
@@ -850,8 +857,8 @@ mod tests {
     }
 
     #[test]
-    fn operators_symbols_test(){
-        let mut context : DefaultContext<f64> = DefaultContext::new_unchecked();
+    fn operators_symbols_test() {
+        let mut context: DefaultContext<f64> = DefaultContext::new_unchecked();
         context.add_constant("∞", f64::INFINITY);
         context.add_constant("π", std::f64::consts::PI);
         context.add_binary_function(Dummy("√".to_string()));

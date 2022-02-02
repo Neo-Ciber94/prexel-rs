@@ -18,6 +18,12 @@ pub struct Evaluator<'a, N, C: Context<'a, N> = DefaultContext<'a, N>> {
     _marker: &'a PhantomData<N>,
 }
 
+impl<'a, N: CheckedNum> Default for Evaluator<'a, N, DefaultContext<'a, N>> {
+    fn default() -> Self {
+        Evaluator::new()
+    }
+}
+
 impl<'a, N: CheckedNum> Evaluator<'a, N, DefaultContext<'a, N>> {
     /// Constructs a new `Evaluator` using the checked `DefaultContext`.
     #[inline]
@@ -84,7 +90,7 @@ where
     }
 }
 
-impl<'a, C, N>  Evaluator<'a, N, C>
+impl<'a, C, N> Evaluator<'a, N, C>
 where
     C: Context<'a, N>,
     N: Debug + Clone,
@@ -119,22 +125,26 @@ where
             Number(n) => values.push(n.clone()),
             Variable(name) => {
                 let n = context
-                    .get_variable(&name)
-                    .ok_or(Error::new(
-                        ErrorKind::InvalidInput,
-                        format!("Variable `{}` not found", name),
-                    ))?
+                    .get_variable(name)
+                    .ok_or_else(|| {
+                        Error::new(
+                            ErrorKind::InvalidInput,
+                            format!("Variable `{}` not found", name),
+                        )
+                    })?
                     .clone();
 
                 values.push(n);
             }
             Constant(name) => {
                 let n = context
-                    .get_constant(&name)
-                    .ok_or(Error::new(
-                        ErrorKind::InvalidInput,
-                        format!("Constant `{}` not found", name),
-                    ))?
+                    .get_constant(name)
+                    .ok_or_else(|| {
+                        Error::new(
+                            ErrorKind::InvalidInput,
+                            format!("Constant `{}` not found", name),
+                        )
+                    })?
                     .clone();
 
                 values.push(n);
@@ -144,10 +154,12 @@ where
                 arg_count = Some(*n);
             }
             UnaryOperator(name) => {
-                let func = context.get_unary_function(name).ok_or(Error::new(
-                    ErrorKind::InvalidInput,
-                    format!("Unary operator `{}` not found", name),
-                ))?;
+                let func = context.get_unary_function(name).ok_or_else(|| {
+                    Error::new(
+                        ErrorKind::InvalidInput,
+                        format!("Unary operator `{}` not found", name),
+                    )
+                })?;
 
                 match values.pop() {
                     Some(n) => {
@@ -163,10 +175,12 @@ where
                 }
             }
             BinaryOperator(name) => {
-                let func = context.get_binary_function(name).ok_or(Error::new(
-                    ErrorKind::InvalidInput,
-                    format!("Binary operator `{}` not found", name),
-                ))?;
+                let func = context.get_binary_function(name).ok_or_else(|| {
+                    Error::new(
+                        ErrorKind::InvalidInput,
+                        format!("Binary operator `{}` not found", name),
+                    )
+                })?;
 
                 match (values.pop(), values.pop()) {
                     (Some(x), Some(y)) => {
@@ -183,19 +197,23 @@ where
             }
             Function(name) => {
                 // A reference to the function
-                let func = context.get_function(&name).ok_or(Error::new(
-                    ErrorKind::InvalidInput,
-                    format!("Function `{}` not found", name),
-                ))?;
+                let func = context.get_function(name).ok_or_else(|| {
+                    Error::new(
+                        ErrorKind::InvalidInput,
+                        format!("Function `{}` not found", name),
+                    )
+                })?;
 
                 // The number of arguments the function takes
-                let n = arg_count.ok_or(Error::new(
-                    ErrorKind::InvalidInput,
-                    format!(
-                        "Cannot evaluate function `{}`, unknown number of arguments",
-                        name
-                    ),
-                ))?;
+                let n = arg_count.ok_or_else(|| {
+                    Error::new(
+                        ErrorKind::InvalidInput,
+                        format!(
+                            "Cannot evaluate function `{}`, unknown number of arguments",
+                            name
+                        ),
+                    )
+                })?;
 
                 // Stores the arguments to pass to the function.
                 let mut args = Vec::new();
@@ -299,16 +317,10 @@ mod shunting_yard {
                     push_number(context, &mut output, &mut operators, token)
                 }
                 Token::BinaryOperator(name) => {
-                    push_binary_function(context, &mut output, &mut operators, token, name, )?;
+                    push_binary_function(context, &mut output, &mut operators, token, name)?;
                 }
                 Token::UnaryOperator(name) => {
-                    push_unary_function(
-                        context,
-                        &mut output,
-                        &mut operators,
-                        token,
-                        name
-                    )?
+                    push_unary_function(context, &mut output, &mut operators, token, name)?
                 }
                 Token::Function(name) => {
                     if !context.config().custom_function_call {
@@ -321,7 +333,11 @@ mod shunting_yard {
                         {
                             return Err(Error::new(
                                 ErrorKind::InvalidInput,
-                                format!("Function arguments of `{}` are not within a parentheses", name)));
+                                format!(
+                                    "Function arguments of `{}` are not within a parentheses",
+                                    name
+                                ),
+                            ));
                         }
                     }
 
@@ -339,24 +355,23 @@ mod shunting_yard {
 
                     // Checking for empty grouping symbols: eg: `Random(())`, `()+2`
                     if pos > 1 {
-                        match tokens[pos - 1] {
-                            Token::GroupingOpen(s) => {
-                                if context
-                                    .config()
-                                    .get_group_open_for(*c)
-                                    .map_or(false, |v| v == s){
-                                    if !tokens[pos - 2].is_function() {
-                                        return Err(Error::new(
-                                            ErrorKind::InvalidInput,
-                                            format!(
-                                                // Empty grouping symbols: ()
-                                                "Empty grouping symbols: {}{}",
-                                                context.config().get_group_open_for(*c).unwrap(), c),
-                                        ));
-                                    }
-                                }
+                        if let Token::GroupingOpen(s) = tokens[pos - 1] {
+                            if context
+                                .config()
+                                .get_group_open_for(*c)
+                                .map_or(false, |v| v == s)
+                                && !tokens[pos - 2].is_function()
+                            {
+                                return Err(Error::new(
+                                    ErrorKind::InvalidInput,
+                                    format!(
+                                        // Empty grouping symbols: ()
+                                        "Empty grouping symbols: {}{}",
+                                        context.config().get_group_open_for(*c).unwrap(),
+                                        c
+                                    ),
+                                ));
                             }
-                            _ => {}
                         }
                     }
 
@@ -418,37 +433,34 @@ mod shunting_yard {
         Ok(output)
     }
 
-    fn check_comma_position<N>(tokens: &[Token<N>], grouping_count: &[usize], pos: usize) -> Result<()>{
+    fn check_comma_position<N>(
+        tokens: &[Token<N>],
+        grouping_count: &[usize],
+        pos: usize,
+    ) -> Result<()> {
         // TODO: Moves this comma checks to its own function
         if pos == 0 {
             return Err(Error::new(ErrorKind::InvalidInput, "Misplaced comma"));
         }
 
-        if tokens
-            .iter()
-            .nth(pos - 1)
-            .map_or(false, |t| t.is_grouping_open()) {
+        if tokens.get(pos - 1).map_or(false, |t| t.is_grouping_open()) {
             // Invalid expression: `(,`
             return Err(Error::new(ErrorKind::InvalidInput, "Misplaced comma: `(,`"));
         }
 
-        if tokens
-            .iter()
-            .nth(pos + 1)
-            .map_or(false, |t| t.is_grouping_close()) {
+        if tokens.get(pos + 1).map_or(false, |t| t.is_grouping_close()) {
             // Invalid expression: `,)`
             return Err(Error::new(ErrorKind::InvalidInput, "Misplaced comma: `,)`"));
         }
 
         // We avoid all function arguments wrapped by grouping symbols,
         // eg: Max((1,2,3))
-        if !grouping_count.is_empty() {
-            if !tokens
-                .iter()
-                .nth(*grouping_count.last().unwrap() - 1)
-                .map_or(false, |t| t.is_function()) {
-                return Err(Error::new(ErrorKind::InvalidInput, "Misplaced comma"));
-            }
+        if !grouping_count.is_empty()
+            && !tokens
+                .get(*grouping_count.last().unwrap() - 1)
+                .map_or(false, |t| t.is_function())
+        {
+            return Err(Error::new(ErrorKind::InvalidInput, "Misplaced comma"));
         }
 
         Ok(())
@@ -461,11 +473,9 @@ mod shunting_yard {
         token: &Token<N>,
     ) {
         output.push(token.clone());
-        if let Some(t) = operators.last() {
-            if let Token::UnaryOperator(op) = t {
-                if context.get_unary_function(op).is_some() {
-                    output.push(operators.pop().unwrap());
-                }
+        if let Some(Token::UnaryOperator(op)) = operators.last() {
+            if context.get_unary_function(op).is_some() {
+                output.push(operators.pop().unwrap());
             }
         }
     }
@@ -512,10 +522,12 @@ mod shunting_yard {
         token: &Token<N>,
         name: &str,
     ) -> Result<()> {
-        let operator = context.get_binary_function(name).ok_or(Error::new(
-            ErrorKind::InvalidInput,
-            format!("Binary function `{}` not found", name),
-        ))?;
+        let operator = context.get_binary_function(name).ok_or_else(|| {
+            Error::new(
+                ErrorKind::InvalidInput,
+                format!("Binary function `{}` not found", name),
+            )
+        })?;
 
         while let Some(t) = operators.last() {
             if let Token::GroupingOpen(_) = t {
@@ -526,10 +538,10 @@ mod shunting_yard {
                 output.push(operators.pop().unwrap());
             } else {
                 let top_operator = match t {
-                    Token::BinaryOperator(op) => {
-                        context.get_binary_function(op)
-                    },
-                    _ => { break; }
+                    Token::BinaryOperator(op) => context.get_binary_function(op),
+                    _ => {
+                        break;
+                    }
                 };
 
                 match top_operator {
@@ -575,12 +587,10 @@ mod shunting_yard {
                             // If `arg_count` is not empty we are inside a function.
                             // So we pop the argument count and function token into the output stack.
                             if !arg_count.is_empty() {
-                                if let Some(top) = operators.last() {
-                                    if let Token::Function(_) = top {
-                                        let count = arg_count.pop().unwrap() + 1;
-                                        output.push(Token::ArgCount(count));
-                                        output.push(operators.pop().unwrap());
-                                    }
+                                if let Some(Token::Function(_)) = operators.last() {
+                                    let count = arg_count.pop().unwrap() + 1;
+                                    output.push(Token::ArgCount(count));
+                                    output.push(operators.pop().unwrap());
                                 }
                             }
                         }
@@ -659,7 +669,11 @@ mod shunting_yard {
                     context
                 )
                 .unwrap(),
-                [Number(10), UnaryOperator('+'.to_string()), UnaryOperator('-'.to_string())]
+                [
+                    Number(10),
+                    UnaryOperator('+'.to_string()),
+                    UnaryOperator('-'.to_string())
+                ]
             );
         }
 

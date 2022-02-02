@@ -63,7 +63,7 @@ pub mod math {
             if value < N::one() {
                 return if let Some(n) = value.to_f64() {
                     let result = gamma(n + 1f64);
-                    N::from_f64(result).ok_or(Error::from(ErrorKind::Overflow))
+                    N::from_f64(result).ok_or_else(|| Error::from(ErrorKind::Overflow))
                 } else {
                     Err(Error::from(ErrorKind::Overflow))
                 };
@@ -81,12 +81,12 @@ pub mod math {
             if !next.is_zero() {
                 if let (Some(mut total_f64), Some(n)) = (total.to_f64(), next.to_f64()) {
                     total_f64 *= gamma(n + 1f64);
-                    N::from_f64(total_f64).ok_or(Error::from(ErrorKind::Overflow))
+                    N::from_f64(total_f64).ok_or_else(|| Error::from(ErrorKind::Overflow))
                 } else {
                     Err(Error::from(ErrorKind::Overflow))
                 }
             } else {
-                Ok(total.clone())
+                Ok(total)
             }
         }
     }
@@ -107,7 +107,7 @@ pub mod math {
 
         fn call(&self, left: N, right: N) -> Result<N> {
             if let (Some(base), Some(exp)) = (left.to_f64(), right.to_f64()) {
-                N::from_f64(f64::powf(base, exp)).ok_or(Error::from(ErrorKind::Overflow))
+                N::from_f64(f64::powf(base, exp)).ok_or_else(|| Error::from(ErrorKind::Overflow))
             } else {
                 Err(Error::from(ErrorKind::Overflow))
             }
@@ -138,7 +138,7 @@ pub mod math {
                 }
             }
 
-            max.ok_or(Error::from(ErrorKind::InvalidArgumentCount))
+            max.ok_or_else(|| Error::from(ErrorKind::InvalidArgumentCount))
         }
     }
 
@@ -166,7 +166,7 @@ pub mod math {
                 }
             }
 
-            min.ok_or(Error::from(ErrorKind::InvalidArgumentCount))
+            min.ok_or_else(|| Error::from(ErrorKind::InvalidArgumentCount))
         }
     }
 
@@ -190,7 +190,7 @@ pub mod math {
                             .$method_name();
 
                         N::from_f64(result)
-                            .ok_or(Error::from(ErrorKind::Overflow))
+                            .ok_or_else(|| Error::from(ErrorKind::Overflow))
                     }
                 }
             }
@@ -262,7 +262,7 @@ pub mod math {
                         if n.is_nan() || n.is_infinite() {
                             Err(Error::from(ErrorKind::NAN))
                         } else {
-                            N::from_f64(n).ok_or(Error::from(ErrorKind::Overflow))
+                            N::from_f64(n).ok_or_else(|| Error::from(ErrorKind::Overflow))
                         }
                     }
                     None => Err(Error::from(ErrorKind::Overflow)),
@@ -277,7 +277,7 @@ pub mod math {
                             if result.is_nan() || result.is_infinite() {
                                 Err(Error::from(ErrorKind::NAN))
                             } else {
-                                N::from_f64(result).ok_or(Error::from(ErrorKind::Overflow))
+                                N::from_f64(result).ok_or_else(|| Error::from(ErrorKind::Overflow))
                             }
                         }
                         _ => Err(Error::from(ErrorKind::Overflow)),
@@ -297,14 +297,14 @@ pub mod math {
 
         fn call(&self, args: &[N]) -> Result<N> {
             match args.len() {
-                0 => N::from_f64(random::<f64>()).ok_or(Error::from(ErrorKind::Overflow)),
+                0 => N::from_f64(random::<f64>()).ok_or_else(|| Error::from(ErrorKind::Overflow)),
                 1 => {
                     let max = try_to_float(&args[0])?;
                     if max.is_sign_negative(){
                         return Err(Error::from(ErrorKind::NegativeValue));
                     }
 
-                    N::from_f64(random::<f64>() * max).ok_or(Error::from(ErrorKind::Overflow))
+                    N::from_f64(random::<f64>() * max).ok_or_else(|| Error::from(ErrorKind::Overflow))
                 }
                 2 => {
                     let min = try_to_float(&args[0])?;
@@ -318,7 +318,7 @@ pub mod math {
                     }
 
                     let value = min + ((max - min) * random::<f64>());
-                    N::from_f64(value).ok_or(Error::from(ErrorKind::Overflow))
+                    N::from_f64(value).ok_or_else(|| Error::from(ErrorKind::Overflow))
                 }
                 _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
             }
@@ -522,7 +522,7 @@ pub mod math {
                         if n.is_nan() || n.is_infinite() {
                             Err(Error::from(ErrorKind::NAN))
                         } else {
-                            N::from_f64(n).ok_or(Error::from(ErrorKind::Overflow))
+                            N::from_f64(n).ok_or_else(|| Error::from(ErrorKind::Overflow))
                         }
                     }
                     None => Err(Error::from(ErrorKind::Overflow)),
@@ -537,7 +537,7 @@ pub mod math {
                         if result.is_nan() || result.is_infinite() {
                             Err(Error::from(ErrorKind::NAN))
                         } else {
-                            N::from_f64(result).ok_or(Error::from(ErrorKind::Overflow))
+                            N::from_f64(result).ok_or_else(|| Error::from(ErrorKind::Overflow))
                         }
                     } else{
                         Err(Error::from(ErrorKind::Overflow))

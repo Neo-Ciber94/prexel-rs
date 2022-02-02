@@ -161,7 +161,7 @@ impl<N: Add<N, Output = N> + Clone> Function<N> for SumFunction {
             }
         }
 
-        result.ok_or(Error::from(ErrorKind::InvalidArgumentCount))
+        result.ok_or_else(|| Error::from(ErrorKind::InvalidArgumentCount))
     }
 }
 
@@ -183,7 +183,7 @@ impl<N: Mul<N, Output = N> + Clone> Function<N> for ProdFunction {
             }
         }
 
-        result.ok_or(Error::from(ErrorKind::InvalidArgumentCount))
+        result.ok_or_else(|| Error::from(ErrorKind::InvalidArgumentCount))
     }
 }
 

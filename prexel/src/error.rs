@@ -181,6 +181,7 @@ impl Error {
     /// let inner_error = error.get_ref().unwrap();
     /// ```
     #[inline]
+    #[allow(clippy::borrowed_box)]
     pub fn get_ref(&self) -> Option<&Box<dyn std::error::Error + Send + Sync>> {
         match self.detail {
             Detail::Simple(_) => None,
