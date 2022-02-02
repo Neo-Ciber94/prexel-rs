@@ -4,7 +4,7 @@ An evaluator for math expressions.
 ## Usage
 ```toml
 [dependencies]
-math_engine = "0.1.0"
+prexel = "0.1.0"
 ```
 
 ## Examples
@@ -16,6 +16,9 @@ fn main(){
     println!("{:?}", evaluator.eval("2 + 3 * 5"));
 }
 ```
+
+## Warning
+This library is not stable and could have breaking changes in any time.
 
 ## Implementation
 There are 3 steps for evaluating each expression:
