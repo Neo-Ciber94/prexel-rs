@@ -4,4 +4,5 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
-prexel = { path="../prexel", version="0.0.1", features=["complex", "decimal"] }
+prexel = { path="../prexel", features=["complex", "decimal"] }
+bigdecimal = "0.3.0"
