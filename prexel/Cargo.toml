@@ -5,7 +5,10 @@ version = "0.1.0"
 authors = ["Freddy L"]
 edition = "2018"
 categories = ["mathematics", "algorithms", "text processing", "value formatting"]
-exclude = ["eval"]
+exclude = [
+    "benches/*",
+    "examples/*",
+]
 
 [features]
 complex = ["num-complex"]
