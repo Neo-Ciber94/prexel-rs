@@ -6,7 +6,7 @@ authors = ["Freddy L"]
 edition = "2018"
 license = "MIT"
 categories = ["mathematics", "algorithms", "text processing", "value formatting"]
-repository="https://github.com/Neo-Ciber94/math_engine-rs/"
+repository="https://github.com/Neo-Ciber94/prexel-rs"
 
 [features]
 complex = ["num-complex"]
