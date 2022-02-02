@@ -1,10 +1,8 @@
 [package]
 name = "eval"
 version = "0.1.0"
-authors = ["Freddy L P.B <freddy_luis_94@hotmail.com>"]
 edition = "2018"
 
 [dependencies]
-math_engine = { path = "../math_engine" , features = ["decimal", "complex"]}
-crossterm = "0.17.1"
-bigdecimal = "0.1.0"
+prexel = { path="../prexel", features=["complex", "decimal"] }
+bigdecimal = "0.3.0"

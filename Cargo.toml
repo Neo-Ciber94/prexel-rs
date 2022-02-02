@@ -1,2 +1,2 @@
 [workspace]
-members = ["math_engine", "eval"]
+members = ["prexel", "eval"]
