@@ -8,6 +8,7 @@ categories = ["mathematics", "algorithms", "text processing", "value formatting"
 exclude = [
     "benches/*",
     "examples/*",
+    "Cargo.lock"
 ]
 
 [features]
