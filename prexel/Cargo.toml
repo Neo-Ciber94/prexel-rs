@@ -4,6 +4,7 @@ description = "A math expression evaluator"
 version = "0.1.0"
 authors = ["Freddy L"]
 edition = "2018"
+license = "MIT"
 categories = ["mathematics", "algorithms", "text processing", "value formatting"]
 exclude = [
     "benches/*",
