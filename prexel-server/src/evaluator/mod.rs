@@ -88,3 +88,29 @@ pub fn eval_complex_expression(expression: EvalExpression) -> EvalResult {
         Err(error) => EvalResult::Err(error.to_string()),
     }
 }
+
+pub fn eval_integer_expression(expression: EvalExpression) -> EvalResult {
+    let mut context =
+        DefaultContext::with_config_checked(CONFIG.clone());
+
+    // Set variables
+    if let Some(variables) = &expression.variables {
+        for (name, value) in variables {
+            match i64::from_str(&value.to_string()) {
+                Ok(value) => {
+                    context.set_variable(name, value);
+                }
+                Err(err) => return EvalResult::Err(format!("{}", err)),
+            }
+        }
+    }
+
+    // Evaluate expression
+    let evaluator = Evaluator::with_context(context);
+    let result = evaluator.eval(&expression.expression);
+
+    match result {
+        Ok(result) => EvalResult::Ok(result.to_string()),
+        Err(error) => EvalResult::Err(error.to_string()),
+    }
+}
