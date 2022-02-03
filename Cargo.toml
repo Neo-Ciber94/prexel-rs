@@ -1,2 +1,2 @@
 [workspace]
-members = ["prexel", "eval"]
+members = ["prexel", "prexel-server", "eval"]

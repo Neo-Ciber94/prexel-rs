@@ -1,0 +1,9 @@
+[package]
+name = "prexel-server"
+edition = "2021"
+version = "0.1.0"
+
+[dependencies]
+prexel = {version = "0.1.0", features = ["decimal"]}
+rocket = {version = "0.5.0-rc.1", features = ["json"]}
+serde = {version = "1.0", features = ["derive"]}
