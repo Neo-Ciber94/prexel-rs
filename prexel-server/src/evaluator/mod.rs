@@ -19,7 +19,7 @@ pub fn eval_decimal_expression(expression: EvalExpression) -> EvalResult {
     // Set variables
     if let Some(variables) = &expression.variables {
         for (name, value) in variables {
-            match Decimal::from_str(value) {
+            match Decimal::from_str(&value.to_string()) {
                 Ok(value) => {
                     context.set_variable(name, value);
                 }
@@ -44,7 +44,7 @@ pub fn eval_float_expression(expression: EvalExpression) -> EvalResult {
     // Set variables
     if let Some(variables) = &expression.variables {
         for (name, value) in variables {
-            match f64::from_str(value) {
+            match f64::from_str(&value.to_string()) {
                 Ok(value) => {
                     context.set_variable(name, value);
                 }
@@ -70,7 +70,7 @@ pub fn eval_complex_expression(expression: EvalExpression) -> EvalResult {
     // Set variables
     if let Some(variables) = &expression.variables {
         for (name, value) in variables {
-            match complex::Complex::<f64>::from_str(value) {
+            match complex::Complex::<f64>::from_str(&value.to_string()) {
                 Ok(value) => {
                     context.set_variable(name, value);
                 }
