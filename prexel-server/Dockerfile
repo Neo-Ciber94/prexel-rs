@@ -1,9 +1,14 @@
-FROM rust:1.58-alpine
+FROM rust:1.58 as build
 
 WORKDIR /app
-COPY ./target/release/ .
+COPY . .
 
-ARG PORT 
-ENV ROCKET_PORT=$PORT
+RUN rustup default nightly
+RUN cargo build --release --verbose
 
-CMD ["prexel-server"]
+WORKDIR /app/target/release
+
+ARG port=5000
+ENV ROCKET_PORT=$port
+
+CMD ["./prexel-server"]
