@@ -21,9 +21,26 @@ impl Display for Variable {
     }
 }
 
+/// Represents the type of the numbers of an expression.
+#[derive(Debug, PartialEq, Clone, Deserialize, Serialize)]
+pub enum NumberType {
+    /// Decimal numbers. (default)
+    Decimal,
+
+    /// Floating point numbers.
+    Float,
+
+    /// Complex numbers.
+    Complex,
+
+    /// Integer numbers
+    Integer,
+}
+
 /// Represents an expression to be evaluated.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct EvalExpression {
     pub expression: String,
     pub variables: Option<HashMap<String, Variable>>,
+    pub r#type: Option<NumberType>,
 }

@@ -1,6 +1,6 @@
+use std::time::Duration;
 use evaluator::{
-    eval_complex_expression, eval_decimal_expression, eval_float_expression,
-    eval_integer_expression,
+    eval_expression,
 };
 use models::{EvalExpression, EvalResult};
 use rocket::serde::{json::Json, Deserialize, Serialize};
@@ -10,22 +10,6 @@ mod middlewares;
 
 #[macro_use]
 extern crate rocket;
-
-/// Represents the type of the numbers of an expression.
-#[derive(Debug, PartialEq, FromFormField)]
-enum NumberType {
-    /// Decimal numbers. (default)
-    Decimal,
-
-    /// Floating point numbers.
-    Float,
-
-    /// Complex numbers.
-    Complex,
-
-    /// Integer numbers
-    Integer,
-}
 
 /// Represents the result to evaluate an expression.
 #[derive(Debug, Serialize, Deserialize)]
@@ -57,22 +41,13 @@ enum EvalResponse {
     Number(String),
 }
 
-#[post("/eval?<type>&<only_result>", data = "<expr>")]
+#[post("/eval?<only_result>", data = "<expr>")]
 fn eval(
     expr: Json<EvalExpression>,
-    r#type: Option<NumberType>,
     only_result: Option<bool>,
 ) -> Json<EvalResponse> {
-    let r#type = r#type.unwrap_or(NumberType::Decimal);
     let expression = expr.into_inner();
-
-    let eval_result = match r#type {
-        NumberType::Decimal => eval_decimal_expression(expression),
-        NumberType::Float => eval_float_expression(expression),
-        NumberType::Complex => eval_complex_expression(expression),
-        NumberType::Integer => eval_integer_expression(expression),
-    };
-
+    let eval_result = eval_expression(expression);
     let only_result = only_result.unwrap_or(false);
 
     if !only_result || eval_result.is_err() {
@@ -84,5 +59,7 @@ fn eval(
 
 #[launch]
 fn rocket() -> _ {
-    rocket::build().mount("/", routes![eval])
+    rocket::build()
+        .mount("/", routes![eval])
+        .attach(middlewares::RateLimiter::new(10, Duration::from_secs(10)))
 }

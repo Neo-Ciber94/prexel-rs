@@ -1,4 +1,4 @@
-use crate::models::{EvalExpression, EvalResult};
+use crate::models::{EvalExpression, EvalResult, NumberType};
 use once_cell::sync::Lazy;
 use prexel::complex;
 use prexel::context::Config;
@@ -13,7 +13,18 @@ static CONFIG: Lazy<Config> = Lazy::new(|| {
         .with_implicit_mul(true)
 });
 
-pub fn eval_decimal_expression(expression: EvalExpression) -> EvalResult {
+pub fn eval_expression(expression: EvalExpression) -> EvalResult {
+    let r#type = expression.r#type.clone().unwrap_or(NumberType::Decimal);
+
+    match r#type {
+        NumberType::Decimal => eval_decimal_expression(expression),
+        NumberType::Float => eval_float_expression(expression),
+        NumberType::Integer => eval_integer_expression(expression),
+        NumberType::Complex => eval_complex_expression(expression),
+    }
+}
+
+fn eval_decimal_expression(expression: EvalExpression) -> EvalResult {
     let mut context = DefaultContext::new_decimal_with_config(CONFIG.clone());
 
     // Set variables
@@ -38,7 +49,7 @@ pub fn eval_decimal_expression(expression: EvalExpression) -> EvalResult {
     }
 }
 
-pub fn eval_float_expression(expression: EvalExpression) -> EvalResult {
+fn eval_float_expression(expression: EvalExpression) -> EvalResult {
     let mut context = DefaultContext::with_config_checked(CONFIG.clone());
 
     // Set variables
@@ -63,7 +74,7 @@ pub fn eval_float_expression(expression: EvalExpression) -> EvalResult {
     }
 }
 
-pub fn eval_complex_expression(expression: EvalExpression) -> EvalResult {
+fn eval_complex_expression(expression: EvalExpression) -> EvalResult {
     let mut context =
         DefaultContext::new_complex_with_config(CONFIG.clone().with_complex_number(true));
 
@@ -89,7 +100,7 @@ pub fn eval_complex_expression(expression: EvalExpression) -> EvalResult {
     }
 }
 
-pub fn eval_integer_expression(expression: EvalExpression) -> EvalResult {
+fn eval_integer_expression(expression: EvalExpression) -> EvalResult {
     let mut context =
         DefaultContext::with_config_checked(CONFIG.clone());
 

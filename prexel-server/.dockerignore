@@ -1,5 +1,5 @@
 Dockerfile
 target/
 private/
-scripts/
 .gitignore
+.env
