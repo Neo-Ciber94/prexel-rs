@@ -1,4 +1,4 @@
-FROM rust:1.58 as build
+FROM rust:1.58
 
 WORKDIR /app
 COPY . .
@@ -10,5 +10,7 @@ WORKDIR /app/target/release
 
 ARG port=5000
 ENV ROCKET_PORT=$port
+ENV ROCKET_ADDRESS=0.0.0.0
+EXPOSE $port
 
 CMD ["./prexel-server"]

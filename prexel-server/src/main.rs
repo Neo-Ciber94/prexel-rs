@@ -6,6 +6,7 @@ use models::{EvalExpression, EvalResult};
 use rocket::serde::{json::Json, Deserialize, Serialize};
 mod evaluator;
 mod models;
+mod middlewares;
 
 #[macro_use]
 extern crate rocket;
