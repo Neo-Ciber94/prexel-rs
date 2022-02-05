@@ -46,6 +46,8 @@ fn eval(
     expr: Json<EvalExpression>,
     only_result: Option<bool>,
 ) -> Json<EvalResponse> {
+    println!("{:?}", serde_json::to_string(&expr.0).unwrap());
+
     let expression = expr.into_inner();
     let eval_result = eval_expression(expression);
     let only_result = only_result.unwrap_or(false);
@@ -57,9 +59,14 @@ fn eval(
     }
 }
 
+static DEFAULT_RATE_LIMITER: middlewares::RateLimiter = middlewares::RateLimiter::new(
+    100,
+    Duration::from_secs(60),
+);
+
 #[launch]
 fn rocket() -> _ {
     rocket::build()
         .mount("/", routes![eval])
-        .attach(middlewares::RateLimiter::new(10, Duration::from_secs(10)))
+        .attach(DEFAULT_RATE_LIMITER.clone())
 }

@@ -4,20 +4,20 @@ use rocket::http::Header;
 use rocket::Response;
 use rocket::{http::Status, Request};
 use std::collections::HashMap;
-use std::net::IpAddr;
+use std::io::Cursor;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
 static RATE_LIMIT_SESSION_NAME: &str = "rate_limit_session";
 static RATE_LIMIT_HEADER_LIMIT_NAME: &str = "X-RateLimit-Limit";
 static RATE_LIMIT_HEADER_REMAINING_NAME: &str = "X-RateLimit-Remaining";
+const RATE_LIMITER_MESSAGE: &str = "Too many requests. Please try again later.";
 
 static RATE_LIMITER_ENTRIES: Lazy<Mutex<HashMap<String, RateLimiterEntry>>> =
     Lazy::new(|| Mutex::default());
 
 #[derive(Debug, Clone)]
 struct RateLimiterEntry {
-    ip: Option<IpAddr>,
     remaining: u64,
     last_access: Instant,
 }
@@ -26,11 +26,16 @@ struct RateLimiterEntry {
 pub struct RateLimiter {
     limit: u64,
     duration: Duration,
+    message: &'static str,
 }
 
 impl RateLimiter {
-    pub fn new(limit: u64, duration: Duration) -> Self {
-        Self { limit, duration }
+    pub const fn new(limit: u64, duration: Duration) -> Self {
+        Self::with_message(limit, duration, RATE_LIMITER_MESSAGE)
+    }
+
+    pub const fn with_message(limit: u64, duration: Duration, message: &'static str) -> Self {
+        Self { limit, duration, message }
     }
 }
 
@@ -50,12 +55,10 @@ impl Fairing for RateLimiter {
         }
 
         let key = get_request_key(request, response);
-        let ip = request.client_ip();
         let mut rate_limiter_entries = RATE_LIMITER_ENTRIES.lock().unwrap();
         let entry_option = rate_limiter_entries.get(&key).cloned();
         let is_first_access = entry_option.is_none();
         let mut entry = entry_option.unwrap_or_else(|| RateLimiterEntry {
-            ip,
             remaining: self.limit,
             last_access: Instant::now(),
         });
@@ -99,6 +102,11 @@ fn set_rate_limiter_response(
     if entry.remaining == 0 {
         response.set_status(Status::TooManyRequests);
         let _ = response.body_mut().take();
+
+        let message_bytes = rate_limiter.message.clone();
+        let len = message_bytes.len();
+        let cursor = Cursor::new(message_bytes);
+        response.set_sized_body(len, cursor);
     }
 }
 

@@ -4,7 +4,6 @@ use serde::{Deserialize, Serialize};
 /// Represents the result of an evaluation.
 pub type EvalResult = Result<String, String>;
 
-
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(untagged)]
 pub enum Variable {
@@ -23,6 +22,7 @@ impl Display for Variable {
 
 /// Represents the type of the numbers of an expression.
 #[derive(Debug, PartialEq, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "lowercase")]
 pub enum NumberType {
     /// Decimal numbers. (default)
     Decimal,
@@ -41,6 +41,6 @@ pub enum NumberType {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct EvalExpression {
     pub expression: String,
-    pub variables: Option<HashMap<String, Variable>>,
     pub r#type: Option<NumberType>,
+    pub variables: Option<HashMap<String, Variable>>,
 }
