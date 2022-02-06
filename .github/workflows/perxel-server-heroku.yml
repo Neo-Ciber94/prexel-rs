@@ -19,7 +19,7 @@ jobs:
           justlogin: true
         
       - name: "Move to prexel server"
-        run: cd prexel-server
+        run: cd prexel-server && pwd
 
       - name: "Build and push to heroku registry"
         run: heroku container:push web -v --app ${{secrets.HEROKU_APP_NAME}}
