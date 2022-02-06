@@ -10,11 +10,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: CDNievas/heroku-action@v1.0 # This is the action
-        with:
-          heroku_email: ${{secrets.HEROKU_EMAIL}}
-          heroku_api_key: ${{secrets.HEROKU_API_KEY}}
-          heroku_app_name: ${{secrets.HEROKU_APP_NAME}}
+      - name: "Install heroku CLI"
+        run: sudo snap install --classic heroku
+        
+      - name: "Login to heroku"
+        run: heroku login -i
+        
+      - name: "Enter email"
+        run: ${{secrets.HEROKU_EMAIL}}
+        
+      - name: "Enter api key"
+        run: ${{secrets.HEROKU_API_KEY}}
+        
+      - name: "Move to prexel server"
+        run: cd prexel-server
           
       - name: "Login to heroku registry"
         run: heroku container:login
