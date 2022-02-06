@@ -15,7 +15,6 @@ jobs:
           heroku_api_key: ${{secrets.HEROKU_API_KEY}}
           heroku_email: ${{secrets.HEROKU_EMAIL}}
           heroku_app_name: ""
-          usedocker: true
           justlogin: true
         
       - name: "Move to prexel server"
