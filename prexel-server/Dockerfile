@@ -6,8 +6,6 @@ COPY . .
 RUN cargo build --release --verbose
 WORKDIR /app/target/release
 
-ARG port=5000
-EXPOSE $port
-ENV ACTIX_PORT=$port
+ENV PORT=5000
 
 CMD ["./prexel-server"]

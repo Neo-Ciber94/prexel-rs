@@ -36,7 +36,7 @@ async fn main() -> std::io::Result<()> {
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
 
     let store = MemoryStore::new();
-    let port = env::var("ACTIX_PORT")
+    let port = env::var("PORT")
         .map(|s| s.parse::<u16>().ok()).ok()
         .flatten()
         .unwrap_or(8000);
