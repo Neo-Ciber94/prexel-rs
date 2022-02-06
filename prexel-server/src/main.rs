@@ -1,72 +1,57 @@
-use std::time::Duration;
-use evaluator::{
-    eval_expression,
-};
-use models::{EvalExpression, EvalResult};
-use rocket::serde::{json::Json, Deserialize, Serialize};
 mod evaluator;
 mod models;
-mod middlewares;
 
-#[macro_use]
-extern crate rocket;
+use std::env;
+use crate::models::{EvalResponse, EvaluatedExpression};
+use actix_ratelimit::{MemoryStore, MemoryStoreActor, RateLimiter};
+use actix_web::web::{Json, Query};
+use actix_web::{post, App, HttpRequest, HttpResponse, HttpServer, Responder};
+use evaluator::eval_expression;
+use models::{EvalExpression};
+use serde::{Deserialize, Serialize};
+use std::time::Duration;
+use actix_web::middleware::Logger;
 
-/// Represents the result to evaluate an expression.
 #[derive(Debug, Serialize, Deserialize)]
-struct EvaluatedExpression {
-    result: Option<String>,
-    error: Option<String>,
-}
-
-impl From<EvalResult> for EvaluatedExpression {
-    fn from(result: EvalResult) -> Self {
-        match result {
-            EvalResult::Ok(result) => EvaluatedExpression {
-                result: Some(result),
-                error: None,
-            },
-            EvalResult::Err(error) => EvaluatedExpression {
-                result: None,
-                error: Some(error),
-            },
-        }
-    }
-}
-
-/// Represents a response object.
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(untagged)]
-enum EvalResponse {
-    Result(EvaluatedExpression),
-    Number(String),
-}
-
-#[post("/eval?<only_result>", data = "<expr>")]
-fn eval(
-    expr: Json<EvalExpression>,
+struct Params {
     only_result: Option<bool>,
-) -> Json<EvalResponse> {
-    println!("{:?}", serde_json::to_string(&expr.0).unwrap());
+}
 
+#[post("/eval")]
+async fn eval(req: HttpRequest, expr: Json<EvalExpression>) -> impl Responder {
     let expression = expr.into_inner();
     let eval_result = eval_expression(expression);
-    let only_result = only_result.unwrap_or(false);
+    let query = Query::<Params>::from_query(req.query_string()).ok();
+    let only_result = query.and_then(|q| q.only_result).unwrap_or(false);
 
     if !only_result || eval_result.is_err() {
-        Json(EvalResponse::Result(EvaluatedExpression::from(eval_result)))
+        HttpResponse::Ok().json(EvalResponse::Result(EvaluatedExpression::from(eval_result)))
     } else {
-        Json(EvalResponse::Number(eval_result.ok().unwrap().to_string()))
+        HttpResponse::Ok().json(EvalResponse::Number(eval_result.ok().unwrap().to_string()))
     }
 }
 
-static DEFAULT_RATE_LIMITER: middlewares::RateLimiter = middlewares::RateLimiter::new(
-    100,
-    Duration::from_secs(60),
-);
+#[actix_web::main]
+async fn main() -> std::io::Result<()> {
+    env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
 
-#[launch]
-fn rocket() -> _ {
-    rocket::build()
-        .mount("/", routes![eval])
-        .attach(DEFAULT_RATE_LIMITER.clone())
+    let store = MemoryStore::new();
+    let port = env::var("ACTIX_PORT")
+        .map(|s| s.parse::<u16>().ok()).ok()
+        .flatten()
+        .unwrap_or(8000);
+
+    HttpServer::new(move || {
+        App::new()
+            .wrap(Logger::default())
+            .wrap(
+                RateLimiter::new(MemoryStoreActor::from(store.clone()).start())
+                    .with_interval(Duration::from_secs(60))
+                    .with_max_requests(100),
+            )
+            .service(eval)
+    })
+    .bind(format!("0.0.0.0:{}", port))?
+    .run()
+    .await
 }

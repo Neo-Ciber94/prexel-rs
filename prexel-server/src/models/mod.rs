@@ -44,3 +44,33 @@ pub struct EvalExpression {
     pub r#type: Option<NumberType>,
     pub variables: Option<HashMap<String, Variable>>,
 }
+
+/// Represents the result to evaluate an expression.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct EvaluatedExpression {
+    result: Option<String>,
+    error: Option<String>,
+}
+
+impl From<EvalResult> for EvaluatedExpression {
+    fn from(result: EvalResult) -> Self {
+        match result {
+            EvalResult::Ok(result) => EvaluatedExpression {
+                result: Some(result),
+                error: None,
+            },
+            EvalResult::Err(error) => EvaluatedExpression {
+                result: None,
+                error: Some(error),
+            },
+        }
+    }
+}
+
+/// Represents a response object.
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum EvalResponse {
+    Result(EvaluatedExpression),
+    Number(String),
+}
