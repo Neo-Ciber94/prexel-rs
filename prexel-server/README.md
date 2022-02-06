@@ -19,7 +19,7 @@ https://salty-wildwood-17121.herokuapp.com/
 
 - **Query Parameters**:
   - `only_result`:
-    - `true`: If the result is successful the result will be `plain/text` otherwise the `application/json` object with an error.
+    - `true`: If the result is successful the result will be a plain number otherwise a json object with an error.
     - `false`: The result will always be a json.
     
 

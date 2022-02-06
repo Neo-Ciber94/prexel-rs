@@ -52,6 +52,15 @@ pub struct EvaluatedExpression {
     error: Option<String>,
 }
 
+impl EvaluatedExpression {
+    pub fn with_error(error: String) -> Self {
+        EvaluatedExpression {
+            result: None,
+            error: Some(error),
+        }
+    }
+}
+
 impl From<EvalResult> for EvaluatedExpression {
     fn from(result: EvalResult) -> Self {
         match result {
@@ -65,12 +74,4 @@ impl From<EvalResult> for EvaluatedExpression {
             },
         }
     }
-}
-
-/// Represents a response object.
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum EvalResponse {
-    Result(EvaluatedExpression),
-    Number(String),
 }
