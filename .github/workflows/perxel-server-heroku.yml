@@ -10,8 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: "Install heroku CLI"
-        run: sudo snap install --classic heroku
+      - uses: akhileshns/heroku-deploy@v3.12.12
         
       - name: "Login to heroku"
         run: heroku login -i
