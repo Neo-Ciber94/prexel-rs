@@ -16,7 +16,6 @@ jobs:
           heroku_email: ${{secrets.EMAIL}}
           heroku_app_name: ""
           justlogin: true
-      - run: heroku auth:whoami
       
       - name: "Move to prexel server"
         run: cd prexel-server
