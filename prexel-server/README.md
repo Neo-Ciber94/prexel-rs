@@ -3,7 +3,7 @@
 A restful API server using the `prexel` library.
 
 ## URL
-https://salty-wildwood-17121.herokuapp.com/
+https://neociber-prexel.herokuapp.com/
 
 ## Endpoints
 
