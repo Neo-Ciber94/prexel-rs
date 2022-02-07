@@ -1,5 +1,6 @@
 mod evaluator;
 mod models;
+mod context;
 
 use std::env;
 use crate::models::{EvalResponse, EvaluatedExpression};

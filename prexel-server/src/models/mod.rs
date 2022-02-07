@@ -35,6 +35,9 @@ pub enum NumberType {
 
     /// Integer numbers
     Integer,
+
+    /// Binary
+    Binary,
 }
 
 /// Represents an expression to be evaluated.
