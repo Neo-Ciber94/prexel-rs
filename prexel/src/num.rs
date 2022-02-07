@@ -1,3 +1,9 @@
+
+/// Reexports of the `num_traits` crate.
+pub mod num_traits {
+    pub use num_traits::*;
+}
+
 /// Provides traits for implements a checked numeric types.
 pub mod checked {
     use num_traits::{FromPrimitive, One, ToPrimitive, Zero};
