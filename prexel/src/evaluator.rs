@@ -86,7 +86,7 @@ where
         let context = self.context();
         let tokenizer = Tokenizer::with_context(context);
         let tokens = tokenizer.tokenize(expression)?;
-        rpn_eval(&tokens, context)
+        self.eval_tokens(&tokens)
     }
 }
 

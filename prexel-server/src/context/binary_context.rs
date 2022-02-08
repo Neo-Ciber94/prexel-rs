@@ -10,6 +10,10 @@ impl FromStr for Binary {
     type Err = <i128 as FromStr>::Err;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s.starts_with('b') {
+            return i128::from_str_radix(&s[1..], 2).map(Binary);
+        }
+
         i128::from_str(s).map(Binary)
     }
 }
@@ -32,16 +36,16 @@ impl<'a> BinaryContext for DefaultContext<'a, Binary> {
 
     fn with_config_binary(config: Config) -> Self {
         let mut context = DefaultContext::<Binary>::with_config(config);
-        //context.add_unary_function(NotFunction);
-        // context.add_binary_function(AndFunction);
-        // context.add_binary_function(OrFunction);
-        // context.add_binary_function(XorFunction);
-        // context.add_binary_function(EqFunction);
-        // context.add_binary_function(NeFunction);
-        // context.add_binary_function(GtFunction);
-        // context.add_binary_function(LtFunction);
-        // context.add_binary_function(GteFunction);
-        // context.add_binary_function(LteFunction);
+        context.add_unary_function(NotFunction);
+        context.add_binary_function(AndFunction);
+        context.add_binary_function(OrFunction);
+        context.add_binary_function(XorFunction);
+        context.add_binary_function(EqFunction);
+        context.add_binary_function(NeFunction);
+        context.add_binary_function(GtFunction);
+        context.add_binary_function(LtFunction);
+        context.add_binary_function(GteFunction);
+        context.add_binary_function(LteFunction);
         context
     }
 }
