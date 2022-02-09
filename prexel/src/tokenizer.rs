@@ -3,7 +3,7 @@ use crate::error::{Error, ErrorKind};
 use crate::function::Notation;
 use crate::token::Token;
 use crate::utils::extensions::{OptionStrExt, StrExt};
-use crate::utils::string_tokenizer::{DefaultStringTokenizer, StringTokenizer, TokenizeStrategy};
+use crate::utils::splitter::{DefaultSplitter, Splitter, SplitStrategy};
 use crate::Result;
 use std::marker::PhantomData;
 use std::str::FromStr;
@@ -21,32 +21,32 @@ use std::str::FromStr;
 /// let tokens = t.tokenize("2 + 3").unwrap();
 /// assert_eq!(&[Number(2_i32), BinaryOperator('+'.to_string()), Number(3_i32)], tokens.as_slice());
 /// ```
-pub struct Tokenizer<'a, N, C = DefaultContext<'a, N>, T = DefaultStringTokenizer>
+pub struct Tokenizer<'a, N, C = DefaultContext<'a, N>, S = DefaultSplitter>
 where
     C: Context<'a, N>,
-    T: StringTokenizer,
+    S: Splitter,
 {
     context: &'a C,
-    inner: T,
+    splitter: S,
     _marker: PhantomData<N>,
 }
 
-impl<'a, N, C, T> Tokenizer<'a, N, C, T>
+impl<'a, N, C, S> Tokenizer<'a, N, C, S>
 where
     C: Context<'a, N>,
-    T: StringTokenizer,
+    S: Splitter,
 {
-    /// Constructs a new `Tokenizer` with the given context and string tokenizer.
-    fn with_tokenizer(context: &'a C, tokenizer: T) -> Self {
+    /// Constructs a new `Tokenizer` with the given context and string splitter.
+    fn with_splitter(context: &'a C, splitter: S) -> Self {
         Tokenizer {
             context,
-            inner: tokenizer,
+            splitter,
             _marker: PhantomData,
         }
     }
 }
 
-impl<'a, N, C> Tokenizer<'a, N, C, DefaultStringTokenizer>
+impl<'a, N, C> Tokenizer<'a, N, C, DefaultSplitter>
 where
     C: Context<'a, N>,
     N: FromStr,
@@ -56,7 +56,7 @@ where
     pub fn with_context(context: &'a C) -> Self {
         Tokenizer {
             context,
-            inner: DefaultStringTokenizer(TokenizeStrategy::RemoveWhiteSpaces),
+            splitter: DefaultSplitter(SplitStrategy::RemoveWhiteSpaces),
             _marker: PhantomData,
         }
     }
@@ -70,7 +70,7 @@ where
         }
 
         // `Vec` used for fast access indexing, Iterator.nth(..) could be O(N)
-        let raw_tokens = self.inner.get_tokens(expression);
+        let raw_tokens = self.splitter.split_into_tokens(expression);
         // Actual iterator over the string tokens.
         let mut iter = raw_tokens.iter().enumerate().peekable();
         // Stores the tokens to return.

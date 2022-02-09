@@ -2,37 +2,37 @@ use std::iter::Peekable;
 use std::str::Chars;
 
 /// A trait that provides a method to convert a string into a sequence of tokens.
-pub trait StringTokenizer {
+pub trait Splitter {
     /// Converts a string into a sequence of tokens.
-    fn get_tokens(&self, expression: &str) -> Vec<String>;
+    fn split_into_tokens(&self, expression: &str) -> Vec<String>;
 }
 
-/// Defines the method of the `StringTokenizer` to extract the tokens.
+/// Defines the method used to split a string.
 #[derive(Copy, Clone, Eq, PartialEq)]
-pub enum TokenizeStrategy {
+pub enum SplitStrategy {
     /// All the tokens will be retrieve including whitespaces.
     None,
     /// All the tokens will be retrieve ignoring whitespaces.
     RemoveWhiteSpaces,
 }
 
-/// Provides a way to extract tokens from an `str`.
+/// Provides a way to extract tokens from a `str`.
 ///
 /// # Example
 /// ```
-/// use prexel::utils::string_tokenizer::{DefaultStringTokenizer, StringTokenizer};
+/// use prexel::utils::splitter::{DefaultSplitter, Splitter};
 ///
-/// let tokenizer = DefaultStringTokenizer::default();
-/// let tokens = tokenizer.get_tokens("2 + 3");
+/// let splitter = DefaultSplitter::default();
+/// let tokens = splitter.split_into_tokens("2 + 3");
 /// assert_eq!(["2", "+", "3"].to_vec(), tokens);
 /// ```
 #[derive(Copy, Clone, Eq, PartialEq)]
-pub struct DefaultStringTokenizer(pub TokenizeStrategy);
+pub struct DefaultSplitter(pub SplitStrategy);
 
-impl DefaultStringTokenizer {
+impl DefaultSplitter {
     #[inline]
-    pub const fn new(kind: TokenizeStrategy) -> DefaultStringTokenizer {
-        DefaultStringTokenizer(kind)
+    pub const fn new(kind: SplitStrategy) -> DefaultSplitter {
+        DefaultSplitter(kind)
     }
 
     fn next_alphanumeric(dest: &mut String, iterator: &mut Peekable<Chars>) {
@@ -68,8 +68,8 @@ impl DefaultStringTokenizer {
     }
 }
 
-impl StringTokenizer for DefaultStringTokenizer {
-    fn get_tokens(&self, expression: &str) -> Vec<String> {
+impl Splitter for DefaultSplitter {
+    fn split_into_tokens(&self, expression: &str) -> Vec<String> {
         let mut tokens = Vec::new();
         let mut iterator = expression.chars().peekable();
 
@@ -86,8 +86,8 @@ impl StringTokenizer for DefaultStringTokenizer {
                     tokens.push(temp);
                 }
                 ' ' => match self.0 {
-                    TokenizeStrategy::None => tokens.push(String::from(" ")),
-                    TokenizeStrategy::RemoveWhiteSpaces => {}
+                    SplitStrategy::None => tokens.push(String::from(" ")),
+                    SplitStrategy::RemoveWhiteSpaces => {}
                 },
                 c => tokens.push(c.to_string()),
             }
@@ -97,45 +97,45 @@ impl StringTokenizer for DefaultStringTokenizer {
     }
 }
 
-impl Default for DefaultStringTokenizer {
+impl Default for DefaultSplitter {
     fn default() -> Self {
-        DefaultStringTokenizer(TokenizeStrategy::RemoveWhiteSpaces)
+        DefaultSplitter(SplitStrategy::RemoveWhiteSpaces)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::DefaultStringTokenizer;
-    use super::{TokenizeStrategy, StringTokenizer};
+    use super::DefaultSplitter;
+    use super::{SplitStrategy, Splitter};
 
     #[test]
     fn get_tokens_test() {
-        let tokenizer = DefaultStringTokenizer::default();
+        let tokenizer = DefaultSplitter::default();
         assert_eq!(
             ["10", "+", "-", "2", "*", "Sin", "(", "45", ")"].to_vec(),
-            tokenizer.get_tokens("10 + -2 * Sin(45)")
+            tokenizer.split_into_tokens("10 + -2 * Sin(45)")
         );
         assert_eq!(
             ["10", "+", "(", "-", "3", ")", "*", "0.25"].to_vec(),
-            tokenizer.get_tokens("10 + (-3) * 0.25")
+            tokenizer.split_into_tokens("10 + (-3) * 0.25")
         );
         assert_eq!(
             ["(", "x", "+", "y", ")", "-", "2", "^", "10"].to_vec(),
-            tokenizer.get_tokens("(x+y)-2^10")
+            tokenizer.split_into_tokens("(x+y)-2^10")
         );
         assert_eq!(
             ["Log2", "(", "25", ")", "*", "PI", "-", "2"].to_vec(),
-            tokenizer.get_tokens("Log2(25) * PI - 2")
+            tokenizer.split_into_tokens("Log2(25) * PI - 2")
         );
         assert_eq!(
             ["2", "PI", "+", "10"].to_vec(),
-            tokenizer.get_tokens("2PI + 10")
+            tokenizer.split_into_tokens("2PI + 10")
         );
-        assert_eq!(["x", "=", "10"].to_vec(), tokenizer.get_tokens("x = 10"));
+        assert_eq!(["x", "=", "10"].to_vec(), tokenizer.split_into_tokens("x = 10"));
 
         assert_eq!(
             ["5", " ", "*", " ", "2"].to_vec(),
-            DefaultStringTokenizer::new(TokenizeStrategy::None).get_tokens("5 * 2")
+            DefaultSplitter::new(SplitStrategy::None).split_into_tokens("5 * 2")
         );
     }
 }
