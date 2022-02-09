@@ -465,7 +465,7 @@ pub struct Config {
     pub implicit_mul: bool,
     /// Allows complex numbers.
     pub complex_number: bool,
-    /// Allows using custom grouping symbols for function calls, eg: Max[1,2,3], Sum<2,4,6>
+    /// Allows using custom grouping symbols for function calls, eg: `Max[1,2,3]`, `Sum<2,4,6>`
     pub custom_function_call: bool,
     /// Stores the grouping symbols as: `(`, `)`, `[`, `]`.
     grouping: HashMap<char, GroupingSymbol>,
@@ -501,8 +501,8 @@ impl Config {
     /// Enables custom function calls groping symbols.
     ///
     /// # Remarks
-    /// Function calls are only allowed within parentheses, eg: Product(3, 6, 6),
-    /// but `with_custom_function_call` allow to use others, eg: Max[1,2,3], Sum<2,4,6>.
+    /// Function calls are only allowed within parentheses, eg: `Product(3, 6, 6)`,
+    /// but `with_custom_function_call` allow to use others, eg: `Max[1,2,3]`, `Sum<2,4,6>`.
     #[inline]
     pub fn with_custom_function_call(mut self, enable: bool) -> Config {
         self.custom_function_call = enable;

@@ -1,6 +1,10 @@
+/// Checked math operations.
 pub mod checked;
+
+/// Unchecked math operations, (may panic).
 pub mod unchecked;
 
+/// A collection of math functions and operators.
 pub mod math {
     use std::fmt::Debug;
     use std::ops::{Mul, Sub};
