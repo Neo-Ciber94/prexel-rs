@@ -43,7 +43,7 @@ pub async fn eval(req: HttpRequest, body: web::Bytes) -> ApiResponse {
     if !only_result || eval_result.is_err() {
         Ok(HttpResponse::Ok().json(EvaluatedExpression::from(eval_result)))
     } else {
-        let text = eval_result.unwrap().to_string();
+        let text = eval_result.unwrap();
         Ok(HttpResponse::Ok().body(text))
     }
 }

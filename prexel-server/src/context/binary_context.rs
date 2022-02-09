@@ -10,8 +10,8 @@ impl FromStr for Binary {
     type Err = <i128 as FromStr>::Err;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if s.starts_with('b') {
-            return i128::from_str_radix(&s[1..], 2).map(Binary);
+        if let Some(stripped) = s.strip_prefix('b') {
+            return i128::from_str_radix(stripped, 2).map(Binary);
         }
 
         i128::from_str(s).map(Binary)

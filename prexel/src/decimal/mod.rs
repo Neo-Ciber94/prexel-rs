@@ -96,7 +96,7 @@ pub mod ops {
         #[inline]
         fn call(&self, left: Decimal, right: Decimal) -> Result<Decimal> {
             left.checked_add(right)
-                .ok_or(Error::from(ErrorKind::Overflow))
+                .ok_or_else(|| Error::from(ErrorKind::Overflow))
         }
     }
 
@@ -120,7 +120,7 @@ pub mod ops {
         #[inline]
         fn call(&self, left: Decimal, right: Decimal) -> Result<Decimal> {
             left.checked_sub(right)
-                .ok_or(Error::from(ErrorKind::Overflow))
+                .ok_or_else(|| Error::from(ErrorKind::Overflow))
         }
     }
 
@@ -144,7 +144,7 @@ pub mod ops {
         #[inline]
         fn call(&self, left: Decimal, right: Decimal) -> Result<Decimal> {
             left.checked_mul(right)
-                .ok_or(Error::from(ErrorKind::Overflow))
+                .ok_or_else(|| Error::from(ErrorKind::Overflow))
         }
     }
 
@@ -168,7 +168,7 @@ pub mod ops {
         #[inline]
         fn call(&self, left: Decimal, right: Decimal) -> Result<Decimal> {
             left.checked_div(right)
-                .ok_or(Error::from(ErrorKind::Overflow))
+                .ok_or_else(|| Error::from(ErrorKind::Overflow))
         }
     }
 
@@ -192,7 +192,7 @@ pub mod ops {
         #[inline]
         fn call(&self, left: Decimal, right: Decimal) -> Result<Decimal> {
             left.checked_rem(right)
-                .ok_or(Error::from(ErrorKind::Overflow))
+                .ok_or_else(|| Error::from(ErrorKind::Overflow))
         }
     }
 
@@ -216,7 +216,7 @@ pub mod ops {
         #[inline]
         fn call(&self, left: Decimal, right: Decimal) -> Result<Decimal> {
             left.checked_pow(right)
-                .ok_or(Error::from(ErrorKind::Overflow))
+                .ok_or_else(|| Error::from(ErrorKind::Overflow))
         }
     }
 
@@ -254,7 +254,7 @@ pub mod ops {
         fn call(&self, value: Decimal) -> Result<Decimal> {
             value
                 .checked_factorial()
-                .ok_or(Error::from(ErrorKind::Overflow))
+                .ok_or_else(|| Error::from(ErrorKind::Overflow))
         }
     }
 
@@ -276,7 +276,7 @@ pub mod ops {
                 }
             }
 
-            result.ok_or(Error::from(ErrorKind::InvalidArgumentCount))
+            result.ok_or_else(|| Error::from(ErrorKind::InvalidArgumentCount))
         }
     }
 
@@ -293,12 +293,12 @@ pub mod ops {
                 match result {
                     None => result = Some(*cur),
                     Some(ref n) => {
-                        result = Some(n.clone() * cur.clone());
+                        result = Some(n * cur);
                     }
                 }
             }
 
-            result.ok_or(Error::from(ErrorKind::InvalidArgumentCount))
+            result.ok_or_else(|| Error::from(ErrorKind::InvalidArgumentCount))
         }
     }
 
@@ -340,7 +340,7 @@ pub mod ops {
                     match args.len() {
                         1 => args[0]
                             .$method_name()
-                            .ok_or(Error::from(ErrorKind::Overflow)),
+                            .ok_or_else(|| Error::from(ErrorKind::Overflow)),
                         _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
                     }
                 }
@@ -367,7 +367,7 @@ pub mod ops {
                             .$method_name()
                             .map(Decimal::checked_inv)
                             .flatten()
-                            .ok_or(Error::from(ErrorKind::Overflow)),
+                            .ok_or_else(|| Error::from(ErrorKind::Overflow)),
                         _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
                     }
                 }
@@ -459,10 +459,10 @@ pub mod ops {
             match args.len() {
                 1 => args[0]
                     .checked_log(consts::TEN)
-                    .ok_or(Error::from(ErrorKind::Overflow)),
+                    .ok_or_else(|| Error::from(ErrorKind::Overflow)),
                 2 => args[0]
                     .checked_log(args[1])
-                    .ok_or(Error::from(ErrorKind::Overflow)),
+                    .ok_or_else(|| Error::from(ErrorKind::Overflow)),
                 _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
             }
         }
@@ -489,7 +489,7 @@ pub mod ops {
                         1 => {
                             args[0].to_radians()
                                 .$method_name()
-                                .ok_or(Error::from(ErrorKind::Overflow))
+                                .ok_or_else(|| Error::from(ErrorKind::Overflow))
                         },
                         _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
                     }
@@ -516,7 +516,7 @@ pub mod ops {
                         1 => args[0].to_radians()
                             .$method_name()
                             //.map(Decimal::checked_inv)
-                            .ok_or(Error::from(ErrorKind::Overflow)),
+                            .ok_or_else(|| Error::from(ErrorKind::Overflow)),
                         _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
                     }
                 }
@@ -630,7 +630,7 @@ pub mod ops {
                         1 => args[0]
                             .inv()
                             .$method_name()
-                            .ok_or(Error::from(ErrorKind::Overflow)),
+                            .ok_or_else(|| Error::from(ErrorKind::Overflow)),
                         _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
                     }
                 }
