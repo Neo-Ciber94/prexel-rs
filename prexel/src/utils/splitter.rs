@@ -71,7 +71,10 @@ impl Default for DefaultSplitter {
     }
 }
 
-/// An `Splitter` implementation that accepts a custom interceptor.
+/// A `Splitter` implementation that accepts a custom interceptor.
+///
+/// An `interceptor` is a function that will be called for each token
+/// and allow to include custom logic for split the string.
 pub struct SplitterWithInterceptor<F>
 where
     F: Fn(char, &mut Peekable<Chars>) -> Option<String>,
