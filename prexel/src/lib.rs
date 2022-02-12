@@ -25,9 +25,13 @@ pub mod tokenizer;
 /// Common utilities.
 pub mod utils;
 
+/// Extra num traits
+mod numeric_traits;
+
 /// Reexports of the `num_traits` crate.
 pub mod num_traits {
     pub use num_traits::*;
+    pub use crate::numeric_traits::*;
 }
 
 /// An convenient result type used for returning the result of evaluations.

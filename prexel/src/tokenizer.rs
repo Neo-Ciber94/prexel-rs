@@ -3,7 +3,7 @@ use crate::error::{Error, ErrorKind};
 use crate::function::Notation;
 use crate::token::Token;
 use crate::utils::extensions::{OptionStrExt, StrExt};
-use crate::utils::splitter::{DefaultSplitter, Splitter, SplitStrategy};
+use crate::utils::splitter::{DefaultSplitter, SplitStrategy, Splitter};
 use crate::Result;
 use std::marker::PhantomData;
 use std::str::FromStr;
@@ -31,25 +31,9 @@ where
     _marker: PhantomData<N>,
 }
 
-impl<'a, N, C, S> Tokenizer<'a, N, C, S>
-where
-    C: Context<'a, N>,
-    S: Splitter,
-{
-    /// Constructs a new `Tokenizer` with the given context and string splitter.
-    fn with_splitter(context: &'a C, splitter: S) -> Self {
-        Tokenizer {
-            context,
-            splitter,
-            _marker: PhantomData,
-        }
-    }
-}
-
 impl<'a, N, C> Tokenizer<'a, N, C, DefaultSplitter>
 where
     C: Context<'a, N>,
-    N: FromStr,
 {
     /// Constructs a new `Tokenizer` with the given `Context`.
     #[inline]
@@ -60,7 +44,29 @@ where
             _marker: PhantomData,
         }
     }
+}
 
+impl<'a, N, C, S> Tokenizer<'a, N, C, S>
+where
+    C: Context<'a, N>,
+    S: Splitter,
+{
+    /// Constructs a new `Tokenizer` with the given context and string splitter.
+    pub fn with_splitter(context: &'a C, splitter: S) -> Self {
+        Tokenizer {
+            context,
+            splitter,
+            _marker: PhantomData,
+        }
+    }
+}
+
+impl<'a, N, C, S> Tokenizer<'a, N, C, S>
+where
+    C: Context<'a, N>,
+    N: FromStr,
+    S: Splitter,
+{
     pub fn tokenize(&self, expression: &str) -> Result<Vec<Token<N>>> {
         const COMMA: &str = ",";
         const WHITESPACE: &str = " ";
@@ -308,7 +314,9 @@ fn is_number(value: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use crate::impl_checked_num_traits_with_field;
     use crate::token::Token::*;
+    use crate::utils::splitter::SplitterWithInterceptor;
 
     use super::*;
 
@@ -432,5 +440,64 @@ mod tests {
                 ]
             );
         }
+    }
+
+    #[test]
+    fn tokenize_with_custom_splitter_test() {
+        struct AtNumber(i64);
+
+        impl FromStr for AtNumber {
+            type Err = String;
+            fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+                if let Some(stripped) = s.strip_prefix("@") {
+                    return if let Ok(number) = stripped.parse::<i64>() {
+                        Ok(AtNumber(number))
+                    } else {
+                        Err(format!("'{}' is not a number", s))
+                    };
+                }
+
+                Err(format!("Expected '@' followed by a number but got '{}'", s))
+            }
+        }
+
+        impl From<i64> for AtNumber {
+            fn from(number: i64) -> Self {
+                AtNumber(number)
+            }
+        }
+
+        impl_checked_num_traits_with_field!(AtNumber => 0, i64);
+
+        let splitter = SplitterWithInterceptor::new(|c, rest| {
+            if c == '@' {
+                let mut temp = String::new();
+                temp.push(c);
+                while let Some(c) = rest.peek() {
+                    if c.is_alphanumeric() {
+                        temp.push(*c);
+                        rest.next();
+                    } else {
+                        break;
+                    }
+                }
+                Some(temp)
+            } else {
+                None
+            }
+        });
+        let context = DefaultContext::<AtNumber>::new_checked();
+        let tokenizer = Tokenizer::with_splitter(&context, splitter);
+
+        assert_eq!(
+            &tokenizer.tokenize("@34 + (@124)").unwrap(),
+            &[
+                Number(AtNumber(34)),
+                BinaryOperator('+'.to_string()),
+                GroupingOpen('('),
+                Number(AtNumber(124)),
+                GroupingClose(')')
+            ]
+        );
     }
 }
