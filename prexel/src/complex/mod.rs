@@ -39,7 +39,7 @@ pub mod ops {
             match args.len() {
                 1 => {
                     let base = T::from_f64(10_f64)
-                        .ok_or(Error::from(ErrorKind::Overflow))?;
+                        .ok_or_else(|| Error::from(ErrorKind::Overflow))?;
                    Ok(args[0].log(base))
                 },
                 2 => match args[1].im {
@@ -75,7 +75,7 @@ pub mod ops {
             #[inline(always)]
             fn random_t<N: FromPrimitive>() -> Result<N>{
                 N::from_f64(random::<f64>())
-                    .ok_or(Error::from(ErrorKind::Overflow))
+                    .ok_or_else(|| Error::from(ErrorKind::Overflow))
             }
 
             match args.len(){

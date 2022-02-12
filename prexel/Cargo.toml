@@ -1,7 +1,7 @@
 [package]
 name = "prexel"
 description = "A math expression evaluator"
-version = "0.1.0"
+version = "0.1.2"
 authors = ["Freddy L"]
 edition = "2018"
 license = "MIT"

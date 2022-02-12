@@ -1,12 +1,12 @@
-use std::marker::PhantomData;
-use std::str::FromStr;
 use crate::context::{Context, DefaultContext};
 use crate::error::{Error, ErrorKind};
 use crate::function::Notation;
-use crate::Result;
 use crate::token::Token;
-use crate::utils::extensions::{ OptionStrExt, StrExt };
-use crate::utils::string_tokenizer::{StringTokenizer, TokenizeKind};
+use crate::utils::extensions::{OptionStrExt, StrExt};
+use crate::utils::splitter::{DefaultSplitter, SplitStrategy, Splitter};
+use crate::Result;
+use std::marker::PhantomData;
+use std::str::FromStr;
 
 /// The default `Tokenizer`.
 ///
@@ -21,45 +21,62 @@ use crate::utils::string_tokenizer::{StringTokenizer, TokenizeKind};
 /// let tokens = t.tokenize("2 + 3").unwrap();
 /// assert_eq!(&[Number(2_i32), BinaryOperator('+'.to_string()), Number(3_i32)], tokens.as_slice());
 /// ```
-pub struct Tokenizer<'a, N, C = DefaultContext<'a, N>>
+pub struct Tokenizer<'a, N, C = DefaultContext<'a, N>, S = DefaultSplitter>
 where
     C: Context<'a, N>,
+    S: Splitter,
 {
-    /// The context which contains the variables, constants and functions used
-    /// for tokenize and expression.
     context: &'a C,
+    splitter: S,
     _marker: PhantomData<N>,
 }
 
-impl<'a, N, C> Tokenizer<'a, N, C>
+impl<'a, N, C> Tokenizer<'a, N, C, DefaultSplitter>
 where
     C: Context<'a, N>,
-    N: FromStr,
 {
     /// Constructs a new `Tokenizer` with the given `Context`.
     #[inline]
     pub fn with_context(context: &'a C) -> Self {
         Tokenizer {
             context,
+            splitter: DefaultSplitter(SplitStrategy::RemoveWhiteSpaces),
             _marker: PhantomData,
         }
     }
+}
 
+impl<'a, N, C, S> Tokenizer<'a, N, C, S>
+where
+    C: Context<'a, N>,
+    S: Splitter,
+{
+    /// Constructs a new `Tokenizer` with the given context and string splitter.
+    pub fn with_splitter(context: &'a C, splitter: S) -> Self {
+        Tokenizer {
+            context,
+            splitter,
+            _marker: PhantomData,
+        }
+    }
+}
+
+impl<'a, N, C, S> Tokenizer<'a, N, C, S>
+where
+    C: Context<'a, N>,
+    N: FromStr,
+    S: Splitter,
+{
     pub fn tokenize(&self, expression: &str) -> Result<Vec<Token<N>>> {
-        const STRING_TOKENIZER: StringTokenizer =
-            StringTokenizer::new(TokenizeKind::RemoveWhiteSpaces);
         const COMMA: &str = ",";
         const WHITESPACE: &str = " ";
 
-        if expression.is_empty() {
-            return Err(Error::new(
-                ErrorKind::Empty,
-                "Expression is empty",
-            ));
+        if expression.trim().is_empty() {
+            return Err(Error::new(ErrorKind::Empty, "Expression is empty"));
         }
 
         // `Vec` used for fast access indexing, Iterator.nth(..) could be O(N)
-        let raw_tokens = STRING_TOKENIZER.get_tokens(expression);
+        let raw_tokens = self.splitter.split_into_tokens(expression);
         // Actual iterator over the string tokens.
         let mut iter = raw_tokens.iter().enumerate().peekable();
         // Stores the tokens to return.
@@ -68,7 +85,8 @@ where
         let context = self.context;
 
         while let Some((pos, string)) = iter.next() {
-            if is_number(string) {
+            let parsed_number = N::from_str(string);
+            if parsed_number.is_ok() {
                 // `complex_number` is enable in the context, check the next value and
                 // if is the imaginary unit append it to the current number.
                 if context.config().complex_number && iter.peek().map(|s| s.1).contains_str("i") {
@@ -88,7 +106,7 @@ where
                     })?;
                     tokens.push(Token::Number(n));
                 } else {
-                    let n = N::from_str(string).map_err(|_| {
+                    let n = parsed_number.map_err(|_| {
                         Error::new(
                             ErrorKind::InvalidInput,
                             format!(
@@ -164,23 +182,26 @@ where
 }
 
 fn is_unary<'a, N, C>(prev: Option<&str>, cur: &str, next: Option<&str>, context: &C) -> bool
-    where C: Context<'a, N> {
+where
+    C: Context<'a, N>,
+    N: FromStr,
+{
     if let Some(op) = context.get_unary_function(cur) {
         let config = context.config();
         if op.notation() == Notation::Postfix {
-            match prev{
+            match prev {
                 Some(s) => {
-                    if let Some(ch) = s.single_char(){
+                    if let Some(ch) = s.single_char() {
                         // )!
-                        if config.is_group_close(ch){
+                        if config.is_group_close(ch) {
                             return true;
                         }
                     }
 
                     // 10! , PI!, x!
-                    is_number(s) || context.is_constant(s) || context.is_variable(s)
+                    N::from_str(s).is_ok() || context.is_constant(s) || context.is_variable(s)
                 }
-                None => false
+                None => false,
             }
         } else {
             // 10-, (24)+
@@ -190,16 +211,17 @@ fn is_unary<'a, N, C>(prev: Option<&str>, cur: &str, next: Option<&str>, context
 
             if let Some(prev_str) = prev {
                 // )+, )-, ]+
-                if let Some(ch) = prev_str.single_char(){
-                    if config.is_group_close(ch){
+                if let Some(ch) = prev_str.single_char() {
+                    if config.is_group_close(ch) {
                         return false;
                     }
                 }
 
                 // 10+, PI-, x+
-                if is_number(prev_str)
+                if N::from_str(prev_str).is_ok()
                     || context.is_variable(prev_str)
-                    || context.is_constant(prev_str) {
+                    || context.is_constant(prev_str)
+                {
                     return false;
                 }
 
@@ -227,6 +249,8 @@ fn is_unary<'a, N, C>(prev: Option<&str>, cur: &str, next: Option<&str>, context
     }
 }
 
+// TODO: remove
+#[allow(unused)]
 fn is_number(value: &str) -> bool {
     if value == "0" {
         return true;
@@ -290,7 +314,9 @@ fn is_number(value: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use crate::impl_checked_num_traits_with_field;
     use crate::token::Token::*;
+    use crate::utils::splitter::SplitterWithInterceptor;
 
     use super::*;
 
@@ -414,5 +440,64 @@ mod tests {
                 ]
             );
         }
+    }
+
+    #[test]
+    fn tokenize_with_custom_splitter_test() {
+        struct AtNumber(i64);
+
+        impl FromStr for AtNumber {
+            type Err = String;
+            fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+                if let Some(stripped) = s.strip_prefix("@") {
+                    return if let Ok(number) = stripped.parse::<i64>() {
+                        Ok(AtNumber(number))
+                    } else {
+                        Err(format!("'{}' is not a number", s))
+                    };
+                }
+
+                Err(format!("Expected '@' followed by a number but got '{}'", s))
+            }
+        }
+
+        impl From<i64> for AtNumber {
+            fn from(number: i64) -> Self {
+                AtNumber(number)
+            }
+        }
+
+        impl_checked_num_traits_with_field!(AtNumber => 0, i64);
+
+        let splitter = SplitterWithInterceptor::new(|c, rest| {
+            if c == '@' {
+                let mut temp = String::new();
+                temp.push(c);
+                while let Some(c) = rest.peek() {
+                    if c.is_alphanumeric() {
+                        temp.push(*c);
+                        rest.next();
+                    } else {
+                        break;
+                    }
+                }
+                Some(temp)
+            } else {
+                None
+            }
+        });
+        let context = DefaultContext::<AtNumber>::new_checked();
+        let tokenizer = Tokenizer::with_splitter(&context, splitter);
+
+        assert_eq!(
+            &tokenizer.tokenize("@34 + (@124)").unwrap(),
+            &[
+                Number(AtNumber(34)),
+                BinaryOperator('+'.to_string()),
+                GroupingOpen('('),
+                Number(AtNumber(124)),
+                GroupingClose(')')
+            ]
+        );
     }
 }

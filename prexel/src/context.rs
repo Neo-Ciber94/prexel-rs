@@ -1,4 +1,3 @@
-use std::borrow::Borrow;
 use std::collections::HashMap;
 use std::rc::Rc;
 
@@ -6,6 +5,7 @@ use crate::function::{BinaryFunction, Function, UnaryFunction};
 use crate::num::checked::CheckedNum;
 use crate::num::unchecked::UncheckedNum;
 use crate::ops::math::*;
+use crate::utils::ignore_case_str::eq_ignore_case;
 use crate::utils::ignore_case_string::IgnoreCaseString;
 use validate::{OrPanic, TokenKind};
 
@@ -79,7 +79,7 @@ pub trait Context<'a, N> {
 #[derive(Clone)]
 pub struct DefaultContext<'a, N> {
     /// The variables.
-    variables: HashMap<IgnoreCaseString, N>,
+    variables: HashMap<String, N>,
     /// The constants.
     constants: HashMap<IgnoreCaseString, N>,
     /// The functions.
@@ -123,7 +123,7 @@ impl<'a, N> DefaultContext<'a, N> {
 
     /// Gets a reference to the variable values of this context.
     #[inline]
-    pub fn variables(&self) -> &HashMap<IgnoreCaseString, N> {
+    pub fn variables(&self) -> &HashMap<String, N> {
         &self.variables
     }
 
@@ -266,14 +266,11 @@ impl<'a, N> Context<'a, N> for DefaultContext<'a, N> {
         validate::check_token_name(TokenKind::Constant, name).or_panic();
 
         //self.constants.insert(IgnoreCaseString::from(name), value);
-        let string = IgnoreCaseString::from(name);
-        if self.variables.contains_key(&string) {
-            panic!(
-                "Invalid constant name, a variable named `{}` exists",
-                string
-            )
+        // let string = IgnoreCaseString::from(name);
+        if self.variables.keys().any(|k| eq_ignore_case(k, name)) {
+            panic!("Invalid constant name, a variable named `{}` exists", name)
         } else {
-            self.constants.insert(string, value);
+            self.constants.insert(IgnoreCaseString::from(name), value);
         }
     }
 
@@ -282,20 +279,16 @@ impl<'a, N> Context<'a, N> for DefaultContext<'a, N> {
         #[cfg(debug_assertions)]
         validate::check_token_name(TokenKind::Variable, name).or_panic();
 
-        let string = IgnoreCaseString::from(name);
-        if self.constants.contains_key(&string) {
-            panic!(
-                "Invalid variable name, a constant named `{}` exists",
-                string
-            )
+        if self.constants.keys().any(|k| eq_ignore_case(k.as_raw_str(), name)) {
+            panic!("Invalid variable name, a constant named `{}` exists", name)
         } else {
-            self.variables.insert(string, value)
+            self.variables.insert(name.to_string(), value)
         }
     }
 
     #[inline]
     fn get_variable(&self, name: &str) -> Option<&N> {
-        self.variables.get(IgnoreCaseString::from(name).borrow())
+        self.variables.get(name)
     }
 
     #[inline]
@@ -472,7 +465,7 @@ pub struct Config {
     pub implicit_mul: bool,
     /// Allows complex numbers.
     pub complex_number: bool,
-    /// Allows using custom grouping symbols for function calls, eg: Max[1,2,3], Sum<2,4,6>
+    /// Allows using custom grouping symbols for function calls, eg: `Max[1,2,3]`, `Sum<2,4,6>`
     pub custom_function_call: bool,
     /// Stores the grouping symbols as: `(`, `)`, `[`, `]`.
     grouping: HashMap<char, GroupingSymbol>,
@@ -508,8 +501,8 @@ impl Config {
     /// Enables custom function calls groping symbols.
     ///
     /// # Remarks
-    /// Function calls are only allowed within parentheses, eg: Product(3, 6, 6),
-    /// but `with_custom_function_call` allow to use others, eg: Max[1,2,3], Sum<2,4,6>.
+    /// Function calls are only allowed within parentheses, eg: `Product(3, 6, 6)`,
+    /// but `with_custom_function_call` allow to use others, eg: `Max[1,2,3]`, `Sum<2,4,6>`.
     #[inline]
     pub fn with_custom_function_call(mut self, enable: bool) -> Config {
         self.custom_function_call = enable;
@@ -675,7 +668,7 @@ pub mod validate {
 
     #[allow(clippy::redundant_closure)]
     pub fn check_token_name(kind: TokenKind, name: &str) -> Result<()> {
-        if name.is_empty() {
+        if name.trim().is_empty() {
             return Err(Error::new(
                 ErrorKind::Empty,
                 format!("{} name is empty", kind),
@@ -697,50 +690,6 @@ pub mod validate {
                     kind, name
                 ),
             ));
-        }
-
-        let name_length = name.chars().count();
-
-        match kind {
-            // ∞, π, x, Σ, +, -, *, /, %, √
-            TokenKind::Constant | TokenKind::Variable | TokenKind::Operator if name_length == 1 => {
-                let c = name.chars().next().unwrap();
-                if c.is_ascii_digit() {
-                    return Err(Error::new(
-                        ErrorKind::InvalidInput,
-                        format!("{}s names cannot be an ASCII number: `{}`", kind, name),
-                    ));
-                }
-            }
-            // PI, Sum, Mod, Sqrt, f, √(10, 2)
-            TokenKind::Variable
-            | TokenKind::Constant
-            | TokenKind::Function
-            | TokenKind::Operator => {
-                if !name.chars().any(|ref c| char::is_ascii_alphanumeric(c)) {
-                    return Err(Error::new(
-                        ErrorKind::InvalidInput,
-                        format!(
-                            "{}s with names `length > 1` should only contains ASCII alphanumeric characters: `{}`",
-                            kind,
-                            name
-                        ))
-                    );
-                }
-
-                if !name
-                    .chars()
-                    .next()
-                    .map_or(false, |ref c| char::is_ascii_alphabetic(c))
-                {
-                    return Err(Error::new(
-                        ErrorKind::InvalidInput,
-                        format!(
-                            "{}s with names `length > 1` should start with an ASCII alphabetic character: `{}`", kind, name
-                        ))
-                    );
-                }
-            }
         }
 
         Ok(())

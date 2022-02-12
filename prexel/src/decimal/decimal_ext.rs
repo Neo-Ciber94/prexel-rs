@@ -223,6 +223,7 @@ impl DecimalExt for Decimal {
         Some(result.approx())
     }
 
+    #[allow(clippy::assertions_on_constants)]
     fn checked_exp(self) -> Option<Decimal> {
         if self.is_zero() {
             return Some(Decimal::one());
@@ -536,7 +537,7 @@ impl Approx for Decimal {
 
     fn approx_by(&self, delta: &Self) -> Self {
         let r = self.round();
-        if self.approx_eq(&r, &delta) {
+        if self.approx_eq(&r, delta) {
             r
         } else {
             *self

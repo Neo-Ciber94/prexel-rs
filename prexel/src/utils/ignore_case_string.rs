@@ -94,12 +94,6 @@ impl AsRef<IgnoreCaseString> for IgnoreCaseString {
     }
 }
 
-// impl<'a> Borrow<IgnoreCaseStr<'a>> for IgnoreCaseString{
-//     fn borrow(&self) -> &IgnoreCaseStr<'a> {
-//         unimplemented!()
-//     }
-// }
-
 unsafe impl Send for IgnoreCaseString {}
 
 unsafe impl Sync for IgnoreCaseString {}

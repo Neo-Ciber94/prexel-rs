@@ -102,10 +102,10 @@ where
     loop {
         let x = match iterator.next() {
             None => {
-                if other.next().is_none() {
-                    return Some(Ordering::Equal);
+                return if other.next().is_none() {
+                    Some(Ordering::Equal)
                 } else {
-                    return Some(Ordering::Less);
+                    Some(Ordering::Less)
                 }
             }
             Some(val) => val,
@@ -121,6 +121,14 @@ where
             non_eq => return non_eq,
         }
     }
+}
+
+pub fn eq_ignore_case(x: &str, y: &str) -> bool {
+    let result = partial_cmp_by(x.chars(), y.chars(), |a, b| {
+        a.to_lowercase().partial_cmp(b.to_lowercase())
+    });
+
+    result == Some(Ordering::Equal)
 }
 
 #[cfg(test)]
