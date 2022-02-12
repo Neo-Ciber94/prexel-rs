@@ -1,11 +1,6 @@
 
 /// Implements unchecked numeric traits (Add, Sub, Mul, Div, Rem, Neg) for `T` using one of its
 /// field where `T` implements `From` taking a the field type: `T::From(typeof field)`.
-///
-/// # Example
-/// ```
-///
-/// ```
 #[macro_export]
 macro_rules! impl_unchecked_num_traits_with_field {
     ($type:ty => $field:tt, $field_type:ty) => {
@@ -240,6 +235,8 @@ macro_rules! impl_checked_num_traits_with_field {
     }
 }
 
+/// Implements unchecked numeric traits (Add, Sub, Mul, Div, Rem, Neg) and `FromStr` for `T` using one of its
+/// field where `T` implements `From` taking a the field type: `T::From(typeof field)`.
 #[macro_export]
 macro_rules! impl_unchecked_num_traits_with_field_and_from_str {
     ($type:ty => $field:tt, $field_type:ty) => {
@@ -257,6 +254,8 @@ macro_rules! impl_unchecked_num_traits_with_field_and_from_str {
     }
 }
 
+/// Implements checked numeric traits (CheckedAdd, CheckedSub, CheckedMul, CheckedDiv, CheckedRem, CheckedNeg)
+/// and `FromStr` for `T` using one of its field where `T` implements `From` taking a the field type: `T::From(typeof field)`.
 #[macro_export]
 macro_rules! impl_checked_num_traits_with_field_and_from_str {
     ($type:ty => $field:tt, $field_type:ty) => {
