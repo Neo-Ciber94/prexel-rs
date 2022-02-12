@@ -1,7 +1,9 @@
 use prexel::context::{Config, Context, DefaultContext};
 use prexel::function::{Associativity, BinaryFunction, Notation, Precedence, UnaryFunction};
 use std::fmt::Display;
-use std::str::FromStr;
+use std::iter::Peekable;
+use std::str::{Chars, FromStr};
+use prexel::utils::splitter::SplitterWithInterceptor;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Ord, PartialOrd)]
 pub struct Binary(pub i128);
@@ -27,6 +29,31 @@ impl Display for Binary {
 pub trait BinaryContext {
     fn new_binary() -> Self;
     fn with_config_binary(config: Config) -> Self;
+}
+
+pub fn binary_number_splitter() -> SplitterWithInterceptor<fn(char, &mut Peekable<Chars>) -> Option<String>> {
+    fn is_next_binary(chars: &mut Peekable<Chars>) -> bool {
+        chars.peek() == Some(&'1') || chars.peek() == Some(&'0')
+    }
+
+    SplitterWithInterceptor::new(|c, mut rest| {
+        if c == 'b' && is_next_binary(&mut rest) {
+            let mut temp = String::new();
+            temp.push(c);
+            while let Some(c) = rest.peek() {
+                if c.is_ascii_digit() {
+                    temp.push(*c);
+                    rest.next();
+                } else {
+                    break;
+                }
+            }
+
+            Some(temp)
+        } else {
+            None
+        }
+    })
 }
 
 impl<'a> BinaryContext for DefaultContext<'a, Binary> {
