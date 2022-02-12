@@ -6,7 +6,8 @@ use prexel::context::Config;
 use prexel::{context::Context, context::DefaultContext, decimal::Decimal, evaluator::Evaluator};
 use std::str::FromStr;
 use std::string::ToString;
-use crate::context::{Binary, BinaryContext};
+use prexel::tokenizer::Tokenizer;
+use crate::context::{Binary, binary_number_splitter, BinaryContext};
 
 static CONFIG: Lazy<Config> = Lazy::new(|| {
     Config::default()
@@ -146,8 +147,10 @@ fn eval_binary_expression(expression: EvalExpression) -> EvalResult {
     }
 
     // Evaluate expression
+    let tokenizer = Tokenizer::with_splitter(&context, binary_number_splitter());
+    let tokens = tokenizer.tokenize(&expression.expression).map_err(|err| format!("{}", err))?;
     let evaluator = Evaluator::with_context(context);
-    let result = evaluator.eval(&expression.expression);
+    let result = evaluator.eval_tokens(&tokens);
 
     match result {
         Ok(result) => EvalResult::Ok(result.to_string()),
