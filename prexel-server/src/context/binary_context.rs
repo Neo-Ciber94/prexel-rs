@@ -26,18 +26,15 @@ impl Display for Binary {
     }
 }
 
-pub trait BinaryContext {
-    fn new_binary() -> Self;
-    fn with_config_binary(config: Config) -> Self;
-}
+pub type BinaryNumberSplitter = SplitterWithInterceptor<fn(char, &mut Peekable<Chars>) -> Option<String>>;
 
-pub fn binary_number_splitter() -> SplitterWithInterceptor<fn(char, &mut Peekable<Chars>) -> Option<String>> {
+pub fn binary_number_splitter() -> BinaryNumberSplitter {
     fn is_next_binary(chars: &mut Peekable<Chars>) -> bool {
         chars.peek() == Some(&'1') || chars.peek() == Some(&'0')
     }
 
-    SplitterWithInterceptor::new(|c, mut rest| {
-        if c == 'b' && is_next_binary(&mut rest) {
+    SplitterWithInterceptor::new(|c, rest| {
+        if c == 'b' && is_next_binary(rest) {
             let mut temp = String::new();
             temp.push(c);
             while let Some(c) = rest.peek() {
@@ -54,6 +51,11 @@ pub fn binary_number_splitter() -> SplitterWithInterceptor<fn(char, &mut Peekabl
             None
         }
     })
+}
+
+pub trait BinaryContext {
+    fn new_binary() -> Self;
+    fn with_config_binary(config: Config) -> Self;
 }
 
 impl<'a> BinaryContext for DefaultContext<'a, Binary> {
