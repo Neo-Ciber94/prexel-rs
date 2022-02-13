@@ -2,9 +2,9 @@ name: Run Tests and Clippy
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, dev ]
   pull_request:
-    branches: [ master ]
+    branches: [ master, dev ]
 
 env:
   CARGO_TERM_COLOR: always
@@ -24,4 +24,4 @@ jobs:
       run: cargo test --verbose
       
     - name: Run Clippy
-      run: cd prexel && cargo clippy
+      run: cargo clippy
