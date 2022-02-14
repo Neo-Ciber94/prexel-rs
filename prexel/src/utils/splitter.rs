@@ -1,6 +1,5 @@
 use std::iter::Peekable;
 use std::str::Chars;
-use crate::context::Context;
 
 /// A trait that provides a method to convert a string into a sequence of tokens.
 pub trait Splitter {

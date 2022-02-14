@@ -163,8 +163,8 @@ where
                     // If string token length is 1 and its not considered a binary operator, unary operator
                     // or a function we check if is a grouping symbol in the context `Config`.
                     let c = string.chars().next().unwrap();
-                    if let Some(symbol) = context.config().get_group_symbol(c) {
-                        if c == symbol.group_open {
+                    if let Some((open, _)) = context.config().get_group_symbol(c) {
+                        if c == open {
                             tokens.push(Token::GroupingOpen(c));
                         } else {
                             tokens.push(Token::GroupingClose(c));

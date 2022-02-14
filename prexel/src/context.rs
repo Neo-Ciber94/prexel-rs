@@ -1,8 +1,5 @@
-use std::collections::hash_map::Iter;
-use std::collections::HashMap;
-use std::iter::Map;
+use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
-
 use crate::function::{BinaryFunction, Function, UnaryFunction};
 use crate::num::checked::CheckedNum;
 use crate::num::unchecked::UncheckedNum;
@@ -281,7 +278,11 @@ impl<'a, N> Context<'a, N> for DefaultContext<'a, N> {
         #[cfg(debug_assertions)]
         validate::check_token_name(TokenKind::Variable, name).or_panic();
 
-        if self.constants.keys().any(|k| eq_ignore_case(k.as_raw_str(), name)) {
+        if self
+            .constants
+            .keys()
+            .any(|k| eq_ignore_case(k.as_raw_str(), name))
+        {
             panic!("Invalid variable name, a constant named `{}` exists", name)
         } else {
             self.variables.insert(name.to_string(), value)
@@ -467,10 +468,10 @@ pub struct Config {
     pub implicit_mul: bool,
     /// Allows complex numbers.
     pub complex_number: bool,
-    /// Allows using custom grouping symbols for function calls, eg: `Max[1,2,3]`, `Sum<2,4,6>`
+    /// Allows using custom grouping symbols for function calls, eg: `Max[1,2,3]`, `Sum{2,4,6}`
     pub custom_function_call: bool,
     /// Stores the grouping symbols as: `(`, `)`, `[`, `]`.
-    grouping: HashMap<char, GroupingSymbol>,
+    grouping: HashSet<Grouping>,
 }
 
 impl Config {
@@ -478,7 +479,7 @@ impl Config {
     /// if is need an empty `Config` use `Default` instead.
     #[inline]
     pub fn new() -> Self {
-        Config::default().with_group_symbol('(', ')')
+        Config::default().with_grouping(Grouping::Parenthesis)
     }
 
     /// Enables implicit multiplication for this `Config`.
@@ -513,30 +514,17 @@ impl Config {
 
     /// Adds a pair of grouping symbols to this `Config`.
     ///
-    /// # Panics
-    /// If the config already contains the given symbol.
-    ///
     /// # Example
     /// ```
-    /// use prexel::context::Config;
+    /// use prexel::context::{Config, Grouping};
     ///
     /// // `Default` allows to create an empty config
     /// let mut config = Config::default()
-    ///     .with_group_symbol('(', ')')
-    ///     .with_group_symbol('[', ']');
+    ///     .with_grouping(Grouping::Parenthesis)
+    ///     .with_grouping(Grouping::Bracket);
     /// ```
-    pub fn with_group_symbol(mut self, open_group: char, close_group: char) -> Config {
-        let grouping = &mut self.grouping;
-        let grouping_symbol = GroupingSymbol::new(open_group, close_group);
-
-        if grouping.insert(open_group, grouping_symbol).is_some() {
-            panic!("Duplicated symbol: `{}`", open_group);
-        }
-
-        if grouping.insert(close_group, grouping_symbol).is_some() {
-            panic!("Duplicated symbol: `{}`", close_group);
-        }
-
+    pub fn with_grouping(mut self, grouping: Grouping) -> Config {
+        self.grouping.insert(grouping);
         self
     }
 
@@ -544,25 +532,25 @@ impl Config {
     ///
     /// # Examples
     /// ```
-    /// use prexel::context::Config;
+    /// use prexel::context::{Config, Grouping};
     ///
-    /// let mut config = Config::new().with_group_symbol('[', ']');
-    /// assert_eq!(('(', ')'), config.get_group_symbol('(').unwrap().as_tuple());
+    /// let mut config = Config::new().with_grouping(Grouping::Parenthesis);
+    /// assert_eq!(('(', ')'), config.get_group_symbol('(').unwrap());
     /// ```
     #[inline]
-    pub fn get_group_symbol(&self, symbol: char) -> Option<&GroupingSymbol> {
-        self.grouping.get(&symbol)
+    pub fn get_group_symbol(&self, symbol: char) -> Option<(char, char)> {
+        Grouping::new(symbol).map(|g| g.symbols())
     }
 
     /// Gets the grouping close for the specified grouping open.
     ///
     /// # Example
     /// ```
-    /// use prexel::context::Config;
+    /// use prexel::context::{Config, Grouping};
     ///
     /// let config = Config::default()
-    ///     .with_group_symbol('(', ')')
-    ///     .with_group_symbol('[', ']');
+    ///     .with_grouping(Grouping::Parenthesis)
+    ///     .with_grouping(Grouping::Bracket);
     ///
     /// assert_eq!(Some('('), config.get_group_open_for(')'));
     /// assert_eq!(Some('['), config.get_group_open_for(']'));
@@ -570,21 +558,20 @@ impl Config {
     /// ```
     #[inline]
     pub fn get_group_open_for(&self, group_close: char) -> Option<char> {
-        match self.get_group_symbol(group_close) {
-            Some(s) if s.group_close == group_close => Some(s.group_open),
-            _ => None,
-        }
+        Grouping::new(group_close)
+            .map(|g| g.open_for(group_close))
+            .flatten()
     }
 
     /// Gets the grouping close for the specified grouping open.
     ///
     /// # Example
     /// ```
-    /// use prexel::context::Config;
+    /// use prexel::context::{Config, Grouping};
     ///
     /// let config = Config::default()
-    ///     .with_group_symbol('(', ')')
-    ///     .with_group_symbol('[', ']');
+    ///     .with_grouping(Grouping::Parenthesis)
+    ///     .with_grouping(Grouping::Bracket);
     ///
     /// assert_eq!(Some(')'), config.get_group_close_for('('));
     /// assert_eq!(Some(']'), config.get_group_close_for('['));
@@ -592,53 +579,99 @@ impl Config {
     /// ```
     #[inline]
     pub fn get_group_close_for(&self, group_open: char) -> Option<char> {
-        match self.get_group_symbol(group_open) {
-            Some(s) if s.group_open == group_open => Some(s.group_close),
-            _ => None,
-        }
+        Grouping::new(group_open)
+            .map(|g| g.close_for(group_open))
+            .flatten()
     }
 
     /// Checks a value indicating if the given `char` is a group close symbol.
     #[inline]
     pub fn is_group_close(&self, group_close: char) -> bool {
-        self.grouping
-            .get(&group_close)
-            .map_or(false, |s| s.group_close == group_close)
+        Grouping::new(group_close)
+            .map(|g| g.is_close(group_close))
+            .unwrap_or(false)
     }
 
     /// Checks a value indicating if the given `char` is a group open symbol.
     #[inline]
     pub fn is_group_open(&self, group_open: char) -> bool {
-        self.grouping
-            .get(&group_open)
-            .map_or(false, |s| s.group_open == group_open)
+        Grouping::new(group_open)
+            .map(|g| g.is_open(group_open))
+            .unwrap_or(false)
     }
 }
 
-/// Represents a grouping symbol.
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
-pub struct GroupingSymbol {
-    /// The open symbol of teh grouping.
-    pub group_open: char,
-    /// The close symbol of teh grouping.
-    pub group_close: char,
+/// Represents a grouping symbol pair.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Grouping {
+    /// Grouping using parentheses: `(` and `)`.
+    Parenthesis,
+    /// Grouping using square brackets: `[` and `]`.
+    Bracket,
+    /// Grouping using curly braces: `{` and `}`.
+    Brace,
 }
 
-impl GroupingSymbol {
-    /// Constructs a new `GroupingSymbol`.
-    #[inline]
-    pub fn new(group_open: char, group_close: char) -> Self {
-        assert_ne!(group_open, group_close);
-        GroupingSymbol {
-            group_open,
-            group_close,
+impl Grouping {
+    /// Constructs a `Grouping` from the given `char`s.
+    pub fn new(c: char) -> Option<Grouping> {
+        match c {
+            '(' | ')' => Some(Grouping::Parenthesis),
+            '[' | ']' => Some(Grouping::Bracket),
+            '{' | '}' => Some(Grouping::Brace),
+            _ => None,
         }
     }
 
-    /// Gets the open and close `char` symbols of this grouping.
     #[inline]
-    pub fn as_tuple(&self) -> (char, char) {
-        (self.group_open, self.group_close)
+    pub fn symbols(&self) -> (char, char) {
+        (self.open(), self.close())
+    }
+
+    pub fn open(&self) -> char {
+        match self {
+            Grouping::Parenthesis => '(',
+            Grouping::Bracket => '[',
+            Grouping::Brace => '{',
+        }
+    }
+
+    pub fn close(&self) -> char {
+        match self {
+            Grouping::Parenthesis => ')',
+            Grouping::Bracket => ']',
+            Grouping::Brace => '}',
+        }
+    }
+
+    /// Returns `true` if the given `char` is a grouping open symbol.
+    #[inline]
+    pub fn is_open(&self, c: char) -> bool {
+        self.open() == c
+    }
+
+    /// Returns `true` if the given `char` is a grouping close symbol.
+    #[inline]
+    pub fn is_close(&self, c: char) -> bool {
+        self.close() == c
+    }
+
+    /// Returns the grouping open symbol for the given `char`.
+    pub fn close_for(&self, c: char) -> Option<char> {
+        if self.is_open(c) {
+            Self::new(c).map(|g| g.close())
+        } else {
+            None
+        }
+    }
+
+    /// Returns the grouping close symbol for the given `char`.
+    pub fn open_for(&self, c: char) -> Option<char> {
+        if self.is_close(c) {
+            Self::new(c).map(|g| g.open())
+        } else {
+            None
+        }
     }
 }
 
@@ -786,25 +819,13 @@ mod tests {
     #[test]
     fn config_test() {
         let config = Config::default()
-            .with_group_symbol('(', ')')
-            .with_group_symbol('[', ']');
+            .with_grouping(Grouping::Parenthesis)
+            .with_grouping(Grouping::Bracket);
 
-        assert_eq!(
-            config.get_group_symbol('(').unwrap(),
-            &GroupingSymbol::new('(', ')')
-        );
-        assert_eq!(
-            config.get_group_symbol(')').unwrap(),
-            &GroupingSymbol::new('(', ')')
-        );
-        assert_eq!(
-            config.get_group_symbol('[').unwrap(),
-            &GroupingSymbol::new('[', ']')
-        );
-        assert_eq!(
-            config.get_group_symbol(']').unwrap(),
-            &GroupingSymbol::new('[', ']')
-        );
+        assert_eq!(config.get_group_symbol('(').unwrap(), ('(', ')'));
+        assert_eq!(config.get_group_symbol(')').unwrap(), ('(', ')'));
+        assert_eq!(config.get_group_symbol('[').unwrap(), ('[', ']'));
+        assert_eq!(config.get_group_symbol(']').unwrap(), ('[', ']'));
     }
 
     #[test]

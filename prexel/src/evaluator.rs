@@ -581,8 +581,8 @@ mod shunting_yard {
         while let Some(t) = operators.pop() {
             match t {
                 Token::GroupingOpen(c) => {
-                    if let Some(grouping) = context.config().get_group_symbol(c) {
-                        if grouping.group_close == group_close {
+                    if let Some((_, close)) = context.config().get_group_symbol(c) {
+                        if close == group_close {
                             is_group_open = true;
                             // If `arg_count` is not empty we are inside a function.
                             // So we pop the argument count and function token into the output stack.
@@ -897,11 +897,11 @@ mod shunting_yard {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::context::Config;
+    use crate::context::{Config, Grouping};
 
     #[test]
     fn eval_test() {
-        let config = Config::new().with_group_symbol('[', ']');
+        let config = Config::new().with_grouping(Grouping::Parenthesis);
         let evaluator: Evaluator<i64> =
             Evaluator::with_context(DefaultContext::with_config_checked(config));
 
