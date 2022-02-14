@@ -1,4 +1,6 @@
+use std::collections::hash_map::Iter;
 use std::collections::HashMap;
+use std::iter::Map;
 use std::rc::Rc;
 
 use crate::function::{BinaryFunction, Function, UnaryFunction};
