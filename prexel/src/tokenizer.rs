@@ -3,7 +3,7 @@ use crate::error::{Error, ErrorKind};
 use crate::function::Notation;
 use crate::token::Token;
 use crate::utils::extensions::{OptionStrExt, StrExt};
-use crate::utils::splitter::{DefaultSplitter, SplitStrategy, Splitter};
+use crate::utils::splitter::{DefaultSplitter, Splitter};
 use crate::Result;
 use std::marker::PhantomData;
 use std::str::FromStr;
@@ -21,7 +21,7 @@ use std::str::FromStr;
 /// let tokens = t.tokenize("2 + 3").unwrap();
 /// assert_eq!(&[Number(2_i32), BinaryOperator('+'.to_string()), Number(3_i32)], tokens.as_slice());
 /// ```
-pub struct Tokenizer<'a, N, C = DefaultContext<'a, N>, S = DefaultSplitter>
+pub struct Tokenizer<'a, N, C = DefaultContext<'a, N>, S = DefaultSplitter<'a>>
 where
     C: Context<'a, N>,
     S: Splitter,
@@ -31,7 +31,7 @@ where
     _marker: PhantomData<N>,
 }
 
-impl<'a, N, C> Tokenizer<'a, N, C, DefaultSplitter>
+impl<'a, N, C> Tokenizer<'a, N, C, DefaultSplitter<'a>>
 where
     C: Context<'a, N>,
 {
@@ -40,7 +40,7 @@ where
     pub fn with_context(context: &'a C) -> Self {
         Tokenizer {
             context,
-            splitter: DefaultSplitter(SplitStrategy::RemoveWhiteSpaces),
+            splitter: DefaultSplitter::default(),
             _marker: PhantomData,
         }
     }
@@ -316,7 +316,7 @@ fn is_number(value: &str) -> bool {
 mod tests {
     use crate::impl_checked_num_traits_with_field;
     use crate::token::Token::*;
-    use crate::utils::splitter::SplitterWithInterceptor;
+    use crate::utils::splitter::DefaultSplitterBuilder;
 
     use super::*;
 
@@ -443,7 +443,7 @@ mod tests {
     }
 
     #[test]
-    fn tokenize_with_custom_splitter_test() {
+    fn tokenize_with_custom_rule_test() {
         struct AtNumber(i64);
 
         impl FromStr for AtNumber {
@@ -469,7 +469,7 @@ mod tests {
 
         impl_checked_num_traits_with_field!(AtNumber => 0, i64);
 
-        let splitter = SplitterWithInterceptor::new(|c, rest| {
+        let splitter = DefaultSplitter::with_numeric_rule(|c, rest| {
             if c == '@' {
                 let mut temp = String::new();
                 temp.push(c);
@@ -486,6 +486,7 @@ mod tests {
                 None
             }
         });
+
         let context = DefaultContext::<AtNumber>::new_checked();
         let tokenizer = Tokenizer::with_splitter(&context, splitter);
 

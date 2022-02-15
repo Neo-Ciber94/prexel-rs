@@ -1,5 +1,9 @@
 use std::iter::Peekable;
+use std::marker::PhantomData;
 use std::str::Chars;
+
+/// A rule for splitting a string into tokens.
+pub type SplitRule<'a> = Box<dyn Fn(char, &mut Peekable<Chars>) -> Option<String> + 'a>;
 
 /// A trait that provides a method to convert a string into a sequence of tokens.
 pub trait Splitter {
@@ -7,13 +11,13 @@ pub trait Splitter {
     fn split_into_tokens(&self, expression: &str) -> Vec<String>;
 }
 
-/// Defines the method used to split a string.
+/// Options used for whitespaces.
 #[derive(Copy, Clone, Eq, PartialEq)]
-pub enum SplitStrategy {
+pub enum SplitWhitespaceOption {
     /// All the tokens will be retrieve including whitespaces.
     None,
     /// All the tokens will be retrieve ignoring whitespaces.
-    RemoveWhiteSpaces,
+    Remove,
 }
 
 /// Provides a way to extract tokens from a `str`.
@@ -26,156 +30,240 @@ pub enum SplitStrategy {
 /// let tokens = splitter.split_into_tokens("2 + 3");
 /// assert_eq!(["2", "+", "3"].to_vec(), tokens);
 /// ```
-#[derive(Copy, Clone, Eq, PartialEq)]
-pub struct DefaultSplitter(pub SplitStrategy);
+pub struct DefaultSplitter<'a> {
+    rules: Vec<SplitRule<'a>>,
+}
 
-impl DefaultSplitter {
+impl<'a> DefaultSplitter<'a> {
     #[inline]
-    pub const fn new(kind: SplitStrategy) -> DefaultSplitter {
-        DefaultSplitter(kind)
+    pub fn new(kind: SplitWhitespaceOption) -> DefaultSplitter<'a> {
+        DefaultSplitterBuilder::default()
+            .rule(rules::next_identifier)
+            .rule(rules::next_numeric)
+            .rule(rules::next_operator)
+            .whitespace(kind)
+            .build()
+    }
+
+    pub fn with_numeric_rule<F: 'a>(rule: F) -> Self
+    where
+        F: Fn(char, &mut Peekable<Chars>) -> Option<String>,
+    {
+        DefaultSplitterBuilder::default()
+            .rule(rule)
+            .rule(rules::next_identifier)
+            .rule(rules::next_operator)
+            .whitespace(SplitWhitespaceOption::Remove)
+            .build()
+    }
+
+    #[inline]
+    pub fn builder() -> DefaultSplitterBuilder<'a> {
+        DefaultSplitterBuilder::default()
+    }
+
+    #[inline]
+    pub fn rules(&self) -> &[SplitRule] {
+        &self.rules
     }
 }
 
-impl Splitter for DefaultSplitter {
+impl Splitter for DefaultSplitter<'_> {
     fn split_into_tokens(&self, expression: &str) -> Vec<String> {
         let mut tokens = Vec::new();
         let mut iterator = expression.chars().peekable();
 
-        while let Some(next) = iterator.next() {
-            match next {
-                'a'..='z' | 'A'..='Z' => {
-                    let mut temp = next.to_string();
-                    next_alphanumeric(&mut temp, &mut iterator);
-                    tokens.push(temp);
-                }
-                '0'..='9' => {
-                    let mut temp = next.to_string();
-                    next_numeric(&mut temp, &mut iterator);
-                    tokens.push(temp);
-                }
-                ' ' => match self.0 {
-                    SplitStrategy::None => tokens.push(String::from(" ")),
-                    SplitStrategy::RemoveWhiteSpaces => {}
-                },
-                c => tokens.push(c.to_string()),
-            }
-        }
-
-        tokens
-    }
-}
-
-impl Default for DefaultSplitter {
-    fn default() -> Self {
-        DefaultSplitter(SplitStrategy::RemoveWhiteSpaces)
-    }
-}
-
-/// A `Splitter` implementation that accepts a custom interceptor.
-///
-/// An `interceptor` is a function that will be called for each token
-/// and allow to include custom logic for split the string.
-pub struct SplitterWithInterceptor<F>
-where
-    F: Fn(char, &mut Peekable<Chars>) -> Option<String>,
-{
-    interceptor: F,
-    strategy: SplitStrategy,
-}
-
-impl<F> SplitterWithInterceptor<F>
-where
-    F: Fn(char, &mut Peekable<Chars>) -> Option<String>,
-{
-    /// Creates a new `SplitterWithInterceptor` with the given interceptor and `SplitStrategy::RemoveWhiteSpaces`.
-    pub fn new(interceptor: F) -> Self {
-        Self::with_strategy(interceptor, SplitStrategy::RemoveWhiteSpaces)
-    }
-
-    /// Creates a new `SplitterWithInterceptor` with the given interceptor and `SplitStrategy`.
-    pub fn with_strategy(interceptor: F, strategy: SplitStrategy) -> Self {
-        SplitterWithInterceptor { interceptor, strategy }
-    }
-
-    /// Returns the `SplitStrategy` used by the `SplitterWithInterceptor`.
-    pub fn strategy(&self) -> SplitStrategy {
-        self.strategy
-    }
-}
-
-impl<F> Splitter for SplitterWithInterceptor<F>
-where
-    F: Fn(char, &mut Peekable<Chars>) -> Option<String>,
-{
-    fn split_into_tokens(&self, expression: &str) -> Vec<String> {
-        let mut tokens = Vec::new();
-        let mut iterator = expression.chars().peekable();
-
-        while let Some(next) = iterator.next() {
-            if let Some(token) = (self.interceptor)(next, &mut iterator) {
-                tokens.push(token);
-            } else {
-                match next {
-                    'a'..='z' | 'A'..='Z' => {
-                        let mut temp = next.to_string();
-                        next_alphanumeric(&mut temp, &mut iterator);
-                        tokens.push(temp);
-                    }
-                    '0'..='9' => {
-                        let mut temp = next.to_string();
-                        next_numeric(&mut temp, &mut iterator);
-                        tokens.push(temp);
-                    }
-                    ' ' => match self.strategy {
-                        SplitStrategy::None => tokens.push(String::from(" ")),
-                        SplitStrategy::RemoveWhiteSpaces => {}
-                    },
-                    c => tokens.push(c.to_string()),
-                }
-            }
-        }
-
-        tokens
-    }
-}
-
-fn next_alphanumeric(dest: &mut String, iterator: &mut Peekable<Chars>) {
-    while let Some(c) = iterator.peek() {
-        if c.is_alphanumeric() {
-            dest.push(*c);
-            iterator.next();
-        } else {
-            break;
-        }
-    }
-}
-
-fn next_numeric(dest: &mut String, iterator: &mut Peekable<Chars>) {
-    let mut has_decimal_point = false;
-
-    while let Some(c) = iterator.peek() {
-        if *c == '.' || c.is_ascii_digit() {
-            if *c == '.' {
-                if has_decimal_point {
+        while let Some(c) = iterator.peek().cloned() {
+            for rule in &self.rules {
+                if let Some(token) = (rule)(c, &mut iterator) {
+                    tokens.push(token);
                     break;
                 } else {
-                    has_decimal_point = true;
+                    iterator.next();
+                    tokens.push(c.to_string());
                 }
             }
+        }
 
-            dest.push(*c);
-            iterator.next();
+        tokens
+    }
+}
+
+impl Default for DefaultSplitter<'_> {
+    fn default() -> Self {
+        DefaultSplitter::new(SplitWhitespaceOption::Remove)
+    }
+}
+
+pub struct DefaultSplitterBuilder<'a> {
+    rules: Vec<SplitRule<'a>>,
+    whitespace_option: Option<SplitWhitespaceOption>,
+    _marker: &'a PhantomData<()>,
+}
+
+impl<'a> DefaultSplitterBuilder<'a> {
+    pub fn new() -> Self {
+        DefaultSplitterBuilder {
+            rules: Vec::new(),
+            whitespace_option: None,
+            _marker: &PhantomData,
+        }
+    }
+
+    pub fn rule<F: 'a>(mut self, rule: F) -> Self
+    where
+        F: Fn(char, &mut Peekable<Chars>) -> Option<String>,
+    {
+        self.rules.push(Box::new(rule));
+        self
+    }
+
+    pub fn whitespace(mut self, option: SplitWhitespaceOption) -> Self {
+        self.whitespace_option = Some(option);
+        self
+    }
+
+    pub fn build(self) -> DefaultSplitter<'a> {
+        let DefaultSplitterBuilder {
+            rules,
+            whitespace_option,
+            ..
+        } = self;
+
+        let mut rules = rules;
+        let whitespace_option = whitespace_option.unwrap_or(SplitWhitespaceOption::None);
+
+        match whitespace_option {
+            SplitWhitespaceOption::None => rules.push(Box::new(rules::include_whitespace)),
+            SplitWhitespaceOption::Remove => rules.push(Box::new(rules::skip_whitespace)),
+        };
+
+        DefaultSplitter { rules }
+    }
+}
+
+impl Default for DefaultSplitterBuilder<'_> {
+    fn default() -> Self {
+        DefaultSplitterBuilder::new()
+    }
+}
+
+pub mod rules {
+    use crate::context::Grouping;
+    use std::iter::Peekable;
+    use std::str::Chars;
+
+    pub fn next_identifier(c: char, rest: &mut Peekable<Chars>) -> Option<String> {
+        #[inline]
+        fn is_valid_char(c: &char) -> bool {
+            matches!(c, 'a'..='z' | 'A'..='Z' | '0'..='9' | '_')
+        }
+
+        match c {
+            '_' | 'a'..='z' | 'A'..='Z' => {
+                let mut temp = String::new();
+                temp.push(c);
+                rest.next();
+
+                while let Some(c) = rest.next_if(is_valid_char) {
+                    temp.push(c);
+                }
+
+                Some(temp)
+            }
+            _ => None,
+        }
+    }
+
+    pub fn next_numeric(c: char, rest: &mut Peekable<Chars>) -> Option<String> {
+        #[inline]
+        fn is_valid_char(c: &char) -> bool {
+            matches!(c, '0'..='9' | '.')
+        }
+
+        match c {
+            '0'..='9' => {
+                let mut temp = String::new();
+                temp.push(c);
+                rest.next();
+
+                let mut has_decimal_point = false;
+
+                while let Some(c) = rest.next_if(is_valid_char) {
+                    if c == '.' {
+                        if has_decimal_point {
+                            break;
+                        }
+
+                        has_decimal_point = true;
+                    }
+
+                    temp.push(c);
+                }
+
+                Some(temp)
+            }
+            _ => None,
+        }
+    }
+
+    pub fn next_operator(c: char, rest: &mut Peekable<Chars>) -> Option<String> {
+        match c {
+            _ if c.is_ascii() && !c.is_ascii_alphanumeric() => {
+                let mut temp = String::new();
+                temp.push(c);
+                rest.next();
+
+                while let Some(c) = rest.next_if(|c| c.is_ascii() && !c.is_ascii_alphanumeric()) {
+                    temp.push(c);
+                }
+
+                Some(temp)
+            }
+            _ => None,
+        }
+    }
+
+    pub fn skip_whitespace(c: char, rest: &mut Peekable<Chars>) -> Option<String> {
+        if c.is_whitespace() {
+            while rest.next_if(|c| c.is_whitespace()).is_some() {
+                continue;
+            }
+        }
+
+        None
+    }
+
+    pub fn include_whitespace(c: char, rest: &mut Peekable<Chars>) -> Option<String> {
+        if c.is_whitespace() {
+            let mut temp = String::new();
+            temp.push(c);
+            rest.next();
+
+            while let Some(c) = rest.next_if(|c| c.is_whitespace()) {
+                temp.push(c);
+            }
+
+            Some(temp)
         } else {
-            break;
+            None
+        }
+    }
+
+    pub fn next_grouping(c: char, rest: &mut Peekable<Chars>) -> Option<String> {
+        if Grouping::new(c).is_some() {
+            rest.next(); // Consume the char
+            Some(c.to_string())
+        } else {
+            None
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::utils::splitter::SplitterWithInterceptor;
     use super::DefaultSplitter;
-    use super::{SplitStrategy, Splitter};
+    use super::{SplitWhitespaceOption, Splitter};
 
     #[test]
     fn split_into_tokens() {
@@ -207,34 +295,7 @@ mod tests {
 
         assert_eq!(
             ["5", " ", "*", " ", "2"].to_vec(),
-            DefaultSplitter::new(SplitStrategy::None).split_into_tokens("5 * 2")
-        );
-    }
-
-    #[test]
-    fn split_with_interceptor_test() {
-        let splitter = SplitterWithInterceptor::new(|c, rest| {
-            if c == '@' {
-                let mut temp = String::new();
-                temp.push(c);
-                while let Some(c) = rest.peek() {
-                    if c.is_alphanumeric() {
-                        temp.push(*c);
-                        rest.next();
-                    } else {
-                        break;
-                    }
-                }
-                Some(temp)
-            } else {
-                None
-            }
-        });
-
-        let tokens = splitter.split_into_tokens("@125 + -@2 * Sin(@45)");
-        assert_eq!(
-            ["@125", "+", "-", "@2", "*", "Sin", "(", "@45", ")"].to_vec(),
-            tokens
+            DefaultSplitter::new(SplitWhitespaceOption::None).split_into_tokens("5 * 2")
         );
     }
 }
