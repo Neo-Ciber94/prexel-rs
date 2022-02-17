@@ -270,3 +270,41 @@ impl BinaryFunction<Binary> for LteFunction {
         Ok(Binary(result))
     }
 }
+
+struct ShrFunction;
+impl BinaryFunction<Binary> for ShrFunction {
+    fn name(&self) -> &str {
+        ">>"
+    }
+
+    fn precedence(&self) -> Precedence {
+        Precedence(7)
+    }
+
+    fn associativity(&self) -> Associativity {
+        Associativity::Left
+    }
+
+    fn call(&self, left: Binary, right: Binary) -> prexel::Result<Binary> {
+        Ok(Binary(left.0 >> right.0))
+    }
+}
+
+struct ShlFunction;
+impl BinaryFunction<Binary> for ShlFunction {
+    fn name(&self) -> &str {
+        "<<"
+    }
+
+    fn precedence(&self) -> Precedence {
+        Precedence(7)
+    }
+
+    fn associativity(&self) -> Associativity {
+        Associativity::Left
+    }
+
+    fn call(&self, left: Binary, right: Binary) -> prexel::Result<Binary> {
+        Ok(Binary(left.0 << right.0))
+    }
+}

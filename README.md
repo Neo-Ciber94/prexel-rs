@@ -14,3 +14,4 @@ prexel = "0.1.0"
 
 - [x] Reexport some `num_traits` functions
 - [ ]  Docs
+- [ ] Function aliases 

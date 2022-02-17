@@ -1,4 +1,3 @@
-use std::i128;
 use crate::models::{EvalExpression, EvalResult, NumberType};
 use once_cell::sync::Lazy;
 use prexel::complex;
@@ -111,10 +110,8 @@ fn eval_integer_expression(expression: EvalExpression) -> EvalResult {
     // Set variables
     if let Some(variables) = &expression.variables {
         for (name, value) in variables {
-            match i64::from_str(&value.to_string()) {
-                Ok(value) => {
-                    context.set_variable(name, value);
-                }
+            match i128::from_str(&value.to_string()) {
+                Ok(value) => { context.set_variable(name, value); }
                 Err(err) => return EvalResult::Err(format!("{}", err)),
             }
         }
