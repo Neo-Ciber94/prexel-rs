@@ -259,11 +259,11 @@ pub mod context {
     impl<'a, T> DefaultContext<'a, Complex<T>> where T: Float + FromPrimitive + Debug + Display {
         #[inline]
         pub fn new_complex() -> Self {
-            Self::new_complex_with_config(Config::new()
+            Self::with_config_complex(Config::new()
                 .with_complex_number(true))
         }
 
-        pub fn new_complex_with_config(config: Config) -> Self {
+        pub fn with_config_complex(config: Config) -> Self {
             let mut context = DefaultContext::with_config(config.with_complex_number(true));
             context.add_constant("PI", Complex::from_f64(std::f64::consts::PI).unwrap());
             context.add_constant("E", Complex::from_f64(std::f64::consts::E).unwrap());

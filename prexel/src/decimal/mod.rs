@@ -723,10 +723,10 @@ pub mod context {
     impl<'a> DefaultContext<'a, Decimal> {
         #[inline]
         pub fn new_decimal() -> Self {
-            Self::new_decimal_with_config(Config::new())
+            Self::with_config_decimal(Config::new())
         }
 
-        pub fn new_decimal_with_config(config: Config) -> Self {
+        pub fn with_config_decimal(config: Config) -> Self {
             let mut context = Self::with_config(config);
             context.add_constant("PI", consts::PI);
             context.add_constant("E", consts::E);
