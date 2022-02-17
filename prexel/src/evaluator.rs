@@ -923,7 +923,7 @@ mod tests {
         assert!(evaluator.eval("((10)+(((2)))*(3))").is_ok());
         assert!(evaluator.eval("-(2)^(((4)))").is_ok());
         assert!(evaluator.eval("-(+(-(+(5))))").is_ok());
-        assert!(evaluator.eval("10--+2").is_ok());
+        assert!(evaluator.eval("10 - - +2").is_ok());
         assert!(evaluator.eval("+2!").is_ok());
         assert!(evaluator.eval("5 * Sin(40)").is_ok());
         assert!(evaluator.eval("Sin(30) * 5").is_ok());

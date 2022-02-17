@@ -2,8 +2,18 @@ use std::iter::Peekable;
 use std::marker::PhantomData;
 use std::str::Chars;
 
+/// The result of a split rule.
+pub enum Outcome {
+    /// The result of a split.
+    Data(String),
+    /// Continue to the next rule.
+    Continue,
+    /// Skips the current `char`.
+    Skip,
+}
+
 /// A rule for splitting a string into tokens.
-pub type SplitRule<'a> = Box<dyn Fn(char, &mut Peekable<Chars>) -> Option<String> + 'a>;
+pub type SplitRule<'a> = Box<dyn Fn(char, &mut Peekable<Chars>) -> Outcome + 'a>;
 
 /// A trait that provides a method to convert a string into a sequence of tokens.
 pub trait Splitter {
@@ -38,8 +48,8 @@ impl<'a> DefaultSplitter<'a> {
     #[inline]
     pub fn new(kind: SplitWhitespaceOption) -> DefaultSplitter<'a> {
         DefaultSplitterBuilder::default()
-            .rule(rules::next_identifier)
             .rule(rules::next_numeric)
+            .rule(rules::next_identifier)
             .rule(rules::next_operator)
             .whitespace(kind)
             .build()
@@ -47,7 +57,7 @@ impl<'a> DefaultSplitter<'a> {
 
     pub fn with_numeric_rule<F: 'a>(rule: F) -> Self
     where
-        F: Fn(char, &mut Peekable<Chars>) -> Option<String>,
+        F: Fn(char, &mut Peekable<Chars>) -> Outcome,
     {
         DefaultSplitterBuilder::default()
             .rule(rule)
@@ -74,14 +84,29 @@ impl Splitter for DefaultSplitter<'_> {
         let mut iterator = expression.chars().peekable();
 
         while let Some(c) = iterator.peek().cloned() {
+            iterator.next();
+
+            let mut next = false;
+
             for rule in &self.rules {
-                if let Some(token) = (rule)(c, &mut iterator) {
-                    tokens.push(token);
-                    break;
-                } else {
-                    iterator.next();
-                    tokens.push(c.to_string());
+                match rule(c, &mut iterator) {
+                    Outcome::Data(s) => {
+                        tokens.push(s);
+                        next = true;
+                        break;
+                    }
+                    Outcome::Continue => {
+                        continue;
+                    }
+                    Outcome::Skip => {
+                        next = true;
+                        break;
+                    }
                 }
+            }
+
+            if !next {
+                tokens.push(c.to_string());
             }
         }
 
@@ -112,7 +137,7 @@ impl<'a> DefaultSplitterBuilder<'a> {
 
     pub fn rule<F: 'a>(mut self, rule: F) -> Self
     where
-        F: Fn(char, &mut Peekable<Chars>) -> Option<String>,
+        F: Fn(char, &mut Peekable<Chars>) -> Outcome,
     {
         self.rules.push(Box::new(rule));
         self
@@ -134,7 +159,7 @@ impl<'a> DefaultSplitterBuilder<'a> {
         let whitespace_option = whitespace_option.unwrap_or(SplitWhitespaceOption::None);
 
         match whitespace_option {
-            SplitWhitespaceOption::None => rules.push(Box::new(rules::include_whitespace)),
+            SplitWhitespaceOption::None => {},
             SplitWhitespaceOption::Remove => rules.push(Box::new(rules::skip_whitespace)),
         };
 
@@ -149,33 +174,32 @@ impl Default for DefaultSplitterBuilder<'_> {
 }
 
 pub mod rules {
-    use crate::context::Grouping;
+    use crate::utils::splitter::Outcome;
     use std::iter::Peekable;
     use std::str::Chars;
 
-    pub fn next_identifier(c: char, rest: &mut Peekable<Chars>) -> Option<String> {
+    pub fn next_identifier(c: char, rest: &mut Peekable<Chars>) -> Outcome {
         #[inline]
         fn is_valid_char(c: &char) -> bool {
             matches!(c, 'a'..='z' | 'A'..='Z' | '0'..='9' | '_')
         }
 
         match c {
-            '_' | 'a'..='z' | 'A'..='Z' => {
+            'a'..='z' | 'A'..='Z' | '_' => {
                 let mut temp = String::new();
                 temp.push(c);
-                rest.next();
 
                 while let Some(c) = rest.next_if(is_valid_char) {
                     temp.push(c);
                 }
 
-                Some(temp)
+                Outcome::Data(temp)
             }
-            _ => None,
+            _ => Outcome::Continue,
         }
     }
 
-    pub fn next_numeric(c: char, rest: &mut Peekable<Chars>) -> Option<String> {
+    pub fn next_numeric(c: char, rest: &mut Peekable<Chars>) -> Outcome {
         #[inline]
         fn is_valid_char(c: &char) -> bool {
             matches!(c, '0'..='9' | '.')
@@ -185,7 +209,6 @@ pub mod rules {
             '0'..='9' => {
                 let mut temp = String::new();
                 temp.push(c);
-                rest.next();
 
                 let mut has_decimal_point = false;
 
@@ -201,62 +224,65 @@ pub mod rules {
                     temp.push(c);
                 }
 
-                Some(temp)
+                Outcome::Data(temp)
             }
-            _ => None,
+            _ => Outcome::Continue,
         }
     }
 
-    pub fn next_operator(c: char, rest: &mut Peekable<Chars>) -> Option<String> {
+    pub fn next_operator(c: char, rest: &mut Peekable<Chars>) -> Outcome {
+        fn is_valid_char(c: &char) -> bool {
+            matches!(
+                c, '~'
+                | '`'
+                | '!'
+                | '@'
+                | '#'
+                | '$'
+                | '%'
+                | '^'
+                | '&'
+                | '*'
+                | '-'
+                | '+'
+                | '_'
+                | ':'
+                | ';'
+                | '"'
+                | '\''
+                | '|'
+                | '\\'
+                | '?'
+                | '.'
+                | '<'
+                | '>'
+                | '/'
+                | '='
+                | ','
+            )
+        }
+
         match c {
-            _ if c.is_ascii() && !c.is_ascii_alphanumeric() => {
+            _ if is_valid_char(&c) => {
                 let mut temp = String::new();
                 temp.push(c);
-                rest.next();
 
-                while let Some(c) = rest.next_if(|c| c.is_ascii() && !c.is_ascii_alphanumeric()) {
+                while let Some(c) = rest.next_if(is_valid_char) {
                     temp.push(c);
                 }
 
-                Some(temp)
+                Outcome::Data(temp)
             }
-            _ => None,
+            _ => Outcome::Continue,
         }
     }
 
-    pub fn skip_whitespace(c: char, rest: &mut Peekable<Chars>) -> Option<String> {
+    pub fn skip_whitespace(c: char, _: &mut Peekable<Chars>) -> Outcome {
         if c.is_whitespace() {
-            while rest.next_if(|c| c.is_whitespace()).is_some() {
-                continue;
-            }
+            return Outcome::Skip;
         }
 
-        None
-    }
-
-    pub fn include_whitespace(c: char, rest: &mut Peekable<Chars>) -> Option<String> {
-        if c.is_whitespace() {
-            let mut temp = String::new();
-            temp.push(c);
-            rest.next();
-
-            while let Some(c) = rest.next_if(|c| c.is_whitespace()) {
-                temp.push(c);
-            }
-
-            Some(temp)
-        } else {
-            None
-        }
-    }
-
-    pub fn next_grouping(c: char, rest: &mut Peekable<Chars>) -> Option<String> {
-        if Grouping::new(c).is_some() {
-            rest.next(); // Consume the char
-            Some(c.to_string())
-        } else {
-            None
-        }
+        Outcome::Continue
     }
 }
 

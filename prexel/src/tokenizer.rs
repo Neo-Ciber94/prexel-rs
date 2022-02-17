@@ -316,7 +316,7 @@ fn is_number(value: &str) -> bool {
 mod tests {
     use crate::impl_checked_num_traits_with_field;
     use crate::token::Token::*;
-    use crate::utils::splitter::DefaultSplitterBuilder;
+    use crate::utils::splitter::Outcome;
 
     use super::*;
 
@@ -473,6 +473,7 @@ mod tests {
             if c == '@' {
                 let mut temp = String::new();
                 temp.push(c);
+
                 while let Some(c) = rest.peek() {
                     if c.is_alphanumeric() {
                         temp.push(*c);
@@ -481,9 +482,9 @@ mod tests {
                         break;
                     }
                 }
-                Some(temp)
+                Outcome::Data(temp)
             } else {
-                None
+                Outcome::Continue
             }
         });
 
