@@ -1,9 +1,11 @@
 use prexel::context::{Config, Context, DefaultContext};
 use prexel::function::{Associativity, BinaryFunction, Notation, Precedence, UnaryFunction};
+use prexel::utils::splitter::{
+    rules, DefaultSplitter, DefaultSplitterBuilder, Outcome, SplitWhitespaceOption,
+};
 use std::fmt::Display;
 use std::iter::Peekable;
 use std::str::{Chars, FromStr};
-use prexel::utils::splitter::{DefaultSplitter, Outcome};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Ord, PartialOrd)]
 pub struct Binary(pub i128);
@@ -31,24 +33,30 @@ pub fn binary_number_splitter<'a>() -> DefaultSplitter<'a> {
         chars.peek() == Some(&'1') || chars.peek() == Some(&'0')
     }
 
-    DefaultSplitter::with_numeric_rule(|c, rest| {
-        if c == 'b' && is_next_binary(rest) {
-            let mut temp = String::new();
-            temp.push(c);
-            while let Some(c) = rest.peek() {
-                if c.is_ascii_digit() {
-                    temp.push(*c);
-                    rest.next();
-                } else {
-                    break;
+    DefaultSplitterBuilder::new()
+        .rule(|c, rest| {
+            if c == 'b' && is_next_binary(rest) {
+                let mut temp = String::new();
+                temp.push(c);
+                while let Some(c) = rest.peek() {
+                    if c.is_ascii_digit() {
+                        temp.push(*c);
+                        rest.next();
+                    } else {
+                        break;
+                    }
                 }
-            }
 
-            Outcome::Data(temp)
-        } else {
-            Outcome::Continue
-        }
-    })
+                Outcome::Data(temp)
+            } else {
+                Outcome::Continue
+            }
+        })
+        .rule(rules::next_numeric)
+        .rule(rules::next_identifier)
+        .rule(rules::next_operator)
+        .whitespace(SplitWhitespaceOption::Remove)
+        .build()
 }
 
 pub trait BinaryContext {
@@ -73,6 +81,8 @@ impl<'a> BinaryContext for DefaultContext<'a, Binary> {
         context.add_binary_function(LtFunction);
         context.add_binary_function(GteFunction);
         context.add_binary_function(LteFunction);
+        context.add_binary_function(ShrFunction);
+        context.add_binary_function(ShlFunction);
         context
     }
 }
