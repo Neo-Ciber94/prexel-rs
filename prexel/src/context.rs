@@ -1,11 +1,11 @@
-use std::collections::{HashMap, HashSet};
-use std::rc::Rc;
 use crate::function::{BinaryFunction, Function, UnaryFunction};
 use crate::num::checked::CheckedNum;
 use crate::num::unchecked::UncheckedNum;
 use crate::ops::math::*;
 use crate::utils::ignore_case_str::eq_ignore_case;
 use crate::utils::ignore_case_string::IgnoreCaseString;
+use std::collections::{HashMap, HashSet};
+use std::rc::Rc;
 use validate::{OrPanic, TokenKind};
 
 /// Trait to provides the variables, constants and functions used for evaluate an expression.
@@ -173,7 +173,18 @@ impl<'a, N> DefaultContext<'a, N> {
         if self.functions.contains_key(&function_name) {
             panic!("A function named '{}' already exists", function_name);
         } else {
-            self.functions.insert(function_name, Rc::new(func));
+            let func = Rc::new(func);
+
+            if let Some(aliases) = func.aliases() {
+                for alias in aliases.iter().map(|s| IgnoreCaseString::from(*s)) {
+                    if self.functions.contains_key(&alias) {
+                        panic!("A function named '{}' already exists", alias);
+                    }
+
+                    self.functions.insert(alias, func.clone());
+                }
+            }
+            self.functions.insert(function_name, func);
         }
     }
 
@@ -190,7 +201,19 @@ impl<'a, N> DefaultContext<'a, N> {
         if self.unary_functions.contains_key(&function_name) {
             panic!("An unary function named '{}' already exists", function_name);
         } else {
-            self.unary_functions.insert(function_name, Rc::new(func));
+            let func = Rc::new(func);
+
+            if let Some(aliases) = func.aliases() {
+                for alias in aliases.iter().map(|s| IgnoreCaseString::from(*s)) {
+                    if self.unary_functions.contains_key(&alias) {
+                        panic!("An unary function named '{}' already exists", alias);
+                    }
+
+                    self.unary_functions.insert(alias, func.clone());
+                }
+            }
+
+            self.unary_functions.insert(function_name, func);
         }
     }
 
@@ -211,19 +234,25 @@ impl<'a, N> DefaultContext<'a, N> {
     #[inline]
     pub fn add_binary_function_as<F: BinaryFunction<N> + 'a>(&mut self, func: F, name: &str) {
         #[cfg(debug_assertions)]
-        {
-            if name.chars().count() == 1 {
-                validate::check_token_name(TokenKind::Operator, name).or_panic();
-            } else {
-                validate::check_token_name(TokenKind::Function, name).or_panic();
-            }
-        }
+        validate::check_token_name(TokenKind::Operator, name).or_panic();
 
         let function_name = IgnoreCaseString::from(name);
         if self.binary_functions.contains_key(&function_name) {
             panic!("A binary function named '{}' already exists", function_name);
         } else {
-            self.binary_functions.insert(function_name, Rc::new(func));
+            let func = Rc::new(func);
+
+            if let Some(aliases) = func.aliases() {
+                for alias in aliases.iter().map(|s| IgnoreCaseString::from(*s)) {
+                    if self.binary_functions.contains_key(&alias) {
+                        panic!("A binary function named '{}' already exists", alias);
+                    }
+
+                    self.binary_functions.insert(alias, func.clone());
+                }
+            }
+
+            self.binary_functions.insert(function_name, func);
         }
     }
 }
@@ -846,5 +875,102 @@ mod tests {
         assert!(context.is_unary_function("ℝ"));
         assert!(context.is_unary_function("λ"));
         assert!(context.is_function("f"));
+    }
+
+    #[test]
+    fn function_aliases_test() {
+        struct SumFunction;
+        impl Function<f64> for SumFunction {
+            fn name(&self) -> &str {
+                "sum"
+            }
+
+            fn call(&self, args: &[f64]) -> Result<f64> {
+                Ok(args.iter().sum())
+            }
+
+            fn aliases(&self) -> Option<&[&str]> {
+                Some(&["add", "∑"])
+            }
+        }
+
+        let mut context: DefaultContext<f64> = DefaultContext::new();
+        context.add_function(SumFunction);
+
+        assert!(context.is_function("sum"));
+        assert!(context.is_function("add"));
+        assert!(context.is_function("∑"));
+
+        assert!(context.get_function("sum").is_some());
+        assert!(context.get_function("add").is_some());
+        assert!(context.get_function("∑").is_some());
+    }
+
+    #[test]
+    fn binary_function_alias_test() {
+        struct AddFunction;
+        impl BinaryFunction<f64> for AddFunction {
+            fn name(&self) -> &str {
+                "+"
+            }
+
+            fn aliases(&self) -> Option<&[&str]> {
+                Some(&["add", "plus"])
+            }
+
+            fn precedence(&self) -> Precedence {
+                Precedence::VERY_LOW
+            }
+
+            fn associativity(&self) -> Associativity {
+                Associativity::Left
+            }
+
+            fn call(&self, left: f64, right: f64) -> Result<f64> {
+                Ok(left + right)
+            }
+        }
+
+        let mut context: DefaultContext<f64> = DefaultContext::new();
+        context.add_binary_function(AddFunction);
+
+        assert!(context.is_binary_function("+"));
+        assert!(context.is_binary_function("add"));
+        assert!(context.is_binary_function("plus"));
+
+        assert!(context.get_binary_function("+").is_some());
+        assert!(context.get_binary_function("add").is_some());
+        assert!(context.get_binary_function("plus").is_some());
+    }
+
+    #[test]
+    fn unary_function_alias_test() {
+        struct NotFunction;
+        impl UnaryFunction<i64> for NotFunction {
+            fn name(&self) -> &str {
+                "not"
+            }
+
+            fn aliases(&self) -> Option<&[&str]> {
+                Some(&["¬"])
+            }
+
+            fn notation(&self) -> Notation {
+                Notation::Prefix
+            }
+
+            fn call(&self, arg: i64) -> Result<i64> {
+                Ok(!arg)
+            }
+        }
+
+        let mut context: DefaultContext<i64> = DefaultContext::new();
+        context.add_unary_function(NotFunction);
+
+        assert!(context.is_unary_function("not"));
+        assert!(context.is_unary_function("¬"));
+
+        assert!(context.get_unary_function("not").is_some());
+        assert!(context.get_unary_function("¬").is_some());
     }
 }

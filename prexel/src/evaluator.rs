@@ -898,6 +898,7 @@ mod shunting_yard {
 mod tests {
     use super::*;
     use crate::context::{Config, Grouping};
+    use crate::ops::math::Function;
 
     #[test]
     fn eval_test() {
@@ -1028,5 +1029,31 @@ mod tests {
         evaluator.mut_context().set_variable("x", 10);
 
         assert_eq!(evaluator.eval("x + 2").unwrap(), 12);
+    }
+
+    #[test]
+    fn eval_with_alias_test() {
+        struct SumFunction;
+        impl Function<f64> for SumFunction {
+            fn name(&self) -> &str {
+                "sum"
+            }
+
+            fn call(&self, args: &[f64]) -> Result<f64> {
+                Ok(args.iter().sum())
+            }
+
+            fn aliases(&self) -> Option<&[&str]> {
+                Some(&["add", "∑"])
+            }
+        }
+
+        let mut context: DefaultContext<f64> = DefaultContext::new();
+        context.add_function(SumFunction);
+
+        let evaluator = Evaluator::with_context(context);
+        assert_eq!(evaluator.eval("sum(1, 2, 3, 4)").unwrap(), 10.0);
+        assert_eq!(evaluator.eval("add(1, 2, 3, 4)").unwrap(), 10.0);
+        assert_eq!(evaluator.eval("∑(1, 2, 3, 4)").unwrap(), 10.0);
     }
 }

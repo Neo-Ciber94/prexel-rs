@@ -323,5 +323,10 @@ mod tests {
             ["5", " ", "*", " ", "2"].to_vec(),
             DefaultSplitter::new(SplitWhitespaceOption::None).split_into_tokens("5 * 2")
         );
+
+        assert_eq!(
+            ["256", ">>", "3"].to_vec(),
+            DefaultSplitter::default().split_into_tokens("256 >> 3")
+        );
     }
 }
