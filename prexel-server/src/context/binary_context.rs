@@ -3,7 +3,7 @@ use prexel::function::{Associativity, BinaryFunction, Notation, Precedence, Unar
 use std::fmt::Display;
 use std::iter::Peekable;
 use std::str::{Chars, FromStr};
-use prexel::utils::splitter::SplitterWithInterceptor;
+use prexel::utils::splitter::{DefaultSplitter, Outcome};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Ord, PartialOrd)]
 pub struct Binary(pub i128);
@@ -26,14 +26,12 @@ impl Display for Binary {
     }
 }
 
-pub type BinaryNumberSplitter = SplitterWithInterceptor<fn(char, &mut Peekable<Chars>) -> Option<String>>;
-
-pub fn binary_number_splitter() -> BinaryNumberSplitter {
+pub fn binary_number_splitter<'a>() -> DefaultSplitter<'a> {
     fn is_next_binary(chars: &mut Peekable<Chars>) -> bool {
         chars.peek() == Some(&'1') || chars.peek() == Some(&'0')
     }
 
-    SplitterWithInterceptor::new(|c, rest| {
+    DefaultSplitter::with_numeric_rule(|c, rest| {
         if c == 'b' && is_next_binary(rest) {
             let mut temp = String::new();
             temp.push(c);
@@ -46,9 +44,9 @@ pub fn binary_number_splitter() -> BinaryNumberSplitter {
                 }
             }
 
-            Some(temp)
+            Outcome::Data(temp)
         } else {
-            None
+            Outcome::Continue
         }
     })
 }

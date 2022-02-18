@@ -1,7 +1,7 @@
 use crate::models::{EvalExpression, EvalResult, NumberType};
 use once_cell::sync::Lazy;
 use prexel::complex;
-use prexel::context::Config;
+use prexel::context::{Config, Grouping};
 use prexel::{context::Context, context::DefaultContext, decimal::Decimal, evaluator::Evaluator};
 use std::str::FromStr;
 use std::string::ToString;
@@ -10,8 +10,8 @@ use crate::context::{Binary, binary_number_splitter, BinaryContext};
 
 static CONFIG: Lazy<Config> = Lazy::new(|| {
     Config::default()
-        .with_group_symbol('[', ']')
-        .with_group_symbol('(', ')')
+        .with_grouping(Grouping::Parenthesis)
+        .with_grouping(Grouping::Bracket)
         .with_implicit_mul(true)
 });
 
@@ -28,7 +28,7 @@ pub fn eval_expression(expression: EvalExpression) -> EvalResult {
 }
 
 fn eval_decimal_expression(expression: EvalExpression) -> EvalResult {
-    let mut context = DefaultContext::new_decimal_with_config(CONFIG.clone());
+    let mut context = DefaultContext::with_config_decimal(CONFIG.clone());
 
     // Set variables
     if let Some(variables) = &expression.variables {
@@ -79,7 +79,7 @@ fn eval_float_expression(expression: EvalExpression) -> EvalResult {
 
 fn eval_complex_expression(expression: EvalExpression) -> EvalResult {
     let mut context =
-        DefaultContext::new_complex_with_config(CONFIG.clone().with_complex_number(true));
+        DefaultContext::with_config_complex(CONFIG.clone().with_complex_number(true));
 
     // Set variables
     if let Some(variables) = &expression.variables {
