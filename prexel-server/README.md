@@ -5,6 +5,14 @@ A restful API server using the `prexel` library.
 ## URL
 https://neociber-prexel.herokuapp.com/
 
+### Warning
+
+``The first request could be slow due Heroku put sleeps the inactive dynos.``
+
+## Postman
+  
+Try out in postman: [https://documenter.getpostman.com/view/15231085/UVknuGpf](https://documenter.getpostman.com/view/15231085/UVknuGpf)
+  
 ## Endpoints
 
 ### Evaluate an expression
