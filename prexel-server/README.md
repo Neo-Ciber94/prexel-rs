@@ -42,7 +42,7 @@ https://neociber-prexel.herokuapp.com/
 - **Request:**
 
   ```json5
-  // POST: https://salty-wildwood-17121.herokuapp.com/eval
+  // POST: https://neociber-prexel.herokuapp.com/
   {
     "expression": "(x - y) ^ 2",
     "type": "float",
