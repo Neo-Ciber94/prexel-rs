@@ -970,10 +970,10 @@ mod tests {
         let context = DefaultContext::with_config_checked(config);
         let mut evaluator: Evaluator<i64> = Evaluator::with_context(context);
 
-        evaluator.mut_context().set_variable("x", 10);
+        evaluator.mut_context().set_variable("x", 10).unwrap();
         assert_eq!(evaluator.eval("2x").unwrap(), 20);
 
-        evaluator.mut_context().set_variable("x", 5);
+        evaluator.mut_context().set_variable("x", 5).unwrap();
         assert_eq!(evaluator.eval("3x").unwrap(), 15);
 
         assert!(evaluator.eval("2Sin(50)").is_ok());
@@ -1040,7 +1040,7 @@ mod tests {
     #[test]
     fn eval_using_variable_test() {
         let mut evaluator = Evaluator::new();
-        evaluator.mut_context().set_variable("x", 10);
+        evaluator.mut_context().set_variable("x", 10).unwrap();
 
         assert_eq!(evaluator.eval("x + 2").unwrap(), 12);
     }
@@ -1063,7 +1063,7 @@ mod tests {
         }
 
         let mut context: DefaultContext<f64> = DefaultContext::new();
-        context.add_function(SumFunction);
+        context.add_function(SumFunction).unwrap();
 
         let evaluator = Evaluator::with_context(context);
         assert_eq!(evaluator.eval("sum(1, 2, 3, 4)").unwrap(), 10.0);

@@ -865,13 +865,13 @@ mod tests {
     #[test]
     fn operators_symbols_test() {
         let mut context: DefaultContext<f64> = DefaultContext::new_unchecked();
-        context.add_constant("∞", f64::INFINITY);
-        context.add_constant("π", std::f64::consts::PI);
-        context.add_binary_function(Dummy("√".to_string()));
-        context.add_binary_function(Dummy("∋".to_string()));
-        context.add_unary_function(Dummy("ℝ".to_string()));
-        context.add_unary_function(Dummy("λ".to_string()));
-        context.add_function(Dummy("f".to_string()));
+        context.add_constant("∞", f64::INFINITY).unwrap();
+        context.add_constant("π", std::f64::consts::PI).unwrap();
+        context.add_binary_function(Dummy("√".to_string())).unwrap();
+        context.add_binary_function(Dummy("∋".to_string())).unwrap();
+        context.add_unary_function(Dummy("ℝ".to_string())).unwrap();
+        context.add_unary_function(Dummy("λ".to_string())).unwrap();
+        context.add_function(Dummy("f".to_string())).unwrap();
 
         assert!(context.is_constant("∞"));
         assert!(context.is_constant("π"));
@@ -900,7 +900,7 @@ mod tests {
         }
 
         let mut context: DefaultContext<f64> = DefaultContext::new();
-        context.add_function(SumFunction);
+        context.add_function(SumFunction).unwrap();
 
         assert!(context.is_function("sum"));
         assert!(context.is_function("add"));
@@ -937,7 +937,7 @@ mod tests {
         }
 
         let mut context: DefaultContext<f64> = DefaultContext::new();
-        context.add_binary_function(AddFunction);
+        context.add_binary_function(AddFunction).unwrap();
 
         assert!(context.is_binary_function("+"));
         assert!(context.is_binary_function("add"));
@@ -970,7 +970,7 @@ mod tests {
         }
 
         let mut context: DefaultContext<i64> = DefaultContext::new();
-        context.add_unary_function(NotFunction);
+        context.add_unary_function(NotFunction).unwrap();
 
         assert!(context.is_unary_function("not"));
         assert!(context.is_unary_function("¬"));
