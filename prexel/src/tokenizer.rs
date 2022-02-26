@@ -172,6 +172,15 @@ where
     }
 }
 
+impl<'a, N, C> Default for Tokenizer<'a, N, C, DefaultSplitter<'a>>
+where
+    C: Context<'a, N>,
+{
+    fn default() -> Self {
+        Tokenizer::new()
+    }
+}
+
 fn is_unary<'a, N, C>(prev: Option<&str>, cur: &str, next: Option<&str>, context: &C) -> bool
 where
     C: Context<'a, N>,
