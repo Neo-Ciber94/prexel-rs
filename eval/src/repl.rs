@@ -61,9 +61,9 @@ where
                 break;
             }
             // Assign a variable
-            _ if expression.contains("=") => {
+            _ if expression.contains('=') => {
                 let parts = expression
-                    .split("=")
+                    .split('=')
                     .map(|s| s.trim().to_owned())
                     .collect::<Vec<_>>();
 

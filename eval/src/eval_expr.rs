@@ -5,7 +5,7 @@ use prexel::context::{Config, DefaultContext};
 use prexel::evaluator::Evaluator;
 use std::sync::Mutex;
 
-pub const CONFIG: Lazy<Mutex<Config>> = Lazy::new(|| {
+pub static CONFIG: Lazy<Mutex<Config>> = Lazy::new(|| {
     let config = Config::new().with_implicit_mul(true);
     Mutex::new(config)
 });
