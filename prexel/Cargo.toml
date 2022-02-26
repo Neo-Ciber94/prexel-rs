@@ -13,6 +13,8 @@ repository="https://github.com/Neo-Ciber94/prexel-rs/"
 [features]
 complex = ["num-complex"]
 decimal = ["rust_decimal", "rust_decimal_macros"]
+docs = []
+default = ["docs"]
 
 [dependencies]
 num-traits = "0.2"

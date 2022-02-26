@@ -1,21 +1,338 @@
+use crate::error::{Error, ErrorKind};
+
 /// Checked math operations.
 pub mod checked;
 
 /// Unchecked math operations, (may panic).
 pub mod unchecked;
 
+#[cfg(not(feature = "docs"))]
+macro_rules! forward_func_impl {
+        ($func_name:ident, $method_name:ident) => {
+            forward_func_impl!($func_name, $method_name, $method_name);
+        };
+
+        ($func_name:ident, $method_name:ident, $name:ident) => {
+            impl<N: ToPrimitive + FromPrimitive> Function<N> for $func_name {
+                fn name(&self) -> &str {
+                    stringify!($name)
+                }
+
+                fn call(&self, args: &[N]) -> Result<N> {
+                    if args.len() != 1 {
+                        Err(Error::from(ErrorKind::InvalidArgumentCount))
+                    } else {
+                        let result = try_to_float(&args[0])
+                            .map(|n| n.approx())?
+                            .$method_name();
+
+                        N::from_f64(result)
+                            .ok_or_else(|| Error::from(ErrorKind::Overflow))
+                    }
+                }
+            }
+        };
+    }
+
+#[cfg(not(feature = "docs"))]
+macro_rules! forward_func_inv_impl {
+        ($func_name:ident, $method_name:ident) => {
+            forward_func_inv_impl!($func_name, $method_name, $method_name);
+        };
+
+        ($func_name:ident, $method_name:ident, $name:ident) => {
+            impl<N: ToPrimitive + FromPrimitive> Function<N> for $func_name {
+                fn name(&self) -> &str {
+                    stringify!($name)
+                }
+
+                fn call(&self, args: &[N]) -> Result<N> {
+                    if args.len() != 1 {
+                        Err(Error::from(ErrorKind::InvalidArgumentCount))
+                    } else {
+                        let result = try_to_float(&args[0])
+                            .map(|n| n.approx())?
+                            .$method_name()
+                            .inv();
+
+                        N::from_f64(result)
+                            .ok_or(Error::from(ErrorKind::Overflow))
+                    }
+                }
+            }
+        };
+    }
+
+#[cfg(feature = "docs")]
+macro_rules! forward_func_impl {
+        ($func_name:ident, $method_name:ident, $description:expr) => {
+            forward_func_impl!($func_name, $method_name, $method_name, $description);
+        };
+
+        ($func_name:ident, $method_name:ident, $name:ident, $description:expr) => {
+            impl<N: ToPrimitive + FromPrimitive> Function<N> for $func_name {
+                fn name(&self) -> &str {
+                    stringify!($name)
+                }
+
+                fn call(&self, args: &[N]) -> Result<N> {
+                    if args.len() != 1 {
+                        Err(Error::from(ErrorKind::InvalidArgumentCount))
+                    } else {
+                        let result = try_to_float(&args[0])
+                            .map(|n| n.approx())?
+                            .$method_name();
+
+                        N::from_f64(result)
+                            .ok_or_else(|| Error::from(ErrorKind::Overflow))
+                    }
+                }
+
+                fn description(&self) -> Option<&str> {
+                    Some($description.into())
+                }
+            }
+        };
+    }
+
+#[cfg(feature = "docs")]
+macro_rules! forward_func_inv_impl {
+        ($func_name:ident, $method_name:ident, $description:expr) => {
+            forward_func_inv_impl!($func_name, $method_name, $method_name, $description);
+        };
+
+        ($func_name:ident, $method_name:ident, $name:ident, $description:expr) => {
+            impl<N: ToPrimitive + FromPrimitive> Function<N> for $func_name {
+                fn name(&self) -> &str {
+                    stringify!($name)
+                }
+
+                fn call(&self, args: &[N]) -> Result<N> {
+                    if args.len() != 1 {
+                        Err(Error::from(ErrorKind::InvalidArgumentCount))
+                    } else {
+                        let result = try_to_float(&args[0])
+                            .map(|n| n.approx())?
+                            .$method_name()
+                            .inv();
+
+                        N::from_f64(result)
+                            .ok_or(Error::from(ErrorKind::Overflow))
+                    }
+                }
+
+                fn description(&self) -> Option<&str> {
+                    Some($description.into())
+                }
+            }
+        };
+    }
+
+#[cfg(not(feature = "docs"))]
+macro_rules! impl_arc_trig {
+        ($t:ty, $method_name:ident) => {
+            impl_arc_trig!($t, $method_name, $method_name);
+        };
+
+        ($t:ty, $method_name:ident, $name:ident) => {
+            impl<N: ToPrimitive + FromPrimitive> Function<N> for $t {
+                fn name(&self) -> &str {
+                    stringify!($name)
+                }
+
+                fn call(&self, args: &[N]) -> Result<N> {
+                    if args.len() != 1 {
+                        Err(Error::from(ErrorKind::InvalidArgumentCount))
+                    } else {
+                        match args[0].to_f64()
+                            .map(f64::$method_name)
+                            .map(f64::to_degrees)
+                            .map(|n| n.approx()){
+                            Some(n) => {
+                                if n.is_nan() || n.is_infinite() {
+                                    Err(Error::from(ErrorKind::NAN))
+                                } else {
+                                    N::from_f64(n).ok_or(Error::from(ErrorKind::Overflow))
+                                }
+                            }
+                            None => Err(Error::from(ErrorKind::Overflow)),
+                        }
+                    }
+                }
+            }
+        };
+    }
+
+#[cfg(not(feature = "docs"))]
+macro_rules! impl_arc_trig_rec {
+        ($t:ty, $method_name:ident) => {
+            impl_arc_trig_rec!($t, $method_name, $method_name);
+        };
+
+        ($t:ty, $method_name:ident, $name:ident) => {
+            impl<N: ToPrimitive + FromPrimitive> Function<N> for $t {
+                fn name(&self) -> &str {
+                    stringify!($name)
+                }
+
+                fn call(&self, args: &[N]) -> Result<N> {
+                    if args.len() != 1 {
+                        Err(Error::from(ErrorKind::InvalidArgumentCount))
+                    } else {
+                        match args[0].to_f64()
+                            .map(f64::inv)
+                            .map(f64::$method_name)
+                            .map(f64::to_degrees)
+                            .map(|n| n.approx()){
+                            Some(n) => {
+                                if n.is_nan() || n.is_infinite() {
+                                    Err(Error::from(ErrorKind::NAN))
+                                } else {
+                                    N::from_f64(n).ok_or(Error::from(ErrorKind::Overflow))
+                                }
+                            }
+                            None => Err(Error::from(ErrorKind::Overflow)),
+                        }
+                    }
+                }
+            }
+        };
+    }
+
+#[cfg(feature = "docs")]
+macro_rules! impl_arc_trig {
+        ($t:ty, $method_name:ident, $description:expr) => {
+            impl_arc_trig!($t, $method_name, $method_name, $description);
+        };
+
+        ($t:ty, $method_name:ident, $name:ident, $description:expr) => {
+            impl<N: ToPrimitive + FromPrimitive> Function<N> for $t {
+                fn name(&self) -> &str {
+                    stringify!($name)
+                }
+
+                fn call(&self, args: &[N]) -> Result<N> {
+                    if args.len() != 1 {
+                        Err(Error::from(ErrorKind::InvalidArgumentCount))
+                    } else {
+                        match args[0].to_f64()
+                            .map(f64::$method_name)
+                            .map(f64::to_degrees)
+                            .map(|n| n.approx()){
+                            Some(n) => {
+                                if n.is_nan() || n.is_infinite() {
+                                    Err(Error::from(ErrorKind::NAN))
+                                } else {
+                                    N::from_f64(n).ok_or(Error::from(ErrorKind::Overflow))
+                                }
+                            }
+                            None => Err(Error::from(ErrorKind::Overflow)),
+                        }
+                    }
+                }
+
+                fn description(&self) -> Option<&str> {
+                    Some($description.into())
+                }
+            }
+        };
+    }
+
+#[cfg(feature = "docs")]
+macro_rules! impl_arc_trig_rec {
+        ($t:ty, $method_name:ident, $description:expr) => {
+            impl_arc_trig_rec!($t, $method_name, $method_name, $description);
+        };
+
+        ($t:ty, $method_name:ident, $name:ident, $description:expr) => {
+            impl<N: ToPrimitive + FromPrimitive> Function<N> for $t {
+                fn name(&self) -> &str {
+                    stringify!($name)
+                }
+
+                fn call(&self, args: &[N]) -> Result<N> {
+                    if args.len() != 1 {
+                        Err(Error::from(ErrorKind::InvalidArgumentCount))
+                    } else {
+                        match args[0].to_f64()
+                            .map(f64::inv)
+                            .map(f64::$method_name)
+                            .map(f64::to_degrees)
+                            .map(|n| n.approx()){
+                            Some(n) => {
+                                if n.is_nan() || n.is_infinite() {
+                                    Err(Error::from(ErrorKind::NAN))
+                                } else {
+                                    N::from_f64(n).ok_or(Error::from(ErrorKind::Overflow))
+                                }
+                            }
+                            None => Err(Error::from(ErrorKind::Overflow)),
+                        }
+                    }
+                }
+
+                fn description(&self) -> Option<&str> {
+                    Some($description.into())
+                }
+            }
+        };
+    }
+
+#[inline(always)]
+pub(crate) fn try_to_float<N: num_traits::ToPrimitive>(n: &N) -> crate::Result<f64> {
+    match n.to_f64() {
+        Some(n) => {
+            if n.is_nan() || n.is_infinite() {
+                Err(Error::from(ErrorKind::NAN))
+            } else {
+                Ok(n)
+            }
+        }
+        None => Err(Error::from(ErrorKind::Overflow)),
+    }
+}
+
+/// For reduce errors as: `0.1 + 0.2 ≠ 0.3`.
+impl crate::utils::approx::Approx for f64{
+    #[inline]
+    fn approx(&self) -> Self {
+        const ERROR : f64 = 0.000_000_000_1_f64;
+        self.approx_by(&ERROR)
+    }
+
+    fn approx_by(&self, delta: &Self) -> Self {
+        let r = self.round();
+
+        if (self - r).abs() < *delta{
+            r
+        }
+        else{
+            *self
+        }
+    }
+}
+
 /// A collection of math functions and operators.
 pub mod math {
+    pub use super::math_ops::*;
+    pub use super::trig_ops::*;
+}
+
+mod math_ops {
     use std::fmt::Debug;
     use std::ops::{Mul, Sub};
-    use num_traits::{FromPrimitive, Inv, One, ToPrimitive, Zero};
+    use num_traits::{FromPrimitive, One, ToPrimitive, Zero};
     use rand::random;
     use crate::error::*;
     pub use crate::function::{BinaryFunction, Function, UnaryFunction};
     use crate::function::{Associativity, Notation, Precedence};
+    use crate::ops::try_to_float;
     use crate::utils::gamma::gamma;
     use crate::Result;
     use crate::utils::approx::Approx;
+
+    #[cfg(feature = "docs")]
+    use crate::descriptions::Description;
 
     pub struct UnaryPlus;
     impl<N> UnaryFunction<N> for UnaryPlus {
@@ -29,6 +346,11 @@ pub mod math {
 
         fn call(&self, value: N) -> Result<N> {
             Ok(value)
+        }
+
+        #[cfg(feature = "docs")]
+        fn description(&self) -> Option<&str> {
+            Some(Description::Plus.into())
         }
     }
 
@@ -93,6 +415,11 @@ pub mod math {
                 Ok(total)
             }
         }
+
+        #[cfg(feature = "docs")]
+        fn description(&self) -> Option<&str> {
+            Some(Description::Factorial.into())
+        }
     }
 
     pub struct PowOperator;
@@ -115,6 +442,11 @@ pub mod math {
             } else {
                 Err(Error::from(ErrorKind::Overflow))
             }
+        }
+
+        #[cfg(feature = "docs")]
+        fn description(&self) -> Option<&str> {
+            Some(Description::Pow.into())
         }
     }
 
@@ -144,6 +476,11 @@ pub mod math {
 
             max.ok_or_else(|| Error::from(ErrorKind::InvalidArgumentCount))
         }
+
+        #[cfg(feature = "docs")]
+        fn description(&self) -> Option<&str> {
+            Some(Description::Max.into())
+        }
     }
 
     pub struct MinFunction;
@@ -172,86 +509,68 @@ pub mod math {
 
             min.ok_or_else(|| Error::from(ErrorKind::InvalidArgumentCount))
         }
-    }
 
-    macro_rules! forward_func_impl {
-        ($func_name:ident, $method_name:ident) => {
-            forward_func_impl!($func_name, $method_name, $method_name);
-        };
-
-        ($func_name:ident, $method_name:ident, $name:ident) => {
-            impl<N: ToPrimitive + FromPrimitive> Function<N> for $func_name {
-                fn name(&self) -> &str {
-                    stringify!($name)
-                }
-
-                fn call(&self, args: &[N]) -> Result<N> {
-                    if args.len() != 1 {
-                        Err(Error::from(ErrorKind::InvalidArgumentCount))
-                    } else {
-                        let result = try_to_float(&args[0])
-                            .map(|n| n.approx())?
-                            .$method_name();
-
-                        N::from_f64(result)
-                            .ok_or_else(|| Error::from(ErrorKind::Overflow))
-                    }
-                }
-            }
-        };
-    }
-
-    macro_rules! forward_func_inv_impl {
-        ($func_name:ident, $method_name:ident) => {
-            forward_func_inv_impl!($func_name, $method_name, $method_name);
-        };
-
-        ($func_name:ident, $method_name:ident, $name:ident) => {
-            impl<N: ToPrimitive + FromPrimitive> Function<N> for $func_name {
-                fn name(&self) -> &str {
-                    stringify!($name)
-                }
-
-                fn call(&self, args: &[N]) -> Result<N> {
-                    if args.len() != 1 {
-                        Err(Error::from(ErrorKind::InvalidArgumentCount))
-                    } else {
-                        let result = try_to_float(&args[0])
-                            .map(|n| n.approx())?
-                            .$method_name()
-                            .inv();
-
-                        N::from_f64(result)
-                            .ok_or(Error::from(ErrorKind::Overflow))
-                    }
-                }
-            }
-        };
+        #[cfg(feature = "docs")]
+        fn description(&self) -> Option<&str> {
+            Some(Description::Min.into())
+        }
     }
 
     pub struct FloorFunction;
+    #[cfg(not(feature = "docs"))]
     forward_func_impl!(FloorFunction, floor);
 
+    #[cfg(feature = "docs")]
+    forward_func_impl!(FloorFunction, floor, Description::Floor);
+
     pub struct CeilFunction;
+    #[cfg(not(feature = "docs"))]
     forward_func_impl!(CeilFunction, ceil);
 
+    #[cfg(feature = "docs")]
+    forward_func_impl!(CeilFunction, ceil, Description::Ceil);
+
     pub struct TruncateFunction;
+    #[cfg(not(feature = "docs"))]
     forward_func_impl!(TruncateFunction, trunc, truncate);
 
+    #[cfg(feature = "docs")]
+    forward_func_impl!(TruncateFunction, trunc, Description::Truncate);
+
     pub struct RoundFunction;
+    #[cfg(not(feature = "docs"))]
     forward_func_impl!(RoundFunction, round);
 
+    #[cfg(feature = "docs")]
+    forward_func_impl!(RoundFunction, round, Description::Round);
+
     pub struct SignFunction;
+    #[cfg(not(feature = "docs"))]
     forward_func_impl!(SignFunction, signum, sign);
 
+    #[cfg(feature = "docs")]
+    forward_func_impl!(SignFunction, signum, Description::Sign);
+
     pub struct SqrtFunction;
+    #[cfg(not(feature = "docs"))]
     forward_func_impl!(SqrtFunction, sqrt);
 
+    #[cfg(feature = "docs")]
+    forward_func_impl!(SqrtFunction, sqrt, Description::Sqrt);
+
     pub struct ExpFunction;
+    #[cfg(not(feature = "docs"))]
     forward_func_impl!(ExpFunction, exp);
 
+    #[cfg(feature = "docs")]
+    forward_func_impl!(ExpFunction, exp, Description::Exp);
+
     pub struct LnFunction;
+    #[cfg(not(feature = "docs"))]
     forward_func_impl!(LnFunction, ln);
+
+    #[cfg(feature = "docs")]
+    forward_func_impl!(LnFunction, ln, Description::Ln);
 
     pub struct LogFunction;
     impl<N: ToPrimitive + FromPrimitive> Function<N> for LogFunction {
@@ -290,6 +609,11 @@ pub mod math {
                 _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
             }
         }
+
+        #[cfg(feature = "docs")]
+        fn description(&self) -> Option<&str> {
+            Some(Description::Log.into())
+        }
     }
 
     pub struct RandFunction;
@@ -327,16 +651,40 @@ pub mod math {
                 _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
             }
         }
+
+        #[cfg(feature = "docs")]
+        fn description(&self) -> Option<&str> {
+            Some(Description::Rand.into())
+        }
     }
 
     pub struct ToRadiansFunction;
+    #[cfg(not(feature = "docs"))]
     forward_func_impl!(ToRadiansFunction, to_radians, toRadians);
 
+    #[cfg(feature = "docs")]
+    forward_func_impl!(ToRadiansFunction, to_radians, toRadians, Description::ToRadians);
+
     pub struct ToDegreesFunction;
+    #[cfg(not(feature = "docs"))]
     forward_func_impl!(ToDegreesFunction, to_degrees, toDegrees);
 
-    //////////////////// Trigonometric ////////////////////
+    #[cfg(feature = "docs")]
+    forward_func_impl!(ToDegreesFunction, to_degrees, toDegrees, Description::ToDegrees);
+}
 
+mod trig_ops {
+    use num_traits::{FromPrimitive, Inv, ToPrimitive, Zero};
+    use crate::error::*;
+    pub use crate::function::{BinaryFunction, Function, UnaryFunction};
+    use crate::ops::try_to_float;
+    use crate::Result;
+    use crate::utils::approx::Approx;
+
+    #[cfg(feature = "docs")]
+    use crate::descriptions::Description;
+
+    #[cfg(not(feature = "docs"))]
     macro_rules! impl_trig {
         ($t:ty, $method_name:ident) => {
             impl<N: ToPrimitive + FromPrimitive> Function<N> for $t {
@@ -367,6 +715,7 @@ pub mod math {
         };
     }
 
+    #[cfg(not(feature = "docs"))]
     macro_rules! impl_trig_rec {
         ($t:ty, $method_name:ident, $name:ident) => {
             impl<N: ToPrimitive + FromPrimitive> Function<N> for $t {
@@ -400,118 +749,178 @@ pub mod math {
         };
     }
 
+    #[cfg(feature = "docs")]
+    macro_rules! impl_trig {
+        ($t:ty, $method_name:ident, $description:expr) => {
+            impl<N: ToPrimitive + FromPrimitive> Function<N> for $t {
+                fn name(&self) -> &str {
+                    stringify!($method_name)
+                }
+
+                fn call(&self, args: &[N]) -> Result<N> {
+                    if args.len() != 1 {
+                        Err(Error::from(ErrorKind::InvalidArgumentCount))
+                    } else {
+                        match args[0].to_f64()
+                            .map(f64::to_radians)
+                            .map(f64::$method_name)
+                            .map(|n| n.approx()){
+                            Some(n) => {
+                                if n.is_nan() || n.is_infinite() {
+                                    Err(Error::from(ErrorKind::NAN))
+                                } else {
+                                    N::from_f64(n).ok_or(Error::from(ErrorKind::Overflow))
+                                }
+                            }
+                            None => Err(Error::from(ErrorKind::Overflow)),
+                        }
+                    }
+                }
+
+                fn description(&self) -> Option<&str> {
+                    Some($description.into())
+                }
+            }
+        };
+    }
+
+    #[cfg(feature = "docs")]
+    macro_rules! impl_trig_rec {
+        ($t:ty, $method_name:ident, $name:ident, $description:expr) => {
+            impl<N: ToPrimitive + FromPrimitive> Function<N> for $t {
+                fn name(&self) -> &str {
+                    stringify!($name)
+                }
+
+                fn call(&self, args: &[N]) -> Result<N> {
+                    if args.len() != 1 {
+                        Err(Error::from(ErrorKind::InvalidArgumentCount))
+                    } else {
+                        match args[0]
+                            .to_f64()
+                            .map(f64::to_radians)
+                            .map(f64::$method_name)
+                            .map(|n| n.approx())
+                            .map(f64::inv)
+                        {
+                            Some(n) => {
+                                if n.is_nan() || n.is_infinite() {
+                                    Err(Error::from(ErrorKind::NAN))
+                                } else {
+                                    N::from_f64(n).ok_or(Error::from(ErrorKind::Overflow))
+                                }
+                            }
+                            None => Err(Error::from(ErrorKind::Overflow)),
+                        }
+                    }
+                }
+
+                fn description(&self) -> Option<&str> {
+                    Some($description.into())
+                }
+            }
+        };
+    }
+
     pub struct SinFunction;
+    #[cfg(not(feature = "docs"))]
     impl_trig!(SinFunction, sin);
 
+    #[cfg(feature = "docs")]
+    impl_trig!(SinFunction, sin, Description::Sin);
+
     pub struct CosFunction;
+    #[cfg(not(feature = "docs"))]
     impl_trig!(CosFunction, cos);
 
+    #[cfg(feature = "docs")]
+    impl_trig!(CosFunction, cos, Description::Cos);
+
     pub struct TanFunction;
+    #[cfg(not(feature = "docs"))]
     impl_trig!(TanFunction, tan);
 
+    #[cfg(feature = "docs")]
+    impl_trig!(TanFunction, tan, Description::Tan);
+
     pub struct CscFunction;
+    #[cfg(not(feature = "docs"))]
     impl_trig_rec!(CscFunction, sin, csc);
 
+    #[cfg(feature = "docs")]
+    impl_trig_rec!(CscFunction, sin, csc, Description::Csc);
+
     pub struct SecFunction;
+    #[cfg(not(feature = "docs"))]
     impl_trig_rec!(SecFunction, cos, sec);
 
+    #[cfg(feature = "docs")]
+    impl_trig_rec!(SecFunction, cos, sec, Description::Sec);
+
     pub struct CotFunction;
+    #[cfg(not(feature = "docs"))]
     impl_trig_rec!(CotFunction, tan, cot);
 
+    #[cfg(feature = "docs")]
+    impl_trig_rec!(CotFunction, tan, cot, Description::Cot);
+
     pub struct SinhFunction;
+    #[cfg(not(feature = "docs"))]
     forward_func_impl!(SinhFunction, sinh);
 
+    #[cfg(feature = "docs")]
+    forward_func_impl!(SinhFunction, sinh, Description::Sinh);
+
     pub struct CoshFunction;
+    #[cfg(not(feature = "docs"))]
     forward_func_impl!(CoshFunction, cosh);
 
+    #[cfg(feature = "docs")]
+    forward_func_impl!(CoshFunction, cosh, Description::Cosh);
+
     pub struct TanhFunction;
+    #[cfg(not(feature = "docs"))]
     forward_func_impl!(TanhFunction, tanh);
 
+    #[cfg(feature = "docs")]
+    forward_func_impl!(TanhFunction, tanh, Description::Tanh);
+
     pub struct CschFunction;
+    #[cfg(not(feature = "docs"))]
     forward_func_inv_impl!(CschFunction, sinh, csch);
 
+    #[cfg(feature = "docs")]
+    forward_func_inv_impl!(CschFunction, sinh, csch, Description::Csch);
+
     pub struct SechFunction;
+    #[cfg(not(feature = "docs"))]
     forward_func_inv_impl!(SechFunction, cosh, sech);
 
+    #[cfg(feature = "docs")]
+    forward_func_inv_impl!(SechFunction, cosh, sech, Description::Sech);
+
     pub struct CothFunction;
+    #[cfg(not(feature = "docs"))]
     forward_func_inv_impl!(CothFunction, tanh, coth);
+
+    #[cfg(feature = "docs")]
+    forward_func_inv_impl!(CothFunction, tanh, coth, Description::Coth);
 
     //////////////////// Inverse Trigonometric ////////////////////
 
-    macro_rules! impl_arc_trig {
-        ($t:ty, $method_name:ident) => {
-            impl_arc_trig!($t, $method_name, $method_name);
-        };
-
-        ($t:ty, $method_name:ident, $name:ident) => {
-            impl<N: ToPrimitive + FromPrimitive> Function<N> for $t {
-                fn name(&self) -> &str {
-                    stringify!($name)
-                }
-
-                fn call(&self, args: &[N]) -> Result<N> {
-                    if args.len() != 1 {
-                        Err(Error::from(ErrorKind::InvalidArgumentCount))
-                    } else {
-                        match args[0].to_f64()
-                            .map(f64::$method_name)
-                            .map(f64::to_degrees)
-                            .map(|n| n.approx()){
-                            Some(n) => {
-                                if n.is_nan() || n.is_infinite() {
-                                    Err(Error::from(ErrorKind::NAN))
-                                } else {
-                                    N::from_f64(n).ok_or(Error::from(ErrorKind::Overflow))
-                                }
-                            }
-                            None => Err(Error::from(ErrorKind::Overflow)),
-                        }
-                    }
-                }
-            }
-        };
-    }
-
-    macro_rules! impl_arc_trig_rec {
-        ($t:ty, $method_name:ident) => {
-            impl_arc_trig_rec!($t, $method_name, $method_name);
-        };
-
-        ($t:ty, $method_name:ident, $name:ident) => {
-            impl<N: ToPrimitive + FromPrimitive> Function<N> for $t {
-                fn name(&self) -> &str {
-                    stringify!($name)
-                }
-
-                fn call(&self, args: &[N]) -> Result<N> {
-                    if args.len() != 1 {
-                        Err(Error::from(ErrorKind::InvalidArgumentCount))
-                    } else {
-                        match args[0].to_f64()
-                            .map(f64::inv)
-                            .map(f64::$method_name)
-                            .map(f64::to_degrees)
-                            .map(|n| n.approx()){
-                            Some(n) => {
-                                if n.is_nan() || n.is_infinite() {
-                                    Err(Error::from(ErrorKind::NAN))
-                                } else {
-                                    N::from_f64(n).ok_or(Error::from(ErrorKind::Overflow))
-                                }
-                            }
-                            None => Err(Error::from(ErrorKind::Overflow)),
-                        }
-                    }
-                }
-            }
-        };
-    }
-
     pub struct ASinFunction;
+    #[cfg(not(feature = "docs"))]
     impl_arc_trig!(ASinFunction, asin);
 
+    #[cfg(feature = "docs")]
+    impl_arc_trig!(ASinFunction, asin, Description::ASin);
+
     pub struct ACosFunction;
+    #[cfg(not(feature = "docs"))]
     impl_arc_trig!(ACosFunction, acos);
+
+    #[cfg(feature = "docs")]
+    impl_arc_trig!(ACosFunction, acos, Description::ACos);
 
     pub struct ATanFunction;
     impl<N: ToPrimitive + FromPrimitive> Function<N> for ATanFunction {
@@ -550,68 +959,75 @@ pub mod math {
                 _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
             }
         }
+
+        #[cfg(feature = "docs")]
+        fn description(&self) -> Option<&str> {
+            Some(Description::ATan.into())
+        }
     }
 
     pub struct ACscFunction;
+    #[cfg(not(feature = "docs"))]
     impl_arc_trig_rec!(ACscFunction, asin, acsc);
 
+    #[cfg(feature = "docs")]
+    impl_arc_trig_rec!(ACscFunction, asin, acsc, Description::ACsc);
+
     pub struct ASecFunction;
+    #[cfg(not(feature = "docs"))]
     impl_arc_trig_rec!(ASecFunction, acos, asec);
 
+    #[cfg(feature = "docs")]
+    impl_arc_trig_rec!(ASecFunction, acos, asec, Description::ASec);
+
     pub struct ACotFunction;
+    #[cfg(not(feature = "docs"))]
     impl_arc_trig_rec!(ACotFunction, atan, acot);
 
+    #[cfg(feature = "docs")]
+    impl_arc_trig_rec!(ACotFunction, atan, acot, Description::ACot);
+
     pub struct ASinhFunction;
+    #[cfg(not(feature = "docs"))]
     impl_arc_trig!(ASinhFunction, asinh);
 
+    #[cfg(feature = "docs")]
+    impl_arc_trig!(ASinhFunction, asinh, Description::ASinh);
+
     pub struct ACoshFunction;
+    #[cfg(not(feature = "docs"))]
     impl_arc_trig!(ACoshFunction, acosh);
 
+    #[cfg(feature = "docs")]
+    impl_arc_trig!(ACoshFunction, acosh, Description::ACosh);
+
     pub struct ATanhFunction;
+    #[cfg(not(feature = "docs"))]
     impl_arc_trig!(ATanhFunction, atanh);
 
+    #[cfg(feature = "docs")]
+    impl_arc_trig!(ATanhFunction, atanh, Description::ATanh);
+
     pub struct ACschFunction;
+    #[cfg(not(feature = "docs"))]
     impl_arc_trig_rec!(ACschFunction, asinh, acsch);
 
+    #[cfg(feature = "docs")]
+    impl_arc_trig_rec!(ACschFunction, asinh, acsch, Description::ACsch);
+
     pub struct ASechFunction;
+    #[cfg(not(feature = "docs"))]
     impl_arc_trig_rec!(ASechFunction, acosh, asech);
 
+    #[cfg(feature = "docs")]
+    impl_arc_trig_rec!(ASechFunction, acosh, asech, Description::ASech);
+
     pub struct ACothFunction;
+    #[cfg(not(feature = "docs"))]
     impl_arc_trig_rec!(ACothFunction, atanh, acoth);
 
-    #[inline(always)]
-    pub(crate) fn try_to_float<N: ToPrimitive>(n: &N) -> Result<f64> {
-        match n.to_f64() {
-            Some(n) => {
-                if n.is_nan() || n.is_infinite() {
-                    Err(Error::from(ErrorKind::NAN))
-                } else {
-                    Ok(n)
-                }
-            }
-            None => Err(Error::from(ErrorKind::Overflow)),
-        }
-    }
-
-    /// For reduce errors as: `0.1 + 0.2 ≠ 0.3`.
-    impl Approx for f64{
-        #[inline]
-        fn approx(&self) -> Self {
-            const ERROR : f64 = 0.000_000_000_1_f64;
-            self.approx_by(&ERROR)
-        }
-
-        fn approx_by(&self, delta: &Self) -> Self {
-            let r = self.round();
-
-            if (self - r).abs() < *delta{
-                r
-            }
-            else{
-                *self
-            }
-        }
-    }
+    #[cfg(feature = "docs")]
+    impl_arc_trig_rec!(ACothFunction, atanh, acoth, Description::ACoth);
 }
 
 #[cfg(test)]

@@ -64,17 +64,245 @@ pub mod consts {
     pub const TEN: Decimal = dec!(10);
 }
 
+#[cfg(not(feature = "docs"))]
+macro_rules! forward_checked_func_impl {
+    ($struct_name:ident, $method_name:ident, $name:ident) => {
+        impl Function<Decimal> for $struct_name {
+            #[inline]
+            fn name(&self) -> &str {
+                stringify!($name)
+            }
+
+            #[inline]
+            fn call(&self, args: &[Decimal]) -> Result<Decimal> {
+                match args.len() {
+                    1 => args[0]
+                        .$method_name()
+                        .ok_or_else(|| Error::from(ErrorKind::Overflow)),
+                    _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
+                }
+            }
+        }
+    };
+
+    ($struct_name:ident, $method_name:ident) => {
+        forward_checked_func_impl!($struct_name, $method_name, $method_name);
+    };
+}
+
+#[cfg(not(feature = "docs"))]
+macro_rules! forward_checked_func_inv_impl {
+    ($struct_name:ident, $method_name:ident, $name:ident) => {
+        impl Function<Decimal> for $struct_name {
+            #[inline]
+            fn name(&self) -> &str {
+                stringify!($name)
+            }
+
+            #[inline]
+            fn call(&self, args: &[Decimal]) -> Result<Decimal> {
+                match args.len() {
+                    1 => args[0]
+                        .$method_name()
+                        .map(Decimal::checked_inv)
+                        .flatten()
+                        .ok_or_else(|| Error::from(ErrorKind::Overflow)),
+                    _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
+                }
+            }
+        }
+    };
+
+    ($struct_name:ident, $method_name:ident) => {
+        forward_checked_func_inv_impl!($struct_name, $method_name, $method_name)
+    };
+}
+
+#[cfg(not(feature = "docs"))]
+macro_rules! forward_func_impl {
+    ($struct_name:ident, $method_name:ident, $name:ident) => {
+        impl Function<Decimal> for $struct_name {
+            #[inline]
+            fn name(&self) -> &str {
+                stringify!($name)
+            }
+
+            #[inline]
+            fn call(&self, args: &[Decimal]) -> Result<Decimal> {
+                match args.len() {
+                    1 => Ok(args[0].$method_name()),
+                    _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
+                }
+            }
+        }
+    };
+
+    ($struct_name:ident, $method_name:ident) => {
+        forward_func_impl!($struct_name, $method_name, $method_name);
+    };
+}
+
+#[cfg(not(feature = "docs"))]
+macro_rules! forward_func_inv_impl {
+    ($struct_name:ident, $method_name:ident, $name:ident) => {
+        impl Function<Decimal> for $struct_name {
+            #[inline]
+            fn name(&self) -> &str {
+                stringify!($name)
+            }
+
+            #[inline]
+            fn call(&self, args: &[Decimal]) -> Result<Decimal> {
+                match args.len() {
+                    1 => Ok(args[0].$method_name().inv()),
+                    _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
+                }
+            }
+        }
+    };
+
+    ($struct_name:ident, $method_name:ident) => {
+        forward_func_inv_impl!($struct_name, $method_name, $method_name);
+    };
+}
+
+#[cfg(feature = "docs")]
+macro_rules! forward_checked_func_impl {
+    ($struct_name:ident, $method_name:ident, $name:ident, $description:expr) => {
+        impl Function<Decimal> for $struct_name {
+            #[inline]
+            fn name(&self) -> &str {
+                stringify!($name)
+            }
+
+            #[inline]
+            fn call(&self, args: &[Decimal]) -> Result<Decimal> {
+                match args.len() {
+                    1 => args[0]
+                        .$method_name()
+                        .ok_or_else(|| Error::from(ErrorKind::Overflow)),
+                    _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
+                }
+            }
+
+            fn description(&self) -> Option<&str> {
+                Some($description.into())
+            }
+        }
+    };
+
+    ($struct_name:ident, $method_name:ident, $description:expr) => {
+        forward_checked_func_impl!($struct_name, $method_name, $method_name, $description);
+    };
+}
+
+#[cfg(feature = "docs")]
+macro_rules! forward_checked_func_inv_impl {
+    ($struct_name:ident, $method_name:ident, $name:ident, $description:expr) => {
+        impl Function<Decimal> for $struct_name {
+            #[inline]
+            fn name(&self) -> &str {
+                stringify!($name)
+            }
+
+            #[inline]
+            fn call(&self, args: &[Decimal]) -> Result<Decimal> {
+                match args.len() {
+                    1 => args[0]
+                        .$method_name()
+                        .map(Decimal::checked_inv)
+                        .flatten()
+                        .ok_or_else(|| Error::from(ErrorKind::Overflow)),
+                    _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
+                }
+            }
+
+            fn description(&self) -> Option<&str> {
+                Some($description.into())
+            }
+        }
+    };
+
+    ($struct_name:ident, $method_name:ident, $description:expr) => {
+        forward_checked_func_inv_impl!($struct_name, $method_name, $method_name, $description);
+    };
+}
+
+#[cfg(feature = "docs")]
+macro_rules! forward_func_impl {
+    ($struct_name:ident, $method_name:ident, $name:ident, $description:expr) => {
+        impl Function<Decimal> for $struct_name {
+            #[inline]
+            fn name(&self) -> &str {
+                stringify!($name)
+            }
+
+            #[inline]
+            fn call(&self, args: &[Decimal]) -> Result<Decimal> {
+                match args.len() {
+                    1 => Ok(args[0].$method_name()),
+                    _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
+                }
+            }
+
+            fn description(&self) -> Option<&str> {
+                Some($description.into())
+            }
+        }
+    };
+
+    ($struct_name:ident, $method_name:ident, $description:expr) => {
+        forward_func_impl!($struct_name, $method_name, $method_name, $description);
+    };
+}
+
+#[cfg(feature = "docs")]
+macro_rules! forward_func_inv_impl {
+    ($struct_name:ident, $method_name:ident, $name:ident, $description:expr) => {
+        impl Function<Decimal> for $struct_name {
+            #[inline]
+            fn name(&self) -> &str {
+                stringify!($name)
+            }
+
+            #[inline]
+            fn call(&self, args: &[Decimal]) -> Result<Decimal> {
+                match args.len() {
+                    1 => Ok(args[0].$method_name().inv()),
+                    _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
+                }
+            }
+
+            fn description(&self) -> Option<&str> {
+                Some($description.into())
+            }
+        }
+    };
+
+    ($struct_name:ident, $method_name:ident, $description:expr) => {
+        forward_func_inv_impl!($struct_name, $method_name, $method_name, $description);
+    };
+}
+
 pub mod ops {
+    pub use super::math_ops::*;
+    pub use super::trig_ops::*;
+}
+
+mod math_ops {
+    use crate::decimal::consts;
     use num_traits::FromPrimitive;
     use rust_decimal::Decimal;
 
-    use crate::decimal::consts;
     use crate::decimal::decimal_ext::DecimalExt;
     use crate::error::*;
     use crate::function::{
         Associativity, BinaryFunction, Function, Notation, Precedence, UnaryFunction,
     };
     use crate::Result;
+
+    #[cfg(feature = "docs")]
+    use crate::descriptions::Description;
 
     pub struct AddOperator;
     impl BinaryFunction<Decimal> for AddOperator {
@@ -97,6 +325,11 @@ pub mod ops {
         fn call(&self, left: Decimal, right: Decimal) -> Result<Decimal> {
             left.checked_add(right)
                 .ok_or_else(|| Error::from(ErrorKind::Overflow))
+        }
+
+        #[cfg(feature = "docs")]
+        fn description(&self) -> Option<&str> {
+            Some(Description::Add.into())
         }
     }
 
@@ -122,6 +355,11 @@ pub mod ops {
             left.checked_sub(right)
                 .ok_or_else(|| Error::from(ErrorKind::Overflow))
         }
+
+        #[cfg(feature = "docs")]
+        fn description(&self) -> Option<&str> {
+            Some(Description::Sub.into())
+        }
     }
 
     pub struct MulOperator;
@@ -145,6 +383,11 @@ pub mod ops {
         fn call(&self, left: Decimal, right: Decimal) -> Result<Decimal> {
             left.checked_mul(right)
                 .ok_or_else(|| Error::from(ErrorKind::Overflow))
+        }
+
+        #[cfg(feature = "docs")]
+        fn description(&self) -> Option<&str> {
+            Some(Description::Mul.into())
         }
     }
 
@@ -170,6 +413,11 @@ pub mod ops {
             left.checked_div(right)
                 .ok_or_else(|| Error::from(ErrorKind::Overflow))
         }
+
+        #[cfg(feature = "docs")]
+        fn description(&self) -> Option<&str> {
+            Some(Description::Div.into())
+        }
     }
 
     pub struct ModOperator;
@@ -193,6 +441,11 @@ pub mod ops {
         fn call(&self, left: Decimal, right: Decimal) -> Result<Decimal> {
             left.checked_rem(right)
                 .ok_or_else(|| Error::from(ErrorKind::Overflow))
+        }
+
+        #[cfg(feature = "docs")]
+        fn description(&self) -> Option<&str> {
+            Some(Description::Mod.into())
         }
     }
 
@@ -218,6 +471,11 @@ pub mod ops {
             left.checked_pow(right)
                 .ok_or_else(|| Error::from(ErrorKind::Overflow))
         }
+
+        #[cfg(feature = "docs")]
+        fn description(&self) -> Option<&str> {
+            Some(Description::Pow.into())
+        }
     }
 
     pub struct UnaryMinus;
@@ -235,6 +493,11 @@ pub mod ops {
         #[inline]
         fn call(&self, value: Decimal) -> Result<Decimal> {
             Ok(-value)
+        }
+
+        #[cfg(feature = "docs")]
+        fn description(&self) -> Option<&str> {
+            Some(Description::Neg.into())
         }
     }
 
@@ -255,6 +518,11 @@ pub mod ops {
             value
                 .checked_factorial()
                 .ok_or_else(|| Error::from(ErrorKind::Overflow))
+        }
+
+        #[cfg(feature = "docs")]
+        fn description(&self) -> Option<&str> {
+            Some(Description::Factorial.into())
         }
     }
 
@@ -278,6 +546,11 @@ pub mod ops {
 
             result.ok_or_else(|| Error::from(ErrorKind::InvalidArgumentCount))
         }
+
+        #[cfg(feature = "docs")]
+        fn description(&self) -> Option<&str> {
+            Some(Description::Sum.into())
+        }
     }
 
     pub struct ProdFunction;
@@ -299,6 +572,11 @@ pub mod ops {
             }
 
             result.ok_or_else(|| Error::from(ErrorKind::InvalidArgumentCount))
+        }
+
+        #[cfg(feature = "docs")]
+        fn description(&self) -> Option<&str> {
+            Some(Description::Prod.into())
         }
     }
 
@@ -325,129 +603,60 @@ pub mod ops {
                 None => Err(Error::from(ErrorKind::InvalidArgumentCount)),
             }
         }
-    }
 
-    macro_rules! forward_checked_func_impl {
-        ($struct_name:ident, $method_name:ident, $name:ident) => {
-            impl Function<Decimal> for $struct_name {
-                #[inline]
-                fn name(&self) -> &str {
-                    stringify!($name)
-                }
-
-                #[inline]
-                fn call(&self, args: &[Decimal]) -> Result<Decimal> {
-                    match args.len() {
-                        1 => args[0]
-                            .$method_name()
-                            .ok_or_else(|| Error::from(ErrorKind::Overflow)),
-                        _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
-                    }
-                }
-            }
-        };
-
-        ($struct_name:ident, $method_name:ident) => {
-            forward_checked_func_impl!($struct_name, $method_name, $method_name);
-        };
-    }
-
-    macro_rules! forward_checked_func_inv_impl {
-        ($struct_name:ident, $method_name:ident, $name:ident) => {
-            impl Function<Decimal> for $struct_name {
-                #[inline]
-                fn name(&self) -> &str {
-                    stringify!($name)
-                }
-
-                #[inline]
-                fn call(&self, args: &[Decimal]) -> Result<Decimal> {
-                    match args.len() {
-                        1 => args[0]
-                            .$method_name()
-                            .map(Decimal::checked_inv)
-                            .flatten()
-                            .ok_or_else(|| Error::from(ErrorKind::Overflow)),
-                        _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
-                    }
-                }
-            }
-        };
-
-        ($struct_name:ident, $method_name:ident) => {
-            forward_checked_func_inv_impl!($struct_name, $method_name, $method_name)
-        };
-    }
-
-    macro_rules! forward_func_impl {
-        ($struct_name:ident, $method_name:ident, $name:ident) => {
-            impl Function<Decimal> for $struct_name {
-                #[inline]
-                fn name(&self) -> &str {
-                    stringify!($name)
-                }
-
-                #[inline]
-                fn call(&self, args: &[Decimal]) -> Result<Decimal> {
-                    match args.len() {
-                        1 => Ok(args[0].$method_name()),
-                        _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
-                    }
-                }
-            }
-        };
-
-        ($struct_name:ident, $method_name:ident) => {
-            forward_func_impl!($struct_name, $method_name, $method_name);
-        };
-    }
-
-    macro_rules! forward_func_inv_impl {
-        ($struct_name:ident, $method_name:ident, $name:ident) => {
-            impl Function<Decimal> for $struct_name {
-                #[inline]
-                fn name(&self) -> &str {
-                    stringify!($name)
-                }
-
-                #[inline]
-                fn call(&self, args: &[Decimal]) -> Result<Decimal> {
-                    match args.len() {
-                        1 => Ok(args[0].$method_name().inv()),
-                        _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
-                    }
-                }
-            }
-        };
-
-        ($struct_name:ident, $method_name:ident) => {
-            forward_func_inv_impl!($struct_name, $method_name, $method_name);
-        };
+        #[cfg(feature = "docs")]
+        fn description(&self) -> Option<&str> {
+            Some(Description::Avg.into())
+        }
     }
 
     pub struct FloorFunction;
+    #[cfg(not(feature = "docs"))]
     forward_func_impl!(FloorFunction, floor);
+    #[cfg(feature = "docs")]
+    forward_func_impl!(FloorFunction, floor, Description::Floor);
 
     pub struct CeilFunction;
+    #[cfg(not(feature = "docs"))]
     forward_func_impl!(CeilFunction, ceil);
+    #[cfg(feature = "docs")]
+    forward_func_impl!(CeilFunction, ceil, Description::Ceil);
 
     pub struct TruncateFunction;
+    #[cfg(not(feature = "docs"))]
     forward_func_impl!(TruncateFunction, trunc, truncate);
+    #[cfg(feature = "docs")]
+    forward_func_impl!(TruncateFunction, trunc, truncate, Description::Truncate);
 
     pub struct RoundFunction;
+    #[cfg(not(feature = "docs"))]
     forward_func_impl!(RoundFunction, round);
+    #[cfg(feature = "docs")]
+    forward_func_impl!(RoundFunction, round, Description::Round);
 
     pub struct SqrtFunction;
+    #[cfg(not(feature = "docs"))]
     forward_checked_func_impl!(SqrtFunction, checked_sqrt, sqrt);
+    #[cfg(feature = "docs")]
+    forward_checked_func_impl!(SqrtFunction, checked_sqrt, sqrt, Description::Sqrt);
 
     pub struct CbrtFunction;
+    #[cfg(not(feature = "docs"))]
     forward_checked_func_impl!(CbrtFunction, checked_cbrt, cbrt);
+    #[cfg(feature = "docs")]
+    forward_checked_func_impl!(CbrtFunction, checked_cbrt, cbrt, Description::Cbrt);
 
     pub struct ExpFunction;
+    #[cfg(not(feature = "docs"))]
     forward_checked_func_impl!(ExpFunction, checked_exp, exp);
+    #[cfg(feature = "docs")]
+    forward_checked_func_impl!(ExpFunction, checked_exp, exp, Description::Exp);
 
     pub struct LnFunction;
+    #[cfg(not(feature = "docs"))]
     forward_checked_func_impl!(LnFunction, checked_ln, ln);
+    #[cfg(feature = "docs")]
+    forward_checked_func_impl!(LnFunction, checked_ln, ln, Description::Ln);
 
     pub struct LogFunction;
     impl Function<Decimal> for LogFunction {
@@ -466,15 +675,37 @@ pub mod ops {
                 _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
             }
         }
+
+        #[cfg(feature = "docs")]
+        fn description(&self) -> Option<&str> {
+            Some(Description::Log.into())
+        }
     }
 
     pub struct ToRadiansFunction;
+    #[cfg(not(feature = "docs"))]
     forward_func_impl!(ToRadiansFunction, to_radians, toRadians);
+    #[cfg(feature = "docs")]
+    forward_func_impl!(ToRadiansFunction, to_radians, toRadians, Description::ToRadians);
 
     pub struct ToDegreesFunction;
+    #[cfg(not(feature = "docs"))]
     forward_func_impl!(ToDegreesFunction, to_degrees, toDegrees);
+    #[cfg(feature = "docs")]
+    forward_func_impl!(ToDegreesFunction, to_degrees, toDegrees, Description::ToDegrees);
+}
 
-    //////////////////// Trigonometric ////////////////////
+mod trig_ops {
+    use crate::decimal::decimal_ext::DecimalExt;
+    use crate::error::*;
+    use crate::function::Function;
+    use crate::Result;
+    use rust_decimal::Decimal;
+
+    #[cfg(feature = "docs")]
+    use crate::descriptions::Description;
+
+    #[cfg(not(feature = "docs"))]
     macro_rules! impl_checked_trig {
         ($struct_name:ident, $method_name:ident, $name:ident) => {
             impl Function<Decimal> for $struct_name {
@@ -486,11 +717,10 @@ pub mod ops {
                 #[inline]
                 fn call(&self, args: &[Decimal]) -> Result<Decimal> {
                     match args.len() {
-                        1 => {
-                            args[0].to_radians()
-                                .$method_name()
-                                .ok_or_else(|| Error::from(ErrorKind::Overflow))
-                        },
+                        1 => args[0]
+                            .to_radians()
+                            .$method_name()
+                            .ok_or_else(|| Error::from(ErrorKind::Overflow)),
                         _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
                     }
                 }
@@ -502,6 +732,7 @@ pub mod ops {
         };
     }
 
+    #[cfg(not(feature = "docs"))]
     macro_rules! impl_checked_trig_rec {
         ($struct_name:ident, $method_name:ident, $name:ident) => {
             impl Function<Decimal> for $struct_name {
@@ -513,7 +744,8 @@ pub mod ops {
                 #[inline]
                 fn call(&self, args: &[Decimal]) -> Result<Decimal> {
                     match args.len() {
-                        1 => args[0].to_radians()
+                        1 => args[0]
+                            .to_radians()
                             .$method_name()
                             //.map(Decimal::checked_inv)
                             .ok_or_else(|| Error::from(ErrorKind::Overflow)),
@@ -528,6 +760,7 @@ pub mod ops {
         };
     }
 
+    #[cfg(not(feature = "docs"))]
     macro_rules! impl_trig {
         ($struct_name:ident, $method_name:ident, $name:ident) => {
             impl Function<Decimal> for $struct_name {
@@ -551,6 +784,7 @@ pub mod ops {
         };
     }
 
+    #[cfg(not(feature = "docs"))]
     macro_rules! impl_trig_rec {
         ($struct_name:ident, $method_name:ident, $name:ident) => {
             impl Function<Decimal> for $struct_name {
@@ -574,25 +808,163 @@ pub mod ops {
         };
     }
 
+    #[cfg(feature = "docs")]
+    macro_rules! impl_checked_trig {
+        ($struct_name:ident, $method_name:ident, $name:ident, $description:expr) => {
+            impl Function<Decimal> for $struct_name {
+                #[inline]
+                fn name(&self) -> &str {
+                    stringify!($name)
+                }
+
+                #[inline]
+                fn call(&self, args: &[Decimal]) -> Result<Decimal> {
+                    match args.len() {
+                        1 => args[0]
+                            .to_radians()
+                            .$method_name()
+                            .ok_or_else(|| Error::from(ErrorKind::Overflow)),
+                        _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
+                    }
+                }
+
+                fn description(&self) -> Option<&str> {
+                    Some($description.into())
+                }
+            }
+        };
+
+        ($struct_name:ident, $method_name:ident, $description:expr) => {
+            impl_checked_trig!($struct_name, $method_name, $method_name, $description);
+        };
+    }
+
+    #[cfg(feature = "docs")]
+    macro_rules! impl_checked_trig_rec {
+        ($struct_name:ident, $method_name:ident, $name:ident, $description:expr) => {
+            impl Function<Decimal> for $struct_name {
+                #[inline]
+                fn name(&self) -> &str {
+                    stringify!($name)
+                }
+
+                #[inline]
+                fn call(&self, args: &[Decimal]) -> Result<Decimal> {
+                    match args.len() {
+                        1 => args[0]
+                            .to_radians()
+                            .$method_name()
+                            //.map(Decimal::checked_inv)
+                            .ok_or_else(|| Error::from(ErrorKind::Overflow)),
+                        _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
+                    }
+                }
+
+                fn description(&self) -> Option<&str> {
+                    Some($description.into())
+                }
+            }
+        };
+
+        ($struct_name:ident, $method_name:ident, $description:expr) => {
+            impl_checked_trig_rec!($struct_name, $method_name, $method_name, $description);
+        };
+    }
+
+    #[cfg(feature = "docs")]
+    macro_rules! impl_trig {
+        ($struct_name:ident, $method_name:ident, $name:ident, $description:expr) => {
+            impl Function<Decimal> for $struct_name {
+                #[inline]
+                fn name(&self) -> &str {
+                    stringify!($name)
+                }
+
+                #[inline]
+                fn call(&self, args: &[Decimal]) -> Result<Decimal> {
+                    match args.len() {
+                        1 => Ok(args[0].to_radians().$method_name()),
+                        _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
+                    }
+                }
+
+                fn description(&self) -> Option<&str> {
+                    Some($description.into())
+                }
+            }
+        };
+
+        ($struct_name:ident, $method_name:ident, $description:expr) => {
+            impl_trig!($struct_name, $method_name, $method_name, $description);
+        };
+    }
+
+    #[cfg(feature = "docs")]
+    macro_rules! impl_trig_rec {
+        ($struct_name:ident, $method_name:ident, $name:ident, $description:expr) => {
+            impl Function<Decimal> for $struct_name {
+                #[inline]
+                fn name(&self) -> &str {
+                    stringify!($name)
+                }
+
+                #[inline]
+                fn call(&self, args: &[Decimal]) -> Result<Decimal> {
+                    match args.len() {
+                        1 => Ok(args[0].to_radians().$method_name().inv()),
+                        _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
+                    }
+                }
+
+                fn description(&self) -> Option<&str> {
+                    Some($description.into())
+                }
+            }
+        };
+
+        ($struct_name:ident, $method_name:ident, $description:expr) => {
+            impl_trig_rec!($struct_name, $method_name, $method_name, $description);
+        };
+    }
+
     pub struct SinFunction;
+    #[cfg(not(feature = "docs"))]
     impl_trig!(SinFunction, sin);
+    #[cfg(feature = "docs")]
+    impl_trig!(SinFunction, sin, Description::Sin);
 
     pub struct CosFunction;
+    #[cfg(not(feature = "docs"))]
     impl_trig!(CosFunction, cos);
+    #[cfg(feature = "docs")]
+    impl_trig!(CosFunction, cos, Description::Cos);
 
     pub struct TanFunction;
+    #[cfg(not(feature = "docs"))]
     impl_checked_trig!(TanFunction, tan);
+    #[cfg(feature = "docs")]
+    impl_checked_trig!(TanFunction, tan, Description::Tan);
 
     pub struct CscFunction;
+    #[cfg(not(feature = "docs"))]
     impl_trig_rec!(CscFunction, sin, csc);
+    #[cfg(feature = "docs")]
+    impl_trig_rec!(CscFunction, sin, csc, Description::Csc);
 
     pub struct SecFunction;
+    #[cfg(not(feature = "docs"))]
     impl_trig_rec!(SecFunction, cos, sec);
+    #[cfg(feature = "docs")]
+    impl_trig_rec!(SecFunction, cos, sec, Description::Sec);
 
     pub struct CotFunction;
+    #[cfg(not(feature = "docs"))]
     impl_checked_trig_rec!(CotFunction, tan, cot);
+    #[cfg(feature = "docs")]
+    impl_checked_trig_rec!(CotFunction, tan, cot, Description::Cot);
 
     //////////////////// Inverse Trigonometric ////////////////////
+    #[cfg(not(feature = "docs"))]
     macro_rules! impl_arc_trig_rec {
         ($struct_name:ident, $method_name:ident, $name:ident) => {
             impl Function<Decimal> for $struct_name {
@@ -616,6 +988,7 @@ pub mod ops {
         };
     }
 
+    #[cfg(not(feature = "docs"))]
     macro_rules! impl_checked_arc_trig_rec {
         ($struct_name:ident, $method_name:ident, $name:ident) => {
             impl Function<Decimal> for $struct_name {
@@ -642,11 +1015,76 @@ pub mod ops {
         };
     }
 
+    #[cfg(feature = "docs")]
+    macro_rules! impl_arc_trig_rec {
+        ($struct_name:ident, $method_name:ident, $name:ident, $description:expr) => {
+            impl Function<Decimal> for $struct_name {
+                #[inline]
+                fn name(&self) -> &str {
+                    stringify!($name)
+                }
+
+                #[inline]
+                fn call(&self, args: &[Decimal]) -> Result<Decimal> {
+                    match args.len() {
+                        1 => Ok(args[0].$method_name()),
+                        _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
+                    }
+                }
+
+                fn description(&self) -> Option<&str> {
+                    Some($description.into())
+                }
+            }
+        };
+
+        ($struct_name:ident, $method_name:ident, $description:expr) => {
+            impl_arc_trig_rec!($struct_name, $method_name, $method_name, $description);
+        };
+    }
+
+    #[cfg(feature = "docs")]
+    macro_rules! impl_checked_arc_trig_rec {
+        ($struct_name:ident, $method_name:ident, $name:ident, $description:expr) => {
+            impl Function<Decimal> for $struct_name {
+                #[inline]
+                fn name(&self) -> &str {
+                    stringify!($name)
+                }
+
+                #[inline]
+                fn call(&self, args: &[Decimal]) -> Result<Decimal> {
+                    match args.len() {
+                        1 => args[0]
+                            .inv()
+                            .$method_name()
+                            .ok_or_else(|| Error::from(ErrorKind::Overflow)),
+                        _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
+                    }
+                }
+
+                fn description(&self) -> Option<&str> {
+                    Some($description.into())
+                }
+            }
+        };
+
+        ($struct_name:ident, $method_name:ident, $description:expr) => {
+            impl_checked_arc_trig_rec!($struct_name, $method_name, $method_name, $description);
+        };
+    }
+
     pub struct ASinFunction;
+    #[cfg(not(feature = "docs"))]
     impl_checked_trig!(ASinFunction, asin);
+    #[cfg(feature = "docs")]
+    impl_checked_trig!(ASinFunction, asin, Description::ASin);
 
     pub struct ACosFunction;
+    #[cfg(not(feature = "docs"))]
     impl_checked_trig!(ACosFunction, acos);
+    #[cfg(feature = "docs")]
+    impl_checked_trig!(ACosFunction, acos, Description::ACos);
 
     pub struct ATanFunction;
     impl Function<Decimal> for ATanFunction {
@@ -663,54 +1101,104 @@ pub mod ops {
                 _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
             }
         }
+
+        #[cfg(feature = "docs")]
+        fn description(&self) -> Option<&str> {
+            Some(Description::ATan.into())
+        }
     }
 
     pub struct ACscFunction;
+    #[cfg(not(feature = "docs"))]
     impl_checked_arc_trig_rec!(ACscFunction, asin, acsc);
+    #[cfg(feature = "docs")]
+    impl_checked_arc_trig_rec!(ACscFunction, asin, acsc, Description::ACsc);
 
     pub struct ASecFunction;
+    #[cfg(not(feature = "docs"))]
     impl_checked_arc_trig_rec!(ASecFunction, acos, asec);
+    #[cfg(feature = "docs")]
+    impl_checked_arc_trig_rec!(ASecFunction, acos, asec, Description::ASec);
 
     pub struct ACotFunction;
+    #[cfg(not(feature = "docs"))]
     impl_arc_trig_rec!(ACotFunction, atan, acot);
+    #[cfg(feature = "docs")]
+    impl_arc_trig_rec!(ACotFunction, atan, acot, Description::ACot);
 
     //////////////////// Hyperbolic Trigonometric ////////////////////
     pub struct SinhFunction;
+    #[cfg(not(feature = "docs"))]
     forward_checked_func_impl!(SinhFunction, sinh);
+    #[cfg(feature = "docs")]
+    forward_checked_func_impl!(SinhFunction, sinh, Description::Sinh);
 
     pub struct CoshFunction;
+    #[cfg(not(feature = "docs"))]
     forward_checked_func_impl!(CoshFunction, cosh);
+    #[cfg(feature = "docs")]
+    forward_checked_func_impl!(CoshFunction, cosh, Description::Cosh);
 
     pub struct TanhFunction;
+    #[cfg(not(feature = "docs"))]
     forward_checked_func_impl!(TanhFunction, tanh);
+    #[cfg(feature = "docs")]
+    forward_checked_func_impl!(TanhFunction, tanh, Description::Tanh);
 
     pub struct CschFunction;
+    #[cfg(not(feature = "docs"))]
     forward_checked_func_inv_impl!(CschFunction, sinh, csch);
+    #[cfg(feature = "docs")]
+    forward_checked_func_inv_impl!(CschFunction, sinh, csch, Description::Csch);
 
     pub struct SechFunction;
+    #[cfg(not(feature = "docs"))]
     forward_checked_func_inv_impl!(SechFunction, cosh, sech);
+    #[cfg(feature = "docs")]
+    forward_checked_func_inv_impl!(SechFunction, cosh, sech, Description::Sech);
 
     pub struct CothFunction;
+    #[cfg(not(feature = "docs"))]
     forward_checked_func_inv_impl!(CothFunction, tanh, coth);
+    #[cfg(feature = "docs")]
+    forward_checked_func_inv_impl!(CothFunction, tanh, coth, Description::Coth);
 
     //////////////////// Inverse Hyperbolic Trigonometric ////////////////////
     pub struct ASinhFunction;
+    #[cfg(not(feature = "docs"))]
     forward_func_impl!(ASinhFunction, asinh);
+    #[cfg(feature = "docs")]
+    forward_func_impl!(ASinhFunction, asinh, Description::ASinh);
 
     pub struct ACoshFunction;
+    #[cfg(not(feature = "docs"))]
     forward_checked_func_impl!(ACoshFunction, acosh);
+    #[cfg(feature = "docs")]
+    forward_checked_func_impl!(ACoshFunction, acosh, Description::ACosh);
 
     pub struct ATanhFunction;
+    #[cfg(not(feature = "docs"))]
     forward_checked_func_impl!(ATanhFunction, atanh);
+    #[cfg(feature = "docs")]
+    forward_checked_func_impl!(ATanhFunction, atanh, Description::ATanh);
 
     pub struct ACschFunction;
+    #[cfg(not(feature = "docs"))]
     forward_func_inv_impl!(ACschFunction, asinh, acsch);
+    #[cfg(feature = "docs")]
+    forward_func_inv_impl!(ACschFunction, asinh, acsch, Description::ACsch);
 
     pub struct ASechFunction;
+    #[cfg(not(feature = "docs"))]
     forward_checked_func_inv_impl!(ASechFunction, acosh, asech);
+    #[cfg(feature = "docs")]
+    forward_checked_func_inv_impl!(ASechFunction, acosh, asech, Description::ASech);
 
     pub struct ACothFunction;
+    #[cfg(not(feature = "docs"))]
     forward_checked_func_inv_impl!(ACothFunction, atanh, acoth);
+    #[cfg(feature = "docs")]
+    forward_checked_func_inv_impl!(ACothFunction, atanh, acoth, Description::ACoth);
 }
 
 pub mod context {
@@ -782,5 +1270,21 @@ pub mod context {
             context.add_function(ACothFunction).unwrap();
             context
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::context::DefaultContext;
+    use crate::evaluator::Evaluator;
+    use super::*;
+
+    #[test]
+    fn compile_test() {
+        let context = DefaultContext::new_decimal();
+        let evaluator = Evaluator::with_context(context);
+        let expr = "(1 + 2) * 3";
+        let result = evaluator.eval(expr).unwrap();
+        assert_eq!(result, Decimal::from(9));
     }
 }

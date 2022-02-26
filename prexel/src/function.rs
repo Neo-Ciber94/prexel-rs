@@ -12,6 +12,12 @@ pub trait Function<N> {
     fn aliases(&self) -> Option<&[&str]> {
         None
     }
+
+    /// Gets information about the usage of this function.
+    #[cfg(feature="docs")]
+    fn description(&self) -> Option<&str> {
+        None
+    }
 }
 
 /// A trait for a function that takes 2 arguments.
@@ -32,6 +38,12 @@ pub trait BinaryFunction<N> {
 
     /// Calls this function with the given arguments.
     fn call(&self, left: N, right: N) -> Result<N>;
+
+    /// Gets information about the usage of this function.
+    #[cfg(feature="docs")]
+    fn description(&self) -> Option<&str> {
+        None
+    }
 }
 
 /// A trait a function that takes 1 argument.
@@ -49,6 +61,12 @@ pub trait UnaryFunction<N> {
 
     /// Calls this function with the given argument.
     fn call(&self, value: N) -> Result<N>;
+
+    /// Gets information about the usage of this function.
+    #[cfg(feature="docs")]
+    fn description(&self) -> Option<&str> {
+        None
+    }
 }
 
 /// Represents the associativity of an operator.

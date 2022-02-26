@@ -34,6 +34,9 @@ impl FromStr for EvalType {
 #[derive(Parser, Debug)]
 #[clap(version, author, about, propagate_version = true)]
 struct Cli {
+    #[clap(long, help="Disables color output")]
+    no_color: bool,
+
     #[clap(subcommand)]
     commands: Commands,
 }
@@ -56,6 +59,7 @@ enum Commands {
 
 fn main() {
     let cli: Cli = Cli::parse();
+    // let no_color = cli.no_color;
 
     match cli.commands {
         Commands::Eval { r#type, expression } => {

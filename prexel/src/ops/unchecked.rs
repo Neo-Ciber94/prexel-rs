@@ -8,6 +8,9 @@ use crate::function::{
 };
 use crate::Result;
 
+#[cfg(feature = "docs")]
+use crate::descriptions::Description;
+
 pub struct AddOperator;
 impl<N: Add<N, Output = N>> BinaryFunction<N> for AddOperator {
     fn name(&self) -> &'static str {
@@ -24,6 +27,11 @@ impl<N: Add<N, Output = N>> BinaryFunction<N> for AddOperator {
 
     fn call(&self, left: N, right: N) -> Result<N> {
         Ok(left + right)
+    }
+
+    #[cfg(feature="docs")]
+    fn description(&self) -> Option<&str> {
+        Some(Description::Add.into())
     }
 }
 
@@ -44,6 +52,11 @@ impl<N: Sub<N, Output = N>> BinaryFunction<N> for SubOperator {
     fn call(&self, left: N, right: N) -> Result<N> {
         Ok(left - right)
     }
+
+    #[cfg(feature="docs")]
+    fn description(&self) -> Option<&str> {
+        Some(Description::Sub.into())
+    }
 }
 
 pub struct MulOperator;
@@ -62,6 +75,11 @@ impl<N: Mul<N, Output = N>> BinaryFunction<N> for MulOperator {
 
     fn call(&self, left: N, right: N) -> Result<N> {
         Ok(left * right)
+    }
+
+    #[cfg(feature="docs")]
+    fn description(&self) -> Option<&str> {
+        Some(Description::Mul.into())
     }
 }
 
@@ -86,6 +104,11 @@ impl<N: Div<N, Output = N> + Zero> BinaryFunction<N> for DivOperator {
 
         Ok(left / right)
     }
+
+    #[cfg(feature="docs")]
+    fn description(&self) -> Option<&str> {
+        Some(Description::Div.into())
+    }
 }
 
 pub struct ModOperator;
@@ -109,6 +132,11 @@ impl<N: Rem<N, Output = N> + Zero> BinaryFunction<N> for ModOperator {
 
         Ok(left % right)
     }
+
+    #[cfg(feature="docs")]
+    fn description(&self) -> Option<&str> {
+        Some(Description::Mod.into())
+    }
 }
 
 pub struct UnaryMinus;
@@ -123,6 +151,11 @@ impl<N: Neg<Output = N>> UnaryFunction<N> for UnaryMinus {
 
     fn call(&self, value: N) -> Result<N> {
         Ok(value.neg())
+    }
+
+    #[cfg(feature="docs")]
+    fn description(&self) -> Option<&str> {
+        Some(Description::Neg.into())
     }
 }
 
@@ -140,6 +173,11 @@ impl<N: Zero + PartialOrd + Neg<Output = N> + Clone> Function<N> for AbsFunction
         } else {
             Ok(args[0].clone().neg())
         }
+    }
+
+    #[cfg(feature="docs")]
+    fn description(&self) -> Option<&str> {
+        Some(Description::Abs.into())
     }
 }
 
@@ -163,6 +201,11 @@ impl<N: Add<N, Output = N> + Clone> Function<N> for SumFunction {
 
         result.ok_or_else(|| Error::from(ErrorKind::InvalidArgumentCount))
     }
+
+    #[cfg(feature="docs")]
+    fn description(&self) -> Option<&str> {
+        Some(Description::Sum.into())
+    }
 }
 
 pub struct ProdFunction;
@@ -184,6 +227,11 @@ impl<N: Mul<N, Output = N> + Clone> Function<N> for ProdFunction {
         }
 
         result.ok_or_else(|| Error::from(ErrorKind::InvalidArgumentCount))
+    }
+
+    #[cfg(feature="docs")]
+    fn description(&self) -> Option<&str> {
+        Some(Description::Prod.into())
     }
 }
 
@@ -211,6 +259,11 @@ impl<N: Add<N, Output = N> + Div<N, Output = N> + FromPrimitive + Clone> Functio
             Some(n) => Ok(n / N::from_usize(args.len()).unwrap()),
             None => Err(Error::from(ErrorKind::InvalidArgumentCount)),
         }
+    }
+
+    #[cfg(feature="docs")]
+    fn description(&self) -> Option<&str> {
+        Some(Description::Avg.into())
     }
 }
 

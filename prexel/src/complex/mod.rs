@@ -3,12 +3,15 @@ pub type Complex<T> = num_complex::Complex<T>;
 pub mod ops {
     use num_complex::Complex;
     use num_traits::{Float, FromPrimitive};
+    use rand::random;
+    use std::fmt::{Display, Debug};
 
     use crate::error::*;
     use crate::function::{Associativity, BinaryFunction, Function, Precedence};
     use crate::Result;
-    use rand::random;
-    use std::fmt::{Display, Debug};
+
+    #[cfg(feature = "docs")]
+    use crate::descriptions::Description;
 
     pub struct PowOperator;
     impl<T> BinaryFunction<Complex<T>> for PowOperator where T: Float{
@@ -26,6 +29,11 @@ pub mod ops {
 
         fn call(&self, left: Complex<T>, right: Complex<T>) -> Result<Complex<T>> {
             Ok(Complex::powc(&left, right))
+        }
+
+        #[cfg(feature = "docs")]
+        fn description(&self) -> Option<&str> {
+            Some(Description::Pow.into())
         }
     }
 
@@ -50,6 +58,11 @@ pub mod ops {
                 },
                 _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
             }
+        }
+
+        #[cfg(feature = "docs")]
+        fn description(&self) -> Option<&str> {
+            Some(Description::Log.into())
         }
     }
 
@@ -111,8 +124,14 @@ pub mod ops {
                 _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
             }
         }
+
+        #[cfg(feature = "docs")]
+        fn description(&self) -> Option<&str> {
+            Some(Description::Rand.into())
+        }
     }
 
+    #[cfg(not(feature = "docs"))]
     macro_rules! forward_impl_func {
         ($t:ty, $method_name:ident) => {
             forward_impl_func!($t, $method_name, $method_name);
@@ -134,6 +153,7 @@ pub mod ops {
         };
     }
 
+    #[cfg(not(feature = "docs"))]
     macro_rules! forward_impl_func_inv {
         ($t:ty, $method_name:ident) => {
             forward_impl_func_inv!($t, $method_name, $method_name);
@@ -155,94 +175,227 @@ pub mod ops {
         };
     }
 
+    #[cfg(feature = "docs")]
+    macro_rules! forward_impl_func {
+        ($t:ty, $method_name:ident, $description:expr) => {
+            forward_impl_func!($t, $method_name, $method_name, $description);
+        };
+
+        ($t:ty, $method_name:ident, $name:ident, $description:expr) => {
+            impl<T> Function<Complex<T>> for $t where T: Float{
+                fn name(&self) -> &str {
+                    stringify!($name)
+                }
+
+                fn call(&self, args: &[Complex<T>]) -> Result<Complex<T>> {
+                    match args.len() {
+                        1 => Ok(args[0].$method_name()),
+                        _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
+                    }
+                }
+
+                fn description(&self) -> Option<&str> {
+                    Some($description.into())
+                }
+            }
+        };
+    }
+
+    #[cfg(feature = "docs")]
+    macro_rules! forward_impl_func_inv {
+        ($t:ty, $method_name:ident, $description:expr) => {
+            forward_impl_func_inv!($t, $method_name, $method_name);
+        };
+
+        ($t:ty, $method_name:ident, $name:ident, $description:expr) => {
+            impl<T> Function<Complex<T>> for $t where T: Float {
+                fn name(&self) -> &str {
+                    stringify!($name)
+                }
+
+                fn call(&self, args: &[Complex<T>]) -> Result<Complex<T>> {
+                    match args.len() {
+                        1 => Ok(args[0].$method_name().inv()),
+                        _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
+                    }
+                }
+
+                fn description(&self) -> Option<&str> {
+                    Some($description.into())
+                }
+            }
+        };
+    }
+
     pub struct SqrtFunction;
+    #[cfg(not(feature = "docs"))]
     forward_impl_func!(SqrtFunction, sqrt);
+    #[cfg(feature = "docs")]
+    forward_impl_func!(SqrtFunction, sqrt, Description::Sqrt);
 
     pub struct LnFunction;
+    #[cfg(not(feature = "docs"))]
     forward_impl_func!(LnFunction, ln);
+    #[cfg(feature = "docs")]
+    forward_impl_func!(LnFunction, ln, Description::Ln);
 
     pub struct ExpFunction;
+    #[cfg(not(feature = "docs"))]
     forward_impl_func!(ExpFunction, exp);
+    #[cfg(feature = "docs")]
+    forward_impl_func!(ExpFunction, exp, Description::Exp);
 
     //////////////////// Trigonometric ////////////////////
 
     pub struct SinFunction;
+    #[cfg(not(feature = "docs"))]
     forward_impl_func!(SinFunction, sin);
+    #[cfg(feature = "docs")]
+    forward_impl_func!(SinFunction, sin, Description::Sin);
 
     pub struct CosFunction;
+    #[cfg(not(feature = "docs"))]
     forward_impl_func!(CosFunction, cos);
+    #[cfg(feature = "docs")]
+    forward_impl_func!(CosFunction, cos, Description::Cos);
 
     pub struct TanFunction;
+    #[cfg(not(feature = "docs"))]
     forward_impl_func!(TanFunction, tan);
+    #[cfg(feature = "docs")]
+    forward_impl_func!(TanFunction, tan, Description::Tan);
 
     pub struct CscFunction;
+    #[cfg(not(feature = "docs"))]
     forward_impl_func_inv!(CscFunction, sin, csc);
+    #[cfg(feature = "docs")]
+    forward_impl_func_inv!(CscFunction, sin, csc, Description::Csc);
 
     pub struct SecFunction;
+    #[cfg(not(feature = "docs"))]
     forward_impl_func_inv!(SecFunction, cos, sec);
+    #[cfg(feature = "docs")]
+    forward_impl_func_inv!(SecFunction, cos, sec, Description::Sec);
 
     pub struct CotFunction;
+    #[cfg(not(feature = "docs"))]
     forward_impl_func_inv!(CotFunction, tan, cot);
+    #[cfg(feature = "docs")]
+    forward_impl_func_inv!(CotFunction, tan, cot, Description::Cot);
 
     //////////////////// Inverse Trigonometric ////////////////////
 
     pub struct ASinFunction;
+    #[cfg(not(feature = "docs"))]
     forward_impl_func!(ASinFunction, asin);
+    #[cfg(feature = "docs")]
+    forward_impl_func!(ASinFunction, asin, Description::ASin);
 
     pub struct ACosFunction;
+    #[cfg(not(feature = "docs"))]
     forward_impl_func!(ACosFunction, acos);
+    #[cfg(feature = "docs")]
+    forward_impl_func!(ACosFunction, acos, Description::ACos);
 
     pub struct ATanFunction;
+    #[cfg(not(feature = "docs"))]
     forward_impl_func!(ATanFunction, atan);
+    #[cfg(feature = "docs")]
+    forward_impl_func!(ATanFunction, atan, Description::ATan);
 
     pub struct ACscFunction;
+    #[cfg(not(feature = "docs"))]
     forward_impl_func_inv!(ACscFunction, asin, acsc);
+    #[cfg(feature = "docs")]
+    forward_impl_func_inv!(ACscFunction, asin, acsc, Description::ACsc);
 
     pub struct ASecFunction;
+    #[cfg(not(feature = "docs"))]
     forward_impl_func_inv!(ASecFunction, acos, asec);
+    #[cfg(feature = "docs")]
+    forward_impl_func_inv!(ASecFunction, acos, asec, Description::ASec);
 
     pub struct ACotFunction;
+    #[cfg(not(feature = "docs"))]
     forward_impl_func_inv!(ACotFunction, atan, acot);
+    #[cfg(feature = "docs")]
+    forward_impl_func_inv!(ACotFunction, atan, acot, Description::ACot);
 
     //////////////////// Hyperbolic Trigonometric ////////////////////
 
     pub struct SinhFunction;
+    #[cfg(not(feature = "docs"))]
     forward_impl_func!(SinhFunction, sinh);
+    #[cfg(feature = "docs")]
+    forward_impl_func!(SinhFunction, sinh, Description::Sinh);
 
     pub struct CoshFunction;
+    #[cfg(not(feature = "docs"))]
     forward_impl_func!(CoshFunction, cosh);
+    #[cfg(feature = "docs")]
+    forward_impl_func!(CoshFunction, cosh, Description::Cosh);
 
     pub struct TanhFunction;
+    #[cfg(not(feature = "docs"))]
     forward_impl_func!(TanhFunction, tanh);
+    #[cfg(feature = "docs")]
+    forward_impl_func!(TanhFunction, tanh, Description::Tanh);
 
     pub struct CschFunction;
+    #[cfg(not(feature = "docs"))]
     forward_impl_func_inv!(CschFunction, sinh, csch);
+    #[cfg(feature = "docs")]
+    forward_impl_func_inv!(CschFunction, sinh, csch, Description::Csch);
 
     pub struct SechFunction;
+    #[cfg(not(feature = "docs"))]
     forward_impl_func_inv!(SechFunction, cosh, sech);
+    #[cfg(feature = "docs")]
+    forward_impl_func_inv!(SechFunction, cosh, sech, Description::Sech);
 
     pub struct CothFunction;
+    #[cfg(not(feature = "docs"))]
     forward_impl_func_inv!(CothFunction, tanh, coth);
+    #[cfg(feature = "docs")]
+    forward_impl_func_inv!(CothFunction, tanh, coth, Description::Coth);
 
     //////////////////// Hyperbolic Inverse Trigonometric ////////////////////
 
     pub struct ASinhFunction;
+    #[cfg(not(feature = "docs"))]
     forward_impl_func!(ASinhFunction, asinh);
+    #[cfg(feature = "docs")]
+    forward_impl_func!(ASinhFunction, asinh, Description::ASinh);
 
     pub struct ACoshFunction;
+    #[cfg(not(feature = "docs"))]
     forward_impl_func!(ACoshFunction, acosh);
+    #[cfg(feature = "docs")]
+    forward_impl_func!(ACoshFunction, acosh, Description::ACosh);
 
     pub struct ATanhFunction;
+    #[cfg(not(feature = "docs"))]
     forward_impl_func!(ATanhFunction, atanh);
+    #[cfg(feature = "docs")]
+    forward_impl_func!(ATanhFunction, atanh, Description::ATanh);
 
     pub struct ACschFunction;
+    #[cfg(not(feature = "docs"))]
     forward_impl_func_inv!(ACschFunction, asinh, acsch);
+    #[cfg(feature = "docs")]
+    forward_impl_func_inv!(ACschFunction, asinh, acsch, Description::ACsch);
 
     pub struct ASechFunction;
+    #[cfg(not(feature = "docs"))]
     forward_impl_func_inv!(ASechFunction, acosh, asech);
+    #[cfg(feature = "docs")]
+    forward_impl_func_inv!(ASechFunction, acosh, asech, Description::ASech);
 
     pub struct ACothFunction;
+    #[cfg(not(feature = "docs"))]
     forward_impl_func_inv!(ACothFunction, atanh, acoth);
+    #[cfg(feature = "docs")]
+    forward_impl_func_inv!(ACothFunction, atanh, acoth, Description::ACoth);
 }
 
 pub mod context {

@@ -1,11 +1,13 @@
 use num_traits::{FromPrimitive, Zero};
-
 use crate::error::*;
 use crate::function::{
     Associativity, BinaryFunction, Function, Notation, Precedence, UnaryFunction,
 };
 use crate::num::checked::{CheckedAdd, CheckedDiv, CheckedMul, CheckedNeg, CheckedRem, CheckedSub};
 use crate::Result;
+
+#[cfg(feature = "docs")]
+use crate::descriptions::Description;
 
 pub struct AddOperator;
 impl<N: CheckedAdd> BinaryFunction<N> for AddOperator {
@@ -24,6 +26,11 @@ impl<N: CheckedAdd> BinaryFunction<N> for AddOperator {
     fn call(&self, left: N, right: N) -> Result<N> {
         left.checked_add(&right)
             .ok_or_else(|| Error::from(ErrorKind::Overflow))
+    }
+
+    #[cfg(feature="docs")]
+    fn description(&self) -> Option<&str> {
+        Some(Description::Add.into())
     }
 }
 
@@ -45,6 +52,11 @@ impl<N: CheckedSub> BinaryFunction<N> for SubOperator {
         left.checked_sub(&right)
             .ok_or_else(|| Error::from(ErrorKind::Overflow))
     }
+
+    #[cfg(feature="docs")]
+    fn description(&self) -> Option<&str> {
+        Some(Description::Sub.into())
+    }
 }
 
 pub struct MulOperator;
@@ -64,6 +76,11 @@ impl<N: CheckedMul> BinaryFunction<N> for MulOperator {
     fn call(&self, left: N, right: N) -> Result<N> {
         left.checked_mul(&right)
             .ok_or_else(|| Error::from(ErrorKind::Overflow))
+    }
+
+    #[cfg(feature="docs")]
+    fn description(&self) -> Option<&str> {
+        Some(Description::Mul.into())
     }
 }
 
@@ -89,6 +106,11 @@ impl<N: CheckedDiv + Zero> BinaryFunction<N> for DivOperator {
         left.checked_div(&right)
             .ok_or_else(|| Error::from(ErrorKind::Overflow))
     }
+
+    #[cfg(feature="docs")]
+    fn description(&self) -> Option<&str> {
+        Some(Description::Div.into())
+    }
 }
 
 pub struct ModOperator;
@@ -113,6 +135,11 @@ impl<N: CheckedRem + Zero> BinaryFunction<N> for ModOperator {
         left.checked_rem(&right)
             .ok_or_else(|| Error::from(ErrorKind::Overflow))
     }
+
+    #[cfg(feature="docs")]
+    fn description(&self) -> Option<&str> {
+        Some(Description::Mod.into())
+    }
 }
 
 pub struct UnaryMinus;
@@ -127,6 +154,11 @@ impl<N: CheckedNeg> UnaryFunction<N> for UnaryMinus {
 
     fn call(&self, value: N) -> Result<N> {
         value.checked_neg().ok_or_else(|| Error::from(ErrorKind::Overflow))
+    }
+
+    #[cfg(feature="docs")]
+    fn description(&self) -> Option<&str> {
+        Some(Description::Neg.into())
     }
 }
 
@@ -146,6 +178,11 @@ impl<N: Zero + PartialOrd + CheckedNeg + Clone> Function<N> for AbsFunction {
                 .checked_neg()
                 .ok_or_else(|| Error::from(ErrorKind::Overflow))
         }
+    }
+
+    #[cfg(feature="docs")]
+    fn description(&self) -> Option<&str> {
+        Some(Description::Abs.into())
     }
 }
 
@@ -170,6 +207,11 @@ impl<N: CheckedAdd + Clone> Function<N> for SumFunction {
 
         result.ok_or_else(|| Error::from(ErrorKind::InvalidArgumentCount))
     }
+
+    #[cfg(feature="docs")]
+    fn description(&self) -> Option<&str> {
+        Some(Description::Sum.into())
+    }
 }
 
 pub struct ProdFunction;
@@ -192,6 +234,11 @@ impl<N: CheckedMul + Clone> Function<N> for ProdFunction {
         }
 
         result.ok_or_else(|| Error::from(ErrorKind::InvalidArgumentCount))
+    }
+
+    #[cfg(feature="docs")]
+    fn description(&self) -> Option<&str> {
+        Some(Description::Prod.into())
     }
 }
 
@@ -224,6 +271,11 @@ impl<N: CheckedAdd + CheckedDiv + FromPrimitive + Clone> Function<N> for AvgFunc
             }
             None => Err(Error::from(ErrorKind::InvalidArgumentCount)),
         }
+    }
+
+    #[cfg(feature="docs")]
+    fn description(&self) -> Option<&str> {
+        Some(Description::Avg.into())
     }
 }
 
