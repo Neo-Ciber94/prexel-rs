@@ -17,31 +17,25 @@ use std::str::FromStr;
 /// use prexel::context::DefaultContext;
 ///
 /// let context = DefaultContext::new_checked();
-/// let t : Tokenizer<i32> = Tokenizer::with_context(&context);
-/// let tokens = t.tokenize("2 + 3").unwrap();
+/// let t : Tokenizer<i32> = Tokenizer::new();
+/// let tokens = t.tokenize(&context, "2 + 3").unwrap();
 /// assert_eq!(&[Number(2_i32), BinaryOperator('+'.to_string()), Number(3_i32)], tokens.as_slice());
 /// ```
-pub struct Tokenizer<'a, N, C = DefaultContext<'a, N>, S = DefaultSplitter<'a>>
-where
-    C: Context<'a, N>,
-    S: Splitter,
-{
-    context: &'a C,
+pub struct Tokenizer<'a, N, C = DefaultContext<'a, N>, S = DefaultSplitter<'a>> {
     splitter: S,
-    _marker: PhantomData<N>,
+    _marker: &'a PhantomData<(N, C)>,
 }
 
 impl<'a, N, C> Tokenizer<'a, N, C, DefaultSplitter<'a>>
 where
     C: Context<'a, N>,
 {
-    /// Constructs a new `Tokenizer` with the given `Context`.
+    /// Constructs a new `Tokenizer`.
     #[inline]
-    pub fn with_context(context: &'a C) -> Self {
+    pub fn new() -> Self {
         Tokenizer {
-            context,
             splitter: DefaultSplitter::default(),
-            _marker: PhantomData,
+            _marker: &PhantomData,
         }
     }
 }
@@ -52,11 +46,10 @@ where
     S: Splitter,
 {
     /// Constructs a new `Tokenizer` with the given context and string splitter.
-    pub fn with_splitter(context: &'a C, splitter: S) -> Self {
+    pub fn with_splitter(splitter: S) -> Self {
         Tokenizer {
-            context,
             splitter,
-            _marker: PhantomData,
+            _marker: &PhantomData,
         }
     }
 }
@@ -67,7 +60,7 @@ where
     N: FromStr,
     S: Splitter,
 {
-    pub fn tokenize(&self, expression: &str) -> Result<Vec<Token<N>>> {
+    pub fn tokenize(&self, context: &C, expression: &str) -> Result<Vec<Token<N>>> {
         const COMMA: &str = ",";
         const WHITESPACE: &str = " ";
 
@@ -81,8 +74,6 @@ where
         let mut iter = raw_tokens.iter().enumerate().peekable();
         // Stores the tokens to return.
         let mut tokens = Vec::new();
-        // Context that contains the variables, constants and functions.
-        let context = self.context;
 
         while let Some((pos, string)) = iter.next() {
             let parsed_number = N::from_str(string);
@@ -352,36 +343,36 @@ mod tests {
 
     #[test]
     fn is_unary_test() {
-        let context: &DefaultContext<i64> = &DefaultContext::new_checked();
-        assert!(is_unary(None, "-", Some("5"), context));
-        assert!(is_unary(None, "-", Some("Pi"), context));
-        assert!(is_unary(Some("("), "-", Some("5"), context));
-        assert!(is_unary(Some("("), "-", Some("Pi"), context));
-        assert!(is_unary(Some("+"), "-", Some("5"), context));
-        assert!(is_unary(Some("+"), "-", Some("E"), context));
-        assert!(is_unary(Some("5"), "!", None, context));
-        assert!(is_unary(Some("E"), "!", None, context));
-        assert!(is_unary(Some(","), "-", Some("5"), context));
-        assert!(is_unary(Some("@"), "-", Some("5"), context));
+        let context: DefaultContext<i64> = DefaultContext::new_checked();
+        assert!(is_unary(None, "-", Some("5"), &context));
+        assert!(is_unary(None, "-", Some("Pi"), &context));
+        assert!(is_unary(Some("("), "-", Some("5"), &context));
+        assert!(is_unary(Some("("), "-", Some("Pi"), &context));
+        assert!(is_unary(Some("+"), "-", Some("5"), &context));
+        assert!(is_unary(Some("+"), "-", Some("E"), &context));
+        assert!(is_unary(Some("5"), "!", None, &context));
+        assert!(is_unary(Some("E"), "!", None, &context));
+        assert!(is_unary(Some(","), "-", Some("5"), &context));
+        assert!(is_unary(Some("@"), "-", Some("5"), &context));
 
-        assert!(!is_unary(Some("3"), "-", Some("5"), context));
-        assert!(!is_unary(Some(")"), "-", Some("5"), context));
-        assert!(!is_unary(Some("E"), "-", Some("Pi"), context));
-        assert!(!is_unary(Some(")"), "-", Some("E"), context));
-        assert!(!is_unary(Some(")"), "-", Some("("), context));
+        assert!(!is_unary(Some("3"), "-", Some("5"), &context));
+        assert!(!is_unary(Some(")"), "-", Some("5"), &context));
+        assert!(!is_unary(Some("E"), "-", Some("Pi"), &context));
+        assert!(!is_unary(Some(")"), "-", Some("E"), &context));
+        assert!(!is_unary(Some(")"), "-", Some("("), &context));
     }
 
     #[test]
     fn tokenize_test() {
-        let context: &DefaultContext<i64> = &DefaultContext::new_checked();
-        let tokenizer: Tokenizer<i64> = Tokenizer::with_context(context);
+        let context: DefaultContext<i64> = DefaultContext::new_checked();
+        let tokenizer: Tokenizer<i64> = Tokenizer::new();
         assert_eq!(
-            &tokenizer.tokenize("2 + 3").unwrap(),
+            &tokenizer.tokenize(&context, "2 + 3").unwrap(),
             &[Number(2), BinaryOperator('+'.to_string()), Number(3)]
         );
 
         assert_eq!(
-            &tokenizer.tokenize("5 * Sin(pi)").unwrap(),
+            &tokenizer.tokenize(&context, "5 * Sin(pi)").unwrap(),
             &[
                 Number(5),
                 BinaryOperator('*'.to_string()),
@@ -393,7 +384,7 @@ mod tests {
         );
 
         assert_eq!(
-            &tokenizer.tokenize("10/2 mod 3^2").unwrap(),
+            &tokenizer.tokenize(&context, "10/2 mod 3^2").unwrap(),
             &[
                 Number(10),
                 BinaryOperator('/'.to_string()),
@@ -406,7 +397,7 @@ mod tests {
         );
 
         assert_eq!(
-            &tokenizer.tokenize("10! + 2").unwrap(),
+            &tokenizer.tokenize(&context, "10! + 2").unwrap(),
             &[
                 Number(10),
                 UnaryOperator('!'.to_string()),
@@ -416,23 +407,23 @@ mod tests {
         );
 
         assert_eq!(
-            &tokenizer.tokenize("600!").unwrap(),
+            &tokenizer.tokenize(&context, "600!").unwrap(),
             &[Number(600), UnaryOperator('!'.to_string())]
         );
 
         assert_eq!(
-            &tokenizer.tokenize("10 2").unwrap(),
+            &tokenizer.tokenize(&context, "10 2").unwrap(),
             &[Number(10), Number(2)]
         );
 
         #[cfg(feature = "complex")]
         {
             use num_complex::Complex64;
-            let context: &DefaultContext<Complex64> = &DefaultContext::new_complex();
-            let complex_tokenizer = Tokenizer::with_context(context);
+            let context: DefaultContext<Complex64> = DefaultContext::new_complex();
+            let complex_tokenizer = Tokenizer::new();
 
             assert_eq!(
-                &complex_tokenizer.tokenize("5 + 3i").unwrap(),
+                &complex_tokenizer.tokenize(&context, "5 + 3i").unwrap(),
                 &[
                     Number(Complex64::new(5_f64, 0_f64)),
                     BinaryOperator('+'.to_string()),
@@ -489,10 +480,10 @@ mod tests {
         });
 
         let context = DefaultContext::<AtNumber>::new_checked();
-        let tokenizer = Tokenizer::with_splitter(&context, splitter);
+        let tokenizer = Tokenizer::with_splitter(splitter);
 
         assert_eq!(
-            &tokenizer.tokenize("@34 + (@124)").unwrap(),
+            &tokenizer.tokenize(&context, "@34 + (@124)").unwrap(),
             &[
                 Number(AtNumber(34)),
                 BinaryOperator('+'.to_string()),

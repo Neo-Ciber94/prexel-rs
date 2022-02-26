@@ -11,10 +11,10 @@ use crate::tokenizer::Tokenizer;
 use crate::Result;
 
 /// Represents the default `Evaluator`.
-#[derive(Clone)]
 pub struct Evaluator<'a, N, C: Context<'a, N> = DefaultContext<'a, N>> {
     /// The context used for evaluation.
     context: C,
+    tokenizer: Tokenizer<'a, N, C>,
     _marker: &'a PhantomData<N>,
 }
 
@@ -30,6 +30,7 @@ impl<'a, N: CheckedNum> Evaluator<'a, N, DefaultContext<'a, N>> {
     pub fn new() -> Self {
         Evaluator {
             context: DefaultContext::new_checked(),
+            tokenizer: Tokenizer::new(),
             _marker: &PhantomData,
         }
     }
@@ -44,6 +45,7 @@ where
     pub fn with_context(context: C) -> Self {
         Evaluator {
             context,
+            tokenizer: Tokenizer::new(),
             _marker: &PhantomData,
         }
     }
@@ -58,6 +60,19 @@ where
     #[inline]
     pub fn mut_context(&mut self) -> &mut C {
         &mut self.context
+    }
+}
+
+impl<'a, N, C> Evaluator<'a, N, C>
+where
+    C: Context<'a, N>,
+{
+    pub fn with_context_and_tokenizer(context: C, tokenizer: Tokenizer<'a, N, C>) -> Self {
+        Evaluator {
+            context,
+            tokenizer,
+            _marker: &PhantomData,
+        }
     }
 }
 
@@ -84,8 +99,7 @@ where
     #[inline]
     pub fn eval(&'a self, expression: &str) -> Result<N> {
         let context = self.context();
-        let tokenizer = Tokenizer::with_context(context);
-        let tokens = tokenizer.tokenize(expression)?;
+        let tokens = self.tokenizer.tokenize(context, expression)?;
         self.eval_tokens(&tokens)
     }
 }

@@ -67,6 +67,20 @@ impl<'a> DefaultSplitter<'a> {
             .build()
     }
 
+    pub fn with_identifier_rule<F: 'a>(rule: F) -> Self
+        where
+            F: Fn(char, &mut Peekable<Chars>) -> Outcome,
+    {
+        DefaultSplitterBuilder::default()
+            .rule(rules::next_numeric)
+            .rule(rule)
+            .rule(rules::next_identifier)
+            .rule(rules::next_operator)
+            .whitespace(SplitWhitespaceOption::Remove)
+            .build()
+    }
+
+
     #[inline]
     pub fn builder() -> DefaultSplitterBuilder<'a> {
         DefaultSplitterBuilder::default()

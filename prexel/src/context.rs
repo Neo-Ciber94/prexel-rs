@@ -6,7 +6,8 @@ use crate::utils::ignore_case_str::eq_ignore_case;
 use crate::utils::ignore_case_string::IgnoreCaseString;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
-use validate::{OrPanic, TokenKind};
+use validate::TokenKind;
+use crate::error::{Error, ErrorKind};
 
 /// Trait to provides the variables, constants and functions used for evaluate an expression.
 pub trait Context<'a, N> {
@@ -14,19 +15,19 @@ pub trait Context<'a, N> {
     fn config(&self) -> &Config;
 
     /// Adds a function to the context.
-    fn add_function<F: Function<N> + 'a>(&mut self, func: F);
+    fn add_function<F: Function<N> + 'a>(&mut self, func: F) -> crate::Result<()>;
 
     /// Adds an unary function to the context.
-    fn add_unary_function<F: UnaryFunction<N> + 'a>(&mut self, func: F);
+    fn add_unary_function<F: UnaryFunction<N> + 'a>(&mut self, func: F) -> crate::Result<()>;
 
     /// Adds a binary function to the context.
-    fn add_binary_function<F: BinaryFunction<N> + 'a>(&mut self, func: F);
+    fn add_binary_function<F: BinaryFunction<N> + 'a>(&mut self, func: F) -> crate::Result<()>;
 
     /// Adds a constant value to the context.
-    fn add_constant(&mut self, name: &str, value: N);
+    fn add_constant(&mut self, name: &str, value: N) -> crate::Result<()>;
 
     /// Adds or set the value of a variable in the context.
-    fn set_variable(&mut self, name: &str, value: N) -> Option<N>;
+    fn set_variable(&mut self, name: &str, value: N) -> crate::Result<Option<N>>;
 
     /// Gets the value of a variable in the context.
     fn get_variable(&self, name: &str) -> Option<&N>;
@@ -165,13 +166,13 @@ impl<'a, N> DefaultContext<'a, N> {
     /// context.add_function_as(MaxFunction, "Maximum");
     /// ```
     #[inline]
-    pub fn add_function_as<F: Function<N> + 'a>(&mut self, func: F, name: &str) {
+    pub fn add_function_as<F: Function<N> + 'a>(&mut self, func: F, name: &str) -> crate::Result<()> {
         #[cfg(debug_assertions)]
-        validate::check_token_name(TokenKind::Function, name).or_panic();
+        validate::check_token_name(TokenKind::Function, name)?;
 
         let function_name = IgnoreCaseString::from(name);
         if self.functions.contains_key(&function_name) {
-            panic!("A function named '{}' already exists", function_name);
+            Err(Error::new(ErrorKind::Unknown, format!("A function named '{}' already exists", function_name)))
         } else {
             let func = Rc::new(func);
 
@@ -185,6 +186,7 @@ impl<'a, N> DefaultContext<'a, N> {
                 }
             }
             self.functions.insert(function_name, func);
+            Ok(())
         }
     }
 
@@ -193,13 +195,13 @@ impl<'a, N> DefaultContext<'a, N> {
     /// # Remarks
     /// - This allows to use an unary function with an alias.
     #[inline]
-    pub fn add_unary_function_as<F: UnaryFunction<N> + 'a>(&mut self, func: F, name: &str) {
+    pub fn add_unary_function_as<F: UnaryFunction<N> + 'a>(&mut self, func: F, name: &str) -> crate::Result<()> {
         #[cfg(debug_assertions)]
-        validate::check_token_name(TokenKind::Operator, name).or_panic();
+        validate::check_token_name(TokenKind::Operator, name)?;
 
         let function_name = IgnoreCaseString::from(name);
         if self.unary_functions.contains_key(&function_name) {
-            panic!("An unary function named '{}' already exists", function_name);
+            Err(Error::new(ErrorKind::Unknown, format!("An unary function named '{}' already exists", function_name)))
         } else {
             let func = Rc::new(func);
 
@@ -214,6 +216,7 @@ impl<'a, N> DefaultContext<'a, N> {
             }
 
             self.unary_functions.insert(function_name, func);
+            Ok(())
         }
     }
 
@@ -232,13 +235,13 @@ impl<'a, N> DefaultContext<'a, N> {
     /// context.add_binary_function_as(AddOperator, "Plus");
     /// ```
     #[inline]
-    pub fn add_binary_function_as<F: BinaryFunction<N> + 'a>(&mut self, func: F, name: &str) {
+    pub fn add_binary_function_as<F: BinaryFunction<N> + 'a>(&mut self, func: F, name: &str) -> crate::Result<()> {
         #[cfg(debug_assertions)]
-        validate::check_token_name(TokenKind::Operator, name).or_panic();
+        validate::check_token_name(TokenKind::Operator, name)?;
 
         let function_name = IgnoreCaseString::from(name);
         if self.binary_functions.contains_key(&function_name) {
-            panic!("A binary function named '{}' already exists", function_name);
+            Err(Error::new(ErrorKind::Unknown, format!("A binary function named '{}' already exists", function_name)))
         } else {
             let func = Rc::new(func);
 
@@ -253,6 +256,7 @@ impl<'a, N> DefaultContext<'a, N> {
             }
 
             self.binary_functions.insert(function_name, func);
+            Ok(())
         }
     }
 }
@@ -271,50 +275,51 @@ impl<'a, N> Context<'a, N> for DefaultContext<'a, N> {
     }
 
     #[inline]
-    fn add_function<F: Function<N> + 'a>(&mut self, func: F) {
+    fn add_function<F: Function<N> + 'a>(&mut self, func: F) -> crate::Result<()> {
         let name = func.name().to_string();
         self.add_function_as(func, &name)
     }
 
     #[inline]
-    fn add_unary_function<F: UnaryFunction<N> + 'a>(&mut self, func: F) {
+    fn add_unary_function<F: UnaryFunction<N> + 'a>(&mut self, func: F) -> crate::Result<()> {
         let name = func.name().to_string();
         self.add_unary_function_as(func, &name)
     }
 
     #[inline]
-    fn add_binary_function<F: BinaryFunction<N> + 'a>(&mut self, func: F) {
+    fn add_binary_function<F: BinaryFunction<N> + 'a>(&mut self, func: F) -> crate::Result<()> {
         let name = func.name().to_string();
         self.add_binary_function_as(func, &name)
     }
 
     #[inline]
-    fn add_constant(&mut self, name: &str, value: N) {
+    fn add_constant(&mut self, name: &str, value: N) -> crate::Result<()> {
         #[cfg(debug_assertions)]
-        validate::check_token_name(TokenKind::Constant, name).or_panic();
+        validate::check_token_name(TokenKind::Constant, name)?;
 
         //self.constants.insert(IgnoreCaseString::from(name), value);
         // let string = IgnoreCaseString::from(name);
         if self.variables.keys().any(|k| eq_ignore_case(k, name)) {
-            panic!("Invalid constant name, a variable named `{}` exists", name)
+            Err(Error::new(ErrorKind::Unknown, format!("Invalid constant name, a variable named `{}` exists", name)))
         } else {
             self.constants.insert(IgnoreCaseString::from(name), value);
+            Ok(())
         }
     }
 
     #[inline]
-    fn set_variable(&mut self, name: &str, value: N) -> Option<N> {
+    fn set_variable(&mut self, name: &str, value: N) -> crate::Result<Option<N>> {
         #[cfg(debug_assertions)]
-        validate::check_token_name(TokenKind::Variable, name).or_panic();
+        validate::check_token_name(TokenKind::Variable, name)?;
 
         if self
             .constants
             .keys()
             .any(|k| eq_ignore_case(k.as_raw_str(), name))
         {
-            panic!("Invalid variable name, a constant named `{}` exists", name)
+            Err(Error::new(ErrorKind::Unknown, format!("Invalid variable name, a constant named `{}` exists", name)))
         } else {
-            self.variables.insert(name.to_string(), value)
+            Ok(self.variables.insert(name.to_string(), value))
         }
     }
 
@@ -364,59 +369,59 @@ impl<'a, N: CheckedNum> DefaultContext<'a, N> {
         use crate::ops::checked::*;
 
         let mut context = Self::with_config(config);
-        context.add_constant("PI", N::from_f64(std::f64::consts::PI).unwrap());
-        context.add_constant("E", N::from_f64(std::f64::consts::E).unwrap());
-        context.add_binary_function(AddOperator);
-        context.add_binary_function(SubOperator);
-        context.add_binary_function(MulOperator);
-        context.add_binary_function(DivOperator);
-        context.add_binary_function(PowOperator);
-        context.add_binary_function(ModOperator);
-        context.add_unary_function(UnaryPlus);
-        context.add_unary_function(UnaryMinus);
-        context.add_unary_function(Factorial);
-        context.add_function(SumFunction);
-        context.add_function(ProdFunction);
-        context.add_function(AvgFunction);
-        context.add_function(MaxFunction);
-        context.add_function(MinFunction);
-        context.add_function(AbsFunction);
-        context.add_function(SqrtFunction);
-        context.add_function(LnFunction);
-        context.add_function(LogFunction);
-        context.add_function(ExpFunction);
-        context.add_function(FloorFunction);
-        context.add_function(CeilFunction);
-        context.add_function(TruncateFunction);
-        context.add_function(RoundFunction);
-        context.add_function(SignFunction);
-        context.add_function(RandFunction);
-        context.add_function(ToRadiansFunction);
-        context.add_function(ToDegreesFunction);
-        context.add_function(SinFunction);
-        context.add_function(CosFunction);
-        context.add_function(TanFunction);
-        context.add_function(CscFunction);
-        context.add_function(SecFunction);
-        context.add_function(CotFunction);
-        context.add_function(ASinFunction);
-        context.add_function(ACosFunction);
-        context.add_function(ATanFunction);
-        context.add_function(ACscFunction);
-        context.add_function(ASecFunction);
-        context.add_function(ACotFunction);
-        context.add_function(SinhFunction);
-        context.add_function(CoshFunction);
-        context.add_function(TanhFunction);
-        context.add_function(CschFunction);
-        context.add_function(SechFunction);
-        context.add_function(CothFunction);
-        context.add_function(ASinhFunction);
-        context.add_function(ACoshFunction);
-        context.add_function(ATanhFunction);
-        context.add_function(ACschFunction);
-        context.add_function(ASechFunction);
-        context.add_function(ACothFunction);
+        context.add_constant("PI", N::from_f64(std::f64::consts::PI).unwrap()).unwrap();
+        context.add_constant("E", N::from_f64(std::f64::consts::E).unwrap()).unwrap();
+        context.add_binary_function(AddOperator).unwrap();
+        context.add_binary_function(SubOperator).unwrap();
+        context.add_binary_function(MulOperator).unwrap();
+        context.add_binary_function(DivOperator).unwrap();
+        context.add_binary_function(PowOperator).unwrap();
+        context.add_binary_function(ModOperator).unwrap();
+        context.add_unary_function(UnaryPlus).unwrap();
+        context.add_unary_function(UnaryMinus).unwrap();
+        context.add_unary_function(Factorial).unwrap();
+        context.add_function(SumFunction).unwrap();
+        context.add_function(ProdFunction).unwrap();
+        context.add_function(AvgFunction).unwrap();
+        context.add_function(MaxFunction).unwrap();
+        context.add_function(MinFunction).unwrap();
+        context.add_function(AbsFunction).unwrap();
+        context.add_function(SqrtFunction).unwrap();
+        context.add_function(LnFunction).unwrap();
+        context.add_function(LogFunction).unwrap();
+        context.add_function(ExpFunction).unwrap();
+        context.add_function(FloorFunction).unwrap();
+        context.add_function(CeilFunction).unwrap();
+        context.add_function(TruncateFunction).unwrap();
+        context.add_function(RoundFunction).unwrap();
+        context.add_function(SignFunction).unwrap();
+        context.add_function(RandFunction).unwrap();
+        context.add_function(ToRadiansFunction).unwrap();
+        context.add_function(ToDegreesFunction).unwrap();
+        context.add_function(SinFunction).unwrap();
+        context.add_function(CosFunction).unwrap();
+        context.add_function(TanFunction).unwrap();
+        context.add_function(CscFunction).unwrap();
+        context.add_function(SecFunction).unwrap();
+        context.add_function(CotFunction).unwrap();
+        context.add_function(ASinFunction).unwrap();
+        context.add_function(ACosFunction).unwrap();
+        context.add_function(ATanFunction).unwrap();
+        context.add_function(ACscFunction).unwrap();
+        context.add_function(ASecFunction).unwrap();
+        context.add_function(ACotFunction).unwrap();
+        context.add_function(SinhFunction).unwrap();
+        context.add_function(CoshFunction).unwrap();
+        context.add_function(TanhFunction).unwrap();
+        context.add_function(CschFunction).unwrap();
+        context.add_function(SechFunction).unwrap();
+        context.add_function(CothFunction).unwrap();
+        context.add_function(ASinhFunction).unwrap();
+        context.add_function(ACoshFunction).unwrap();
+        context.add_function(ATanhFunction).unwrap();
+        context.add_function(ACschFunction).unwrap();
+        context.add_function(ASechFunction).unwrap();
+        context.add_function(ACothFunction).unwrap();
         context
     }
 }
@@ -439,53 +444,53 @@ impl<'a, N: UncheckedNum> DefaultContext<'a, N> {
         use crate::ops::unchecked::*;
 
         let mut context = Self::with_config(config);
-        context.add_constant("PI", N::from_f64(std::f64::consts::PI).unwrap());
-        context.add_constant("E", N::from_f64(std::f64::consts::E).unwrap());
-        context.add_binary_function(AddOperator);
-        context.add_binary_function(SubOperator);
-        context.add_binary_function(MulOperator);
-        context.add_binary_function(DivOperator);
-        context.add_binary_function(PowOperator);
-        context.add_binary_function(ModOperator);
-        context.add_unary_function(UnaryPlus);
-        context.add_unary_function(UnaryMinus);
-        context.add_unary_function(Factorial);
-        context.add_function(SumFunction);
-        context.add_function(AvgFunction);
-        context.add_function(ProdFunction);
-        context.add_function(MaxFunction);
-        context.add_function(MinFunction);
-        context.add_function(SqrtFunction);
-        context.add_function(LnFunction);
-        context.add_function(LogFunction);
-        context.add_function(RandFunction);
-        context.add_function(ToRadiansFunction);
-        context.add_function(ToDegreesFunction);
-        context.add_function(ExpFunction);
-        context.add_function(SinFunction);
-        context.add_function(CosFunction);
-        context.add_function(TanFunction);
-        context.add_function(CscFunction);
-        context.add_function(SecFunction);
-        context.add_function(CotFunction);
-        context.add_function(ASinFunction);
-        context.add_function(ACosFunction);
-        context.add_function(ATanFunction);
-        context.add_function(ACscFunction);
-        context.add_function(ASecFunction);
-        context.add_function(ACotFunction);
-        context.add_function(SinhFunction);
-        context.add_function(CoshFunction);
-        context.add_function(TanhFunction);
-        context.add_function(CschFunction);
-        context.add_function(SechFunction);
-        context.add_function(CothFunction);
-        context.add_function(ASinhFunction);
-        context.add_function(ACoshFunction);
-        context.add_function(ATanhFunction);
-        context.add_function(ACschFunction);
-        context.add_function(ASechFunction);
-        context.add_function(ACothFunction);
+        context.add_constant("PI", N::from_f64(std::f64::consts::PI).unwrap()).unwrap();
+        context.add_constant("E", N::from_f64(std::f64::consts::E).unwrap()).unwrap();
+        context.add_binary_function(AddOperator).unwrap();
+        context.add_binary_function(SubOperator).unwrap();
+        context.add_binary_function(MulOperator).unwrap();
+        context.add_binary_function(DivOperator).unwrap();
+        context.add_binary_function(PowOperator).unwrap();
+        context.add_binary_function(ModOperator).unwrap();
+        context.add_unary_function(UnaryPlus).unwrap();
+        context.add_unary_function(UnaryMinus).unwrap();
+        context.add_unary_function(Factorial).unwrap();
+        context.add_function(SumFunction).unwrap();
+        context.add_function(AvgFunction).unwrap();
+        context.add_function(ProdFunction).unwrap();
+        context.add_function(MaxFunction).unwrap();
+        context.add_function(MinFunction).unwrap();
+        context.add_function(SqrtFunction).unwrap();
+        context.add_function(LnFunction).unwrap();
+        context.add_function(LogFunction).unwrap();
+        context.add_function(RandFunction).unwrap();
+        context.add_function(ToRadiansFunction).unwrap();
+        context.add_function(ToDegreesFunction).unwrap();
+        context.add_function(ExpFunction).unwrap();
+        context.add_function(SinFunction).unwrap();
+        context.add_function(CosFunction).unwrap();
+        context.add_function(TanFunction).unwrap();
+        context.add_function(CscFunction).unwrap();
+        context.add_function(SecFunction).unwrap();
+        context.add_function(CotFunction).unwrap();
+        context.add_function(ASinFunction).unwrap();
+        context.add_function(ACosFunction).unwrap();
+        context.add_function(ATanFunction).unwrap();
+        context.add_function(ACscFunction).unwrap();
+        context.add_function(ASecFunction).unwrap();
+        context.add_function(ACotFunction).unwrap();
+        context.add_function(SinhFunction).unwrap();
+        context.add_function(CoshFunction).unwrap();
+        context.add_function(TanhFunction).unwrap();
+        context.add_function(CschFunction).unwrap();
+        context.add_function(SechFunction).unwrap();
+        context.add_function(CothFunction).unwrap();
+        context.add_function(ASinhFunction).unwrap();
+        context.add_function(ACoshFunction).unwrap();
+        context.add_function(ATanhFunction).unwrap();
+        context.add_function(ACschFunction).unwrap();
+        context.add_function(ASechFunction).unwrap();
+        context.add_function(ACothFunction).unwrap();
         context
     }
 }
