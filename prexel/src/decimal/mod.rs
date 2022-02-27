@@ -49,7 +49,7 @@ pub mod consts {
     /// 0.5
     pub const HALF: Decimal = dec!(0.5);
     /// 1/3
-    pub const ONE_FRACT_3: Decimal = dec!(0.33333333333333333333333333333);
+    pub const ONE_FRACT_3: Decimal = dec!(0.3333333333333333333333333333);
     /// -1
     pub const ONE_MINUS: Decimal = dec!(-1);
     /// 0
