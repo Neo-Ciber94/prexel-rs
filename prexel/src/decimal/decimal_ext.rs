@@ -22,7 +22,7 @@ pub trait DecimalExt {
     fn checked_factorial(self) -> Option<Decimal>;
     fn sin(self) -> Decimal;
     fn cos(self) -> Decimal;
-    fn tan(self) -> Option<Decimal>;
+    fn checked_tan(self) -> Option<Decimal>;
     fn asin(self) -> Option<Decimal>;
     fn acos(self) -> Option<Decimal>;
     fn atan(self) -> Decimal;
@@ -351,7 +351,7 @@ impl DecimalExt for Decimal {
         result.approx()
     }
 
-    fn tan(self) -> Option<Decimal> {
+    fn checked_tan(self) -> Option<Decimal> {
         let cos = self.cos();
         if cos.is_zero() {
             None
@@ -768,9 +768,9 @@ mod tests {
 
     #[test]
     fn tan_test() {
-        assert_almost_eq(Decimal::tan(dec!(45).to_radians()).unwrap(), Decimal::one());
+        assert_almost_eq(Decimal::checked_tan(dec!(45).to_radians()).unwrap(), Decimal::one());
         assert_almost_eq(
-            Decimal::tan(dec!(30).to_radians()).unwrap(),
+            Decimal::checked_tan(dec!(30).to_radians()).unwrap(),
             dec!(0.57735026918962576451),
         );
     }

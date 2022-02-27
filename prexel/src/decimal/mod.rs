@@ -941,9 +941,9 @@ mod trig_ops {
 
     pub struct TanFunction;
     #[cfg(not(feature = "docs"))]
-    impl_checked_trig!(TanFunction, tan);
+    impl_checked_trig!(TanFunction, checked_tan);
     #[cfg(feature = "docs")]
-    impl_checked_trig!(TanFunction, tan, Description::Tan);
+    impl_checked_trig!(TanFunction, checked_tan, Description::Tan);
 
     pub struct CscFunction;
     #[cfg(not(feature = "docs"))]
@@ -961,7 +961,7 @@ mod trig_ops {
     #[cfg(not(feature = "docs"))]
     impl_checked_trig_rec!(CotFunction, tan, cot);
     #[cfg(feature = "docs")]
-    impl_checked_trig_rec!(CotFunction, tan, cot, Description::Cot);
+    impl_checked_trig_rec!(CotFunction, checked_tan, cot, Description::Cot);
 
     //////////////////// Inverse Trigonometric ////////////////////
     #[cfg(not(feature = "docs"))]
