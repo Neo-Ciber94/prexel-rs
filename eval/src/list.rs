@@ -1,10 +1,11 @@
-use crate::EvalType;
+use crate::{ColorWriter, EvalType, Intense};
 use prexel::context::DefaultContext;
 use std::fmt::Display;
 use prexel::complex::Complex;
 
-const MIN_WIDTH: usize = 8;
+const MIN_WIDTH: usize = 4;
 
+#[allow(dead_code)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum ListKind {
     Variables,
@@ -13,34 +14,34 @@ pub enum ListKind {
     Functions,
 }
 
-pub fn list( eval_type: EvalType, list: ListKind) {
+pub fn list(writer: ColorWriter, eval_type: EvalType, list: ListKind) {
     match eval_type {
         EvalType::Decimal => {
-            list_with_context(list, &DefaultContext::new_decimal());
+            list_with_context(writer, list, &DefaultContext::new_decimal());
         },
         EvalType::Float => {
-            list_with_context(list, &DefaultContext::<f64>::new_unchecked());
+            list_with_context(writer, list, &DefaultContext::<f64>::new_unchecked());
         },
         EvalType::Integer => {
-            list_with_context(list, &DefaultContext::<i128>::new_checked());
+            list_with_context(writer, list, &DefaultContext::<i128>::new_checked());
         }
         EvalType::Complex => {
-            list_with_context(list, &DefaultContext::<Complex<f64>>::new_complex());
+            list_with_context(writer, list, &DefaultContext::<Complex<f64>>::new_complex());
         }
     }
 }
 
-pub fn list_with_context<N>(list: ListKind, context: &DefaultContext<'_, N>) where
+pub fn list_with_context<N>(mut writer: ColorWriter, list: ListKind, context: &DefaultContext<'_, N>) where
     N: Display{
     match list {
-        ListKind::Variables => list_variables(context),
-        ListKind::Constants => list_constants(context),
-        ListKind::Operators => list_operators(context),
-        ListKind::Functions => list_functions(context),
+        ListKind::Variables => list_variables(&mut writer, context),
+        ListKind::Constants => list_constants(&mut writer, context),
+        ListKind::Operators => list_operators(&mut writer, context),
+        ListKind::Functions => list_functions(&mut writer, context),
     }
 }
 
-pub fn list_variables<N>(context: &DefaultContext<'_, N>)
+pub fn list_variables<N>(writer: &mut ColorWriter, context: &DefaultContext<'_, N>)
 where
     N: Display,
 {
@@ -53,11 +54,13 @@ where
         + MIN_WIDTH;
 
     for (name, value) in variables {
-        println!("{}{}", pad_right(name, max_name_length), value);
+        writer.write_blue(Intense::Yes, pad_right(name, max_name_length));
+        writer.write_white(Intense::No, value);
+        writer.writeln();
     }
 }
 
-pub fn list_constants<N>(context: &DefaultContext<'_, N>)
+pub fn list_constants<N>(writer: &mut ColorWriter, context: &DefaultContext<'_, N>)
 where
     N: Display,
 {
@@ -70,11 +73,13 @@ where
         + MIN_WIDTH;
 
     for (name, value) in constants {
-        println!("{}{}", pad_right(name, max_name_length), value);
+        writer.write_blue(Intense::Yes, pad_right(name, max_name_length));
+        writer.write_white(Intense::No, value);
+        writer.writeln();
     }
 }
 
-pub fn list_operators<N>(context: &DefaultContext<'_, N>)
+pub fn list_operators<N>(writer: &mut ColorWriter, context: &DefaultContext<'_, N>)
 where
     N: Display,
 {
@@ -104,11 +109,13 @@ where
         + MIN_WIDTH;
 
     for op in operators {
-        println!("{}{}", pad_right(&op.name, max_name_length), op.description);
+        writer.write_blue(Intense::Yes, pad_right(&op.name, max_name_length));
+        writer.write_white(Intense::No, op.description);
+        writer.writeln();
     }
 }
 
-pub fn list_functions<N>(context: &DefaultContext<'_, N>)
+pub fn list_functions<N>(writer: &mut ColorWriter, context: &DefaultContext<'_, N>)
 where
     N: Display,
 {
@@ -121,7 +128,9 @@ where
 
     for (name, f) in functions {
         let description = f.description().unwrap_or_default();
-        println!("{}{}", pad_right(name, max_name_length), description);
+        writer.write_blue(Intense::Yes, pad_right(name, max_name_length));
+        writer.write_white(Intense::No, description);
+        writer.writeln();
     }
 }
 

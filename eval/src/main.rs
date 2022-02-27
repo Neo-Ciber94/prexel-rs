@@ -1,13 +1,13 @@
-mod colored;
+mod writer;
 mod eval_expr;
 mod list;
 mod repl;
 
+use crate::writer::{ColorWriter, Intense};
 use crate::eval_expr::EvalExpr;
 use crate::list::ListKind;
 use clap::{Parser, Subcommand};
 use std::str::FromStr;
-use termcolor::Color;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum EvalType {
@@ -79,16 +79,25 @@ enum Commands {
 
 fn main() {
     let cli: Cli = Cli::parse();
-    // let no_color = cli.no_color;
+    let no_color = cli.no_color;
+    let mut writer = ColorWriter::new(!no_color);
 
     match cli.commands {
         Commands::Eval { r#type, expression } => match EvalExpr::new(r#type).eval(&expression) {
             Ok(result) => println!("{}", result),
-            Err(err) => eprintln_colored!(Color::Red, "{}", err),
+            Err(err) => writer.write_err_red(Intense::Yes, format!("{}", err)),
         },
-        Commands::Repl { r#type } => repl::run_repl(r#type),
-        Commands::Constants { r#type } => list::list(r#type, ListKind::Constants),
-        Commands::Operators { r#type } => list::list(r#type, ListKind::Operators),
-        Commands::Functions { r#type } => list::list(r#type, ListKind::Functions),
+        Commands::Repl { r#type } => {
+            repl::run_repl(writer, r#type);
+        }
+        Commands::Constants { r#type } => {
+            list::list(writer, r#type, ListKind::Constants);
+        }
+        Commands::Operators { r#type } => {
+            list::list(writer,r#type, ListKind::Operators);
+        }
+        Commands::Functions { r#type } => {
+            list::list(writer,r#type, ListKind::Functions);
+        }
     }
 }

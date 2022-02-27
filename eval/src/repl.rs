@@ -1,5 +1,5 @@
 use crate::eval_expr::CONFIG;
-use crate::{eprint_colored, print_colored, readln, EvalType};
+use crate::{readln, ColorWriter, EvalType, Intense};
 use prexel::complex::Complex;
 use prexel::context::{Context, DefaultContext};
 use prexel::evaluator::Evaluator;
@@ -8,34 +8,33 @@ use prexel::tokenizer::Tokenizer;
 use prexel::utils::splitter::{DefaultSplitter, Outcome};
 use std::fmt::{Debug, Display};
 use std::str::FromStr;
-use termcolor::Color;
 
-pub fn run_repl(eval_type: EvalType) {
+pub fn run_repl(writer: ColorWriter, eval_type: EvalType) {
     match eval_type {
         EvalType::Decimal => {
             let context = DefaultContext::with_config_decimal(CONFIG.lock().unwrap().clone());
-            eval_loop(move || context)
+            eval_loop(writer, move || context)
         }
         EvalType::Float => {
             let context =
                 DefaultContext::<f64>::with_config_unchecked(CONFIG.lock().unwrap().clone());
-            eval_loop(move || context)
+            eval_loop(writer, move || context)
         }
         EvalType::Integer => {
             let context =
                 DefaultContext::<i128>::with_config_checked(CONFIG.lock().unwrap().clone());
-            eval_loop(move || context)
+            eval_loop(writer, move || context)
         }
         EvalType::Complex => {
             let context = DefaultContext::<Complex<f64>>::with_config_complex(
                 CONFIG.lock().unwrap().clone().with_complex_number(true),
             );
-            eval_loop(move || context)
+            eval_loop(writer, move || context)
         }
     }
 }
 
-fn eval_loop<'a, N, F>(factory: F)
+fn eval_loop<'a, N, F>(mut writer: ColorWriter, factory: F)
 where
     N: FromStr + Clone + Display + Debug + Zero + 'a,
     F: FnOnce() -> DefaultContext<'a, N>,
@@ -49,11 +48,11 @@ where
     let tokenizer = repl_tokenizer();
     let mut evaluator = Evaluator::with_context_and_tokenizer(context, tokenizer);
     loop {
-        print_prompt();
+        print_prompt(&mut writer);
         let input = readln!();
         let expression = input.trim();
 
-        print_prompt();
+        print_prompt(&mut writer);
 
         match expression {
             // Exits the REPL
@@ -68,7 +67,7 @@ where
                     .collect::<Vec<_>>();
 
                 if parts.len() != 2 {
-                    eprint_colored!(Color::Red, "Invalid assignment");
+                    writer.write_err_red(Intense::Yes, "Invalid assignment");
                 } else {
                     // TODO: Check if the variable is a valid identifier
                     let variable = &parts[0];
@@ -76,11 +75,11 @@ where
                         Ok(value) => {
                             if let Err(err) = evaluator.mut_context().set_variable(variable, value)
                             {
-                                eprint_colored!(Color::Red, "{}", err);
+                                writer.write_err_red(Intense::Yes, format!("{}", err));
                             }
                         }
                         Err(err) => {
-                            eprint_colored!(Color::Red, "{}", err);
+                            writer.write_err_red(Intense::Yes, format!("{}", err));
                         }
                     }
                 }
@@ -88,13 +87,13 @@ where
             // Evaluates the expression
             _ => match evaluator.eval(&input) {
                 Ok(result) => {
-                    print_colored!(Color::Green, "{}", result);
+                    writer.write_green(Intense::Yes, format!("{}", result));
                     if let Err(err) = evaluator.mut_context().set_variable(RESULT, result) {
-                        eprint_colored!(Color::Red, "{}", err);
+                        writer.write_err_red(Intense::Yes, format!("{}", err));
                     }
                 }
                 Err(err) => {
-                    eprint_colored!(Color::Red, "{}", err);
+                    writer.write_err_red(Intense::Yes, format!("{}", err));
                 }
             },
         }
@@ -131,10 +130,6 @@ where
     Tokenizer::with_splitter(splitter)
 }
 
-fn print_prompt() {
-    print_colored!(Color::Cyan, ">>> ");
+fn print_prompt(writer: &mut ColorWriter) {
+    writer.write_cyan(Intense::Yes, ">>> ");
 }
-
-/*
-
-*/

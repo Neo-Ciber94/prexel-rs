@@ -32,12 +32,6 @@ impl IgnoreCaseString {
     pub fn get_mut(&mut self) -> &mut String {
         &mut self.0
     }
-
-    /// Gets the length of the string.
-    #[inline]
-    pub fn len(&self) -> usize {
-        self.0.len()
-    }
 }
 
 impl Deref for IgnoreCaseString {
