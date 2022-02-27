@@ -13,21 +13,21 @@ pub mod consts {
 
     //////////////////////// Constants ////////////////////////
     /// Euler's number (e)
-    pub const E: Decimal = dec!(2.7182818284590452353602874714);
+    pub const E: Decimal = Decimal::E;
     /// 1/e
-    pub const E_INV: Decimal = dec!(0.3678794411714423215955237702);
+    pub const E_INV: Decimal = Decimal::E_INVERSE;
     /// e²
     pub const E_POW_2: Decimal = dec!(7.3890560989306502272304274605);
     /// Archimedes' constant π
-    pub const PI: Decimal = dec!(3.1415926535897932384626433833);
+    pub const PI: Decimal = Decimal::PI;
     /// 2π
-    pub const PI_2: Decimal = dec!(6.2831853071795864769252867666);
+    pub const PI_2: Decimal = Decimal::TWO_PI;
     /// -π
     pub const PI_MINUS: Decimal = dec!(-3.1415926535897932384626433833);
     /// -2π
     pub const PI_2_MINUS: Decimal = dec!(-6.2831853071795864769252867666);
     /// π/2
-    pub const PI_FRACT_2: Decimal = dec!(1.5707963267948966192313216916);
+    pub const PI_FRACT_2: Decimal = Decimal::HALF_PI;
     /// π/3
     pub const PI_FRACT_3: Decimal = dec!(1.0471975511965977461542144610);
     /// π/4
@@ -41,11 +41,11 @@ pub mod consts {
     /// Ln(2)
     pub const LN_2: Decimal = dec!(0.6931471805599453094172321215);
     /// Ln(10)
-    pub const LN_10: Decimal = dec!(2.3025850929940456840179914546844);
+    pub const LN_10: Decimal = dec!(2.3025850929940456840179914546);
     /// 1/Ln(10)
     pub const LN_10_INV: Decimal = dec!(0.4342944819032518276511289189);
     /// ✓2
-    pub const SQRT_2: Decimal = dec!(1.4142135623730950488016887242097);
+    pub const SQRT_2: Decimal = dec!(1.4142135623730950488016887242);
     /// 0.5
     pub const HALF: Decimal = dec!(0.5);
     /// 1/3
