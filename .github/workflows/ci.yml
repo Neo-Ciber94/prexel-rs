@@ -22,3 +22,6 @@ jobs:
       
     - name: Run tests
       run: cargo test --verbose --all-features
+
+    - name: Run Clippy
+      run: cargo clippy --all-features
