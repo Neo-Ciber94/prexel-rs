@@ -71,18 +71,18 @@ impl<'a> BinaryContext for DefaultContext<'a, Binary> {
 
     fn with_config_binary(config: Config) -> Self {
         let mut context = DefaultContext::<Binary>::with_config(config);
-        context.add_unary_function(NotFunction);
-        context.add_binary_function(AndFunction);
-        context.add_binary_function(OrFunction);
-        context.add_binary_function(XorFunction);
-        context.add_binary_function(EqFunction);
-        context.add_binary_function(NeFunction);
-        context.add_binary_function(GtFunction);
-        context.add_binary_function(LtFunction);
-        context.add_binary_function(GteFunction);
-        context.add_binary_function(LteFunction);
-        context.add_binary_function(ShrFunction);
-        context.add_binary_function(ShlFunction);
+        context.add_unary_function(NotFunction).unwrap();
+        context.add_binary_function(AndFunction).unwrap();
+        context.add_binary_function(OrFunction).unwrap();
+        context.add_binary_function(XorFunction).unwrap();
+        context.add_binary_function(EqFunction).unwrap();
+        context.add_binary_function(NeFunction).unwrap();
+        context.add_binary_function(GtFunction).unwrap();
+        context.add_binary_function(LtFunction).unwrap();
+        context.add_binary_function(GteFunction).unwrap();
+        context.add_binary_function(LteFunction).unwrap();
+        context.add_binary_function(ShrFunction).unwrap();
+        context.add_binary_function(ShlFunction).unwrap();
         context
     }
 }
