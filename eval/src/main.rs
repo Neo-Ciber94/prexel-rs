@@ -1,11 +1,13 @@
-mod eval_expr;
 mod colored;
+mod eval_expr;
+mod list;
 mod repl;
 
-use std::str::FromStr;
-use clap::{Parser, Subcommand};
-use termcolor::Color;
 use crate::eval_expr::EvalExpr;
+use crate::list::ListKind;
+use clap::{Parser, Subcommand};
+use std::str::FromStr;
+use termcolor::Color;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum EvalType {
@@ -34,7 +36,7 @@ impl FromStr for EvalType {
 #[derive(Parser, Debug)]
 #[clap(version, author, about, propagate_version = true)]
 struct Cli {
-    #[clap(long, help="Disables color output")]
+    #[clap(long, help = "Disables color output")]
     no_color: bool,
 
     #[clap(subcommand)]
@@ -50,8 +52,26 @@ enum Commands {
         expression: String,
     },
 
-    #[clap(about="Evaluates math expressions in a REPL (read-eval-print loop)")]
+    #[clap(about = "Evaluates math expressions in a REPL (read-eval-print loop)")]
     Repl {
+        #[clap(long, short, default_value = "decimal")]
+        r#type: EvalType,
+    },
+
+    #[clap(about = "Prints the constants")]
+    Constants {
+        #[clap(long, short, default_value = "decimal")]
+        r#type: EvalType,
+    },
+
+    #[clap(about = "Prints the operators")]
+    Operators {
+        #[clap(long, short, default_value = "decimal")]
+        r#type: EvalType,
+    },
+
+    #[clap(about = "Prints the functions")]
+    Functions {
         #[clap(long, short, default_value = "decimal")]
         r#type: EvalType,
     },
@@ -62,14 +82,13 @@ fn main() {
     // let no_color = cli.no_color;
 
     match cli.commands {
-        Commands::Eval { r#type, expression } => {
-            match EvalExpr::new(r#type).eval(&expression) {
-                Ok(result) => println!("{}", result),
-                Err(err) => eprintln_colored!(Color::Red, "{}", err),
-            }
+        Commands::Eval { r#type, expression } => match EvalExpr::new(r#type).eval(&expression) {
+            Ok(result) => println!("{}", result),
+            Err(err) => eprintln_colored!(Color::Red, "{}", err),
         },
-        Commands::Repl { r#type } => {
-            repl::run_repl(r#type);
-        },
+        Commands::Repl { r#type } => repl::run_repl(r#type),
+        Commands::Constants { r#type } => list::list(r#type, ListKind::Constants),
+        Commands::Operators { r#type } => list::list(r#type, ListKind::Operators),
+        Commands::Functions { r#type } => list::list(r#type, ListKind::Functions),
     }
 }
