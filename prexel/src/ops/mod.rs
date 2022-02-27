@@ -660,17 +660,17 @@ mod math_ops {
 
     pub struct ToRadiansFunction;
     #[cfg(not(feature = "docs"))]
-    forward_func_impl!(ToRadiansFunction, to_radians, toRadians);
+    forward_func_impl!(ToRadiansFunction, to_radians, to_radians);
 
     #[cfg(feature = "docs")]
-    forward_func_impl!(ToRadiansFunction, to_radians, toRadians, Description::ToRadians);
+    forward_func_impl!(ToRadiansFunction, to_radians, to_radians, Description::ToRadians);
 
     pub struct ToDegreesFunction;
     #[cfg(not(feature = "docs"))]
-    forward_func_impl!(ToDegreesFunction, to_degrees, toDegrees);
+    forward_func_impl!(ToDegreesFunction, to_degrees, to_degrees);
 
     #[cfg(feature = "docs")]
-    forward_func_impl!(ToDegreesFunction, to_degrees, toDegrees, Description::ToDegrees);
+    forward_func_impl!(ToDegreesFunction, to_degrees, to_degrees, Description::ToDegrees);
 }
 
 mod trig_ops {

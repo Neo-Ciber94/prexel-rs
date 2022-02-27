@@ -1,6 +1,7 @@
 use std::cmp::Ordering;
 use std::fmt::{Debug, Display, Formatter};
 use std::hash::{Hash, Hasher};
+use std::ops::Deref;
 
 /// Represents `str` that will ignore case when comparing.
 #[derive(Copy, Clone)]
@@ -15,13 +16,22 @@ impl<'a> IgnoreCaseStr<'a> {
 
     /// Gets a reference to the inner value.
     #[inline]
-    pub fn as_raw_str(&self) -> &'a str {
+    pub fn as_str(&self) -> &'a str {
         self.0
     }
 
     /// Gets the inner `str` of this instance.
     #[inline]
     pub fn into_inner(self) -> &'a str {
+        self.0
+    }
+}
+
+impl Deref for IgnoreCaseStr<'_> {
+    type Target = str;
+
+    #[inline]
+    fn deref(&self) -> &str {
         self.0
     }
 }

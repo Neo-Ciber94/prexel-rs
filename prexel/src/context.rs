@@ -315,7 +315,7 @@ impl<'a, N> Context<'a, N> for DefaultContext<'a, N> {
         if self
             .constants
             .keys()
-            .any(|k| eq_ignore_case(k.as_raw_str(), name))
+            .any(|k| eq_ignore_case(k.as_str(), name))
         {
             Err(Error::new(ErrorKind::Unknown, format!("Invalid variable name, a constant named `{}` exists", name)))
         } else {

@@ -1,6 +1,7 @@
 use std::cmp::Ordering;
 use std::fmt::{Debug, Display, Formatter};
 use std::hash::{Hash, Hasher};
+use std::ops::Deref;
 use super::ignore_case_str::partial_cmp_by;
 
 /// Represents `String` that will ignore case when comparing.
@@ -22,7 +23,7 @@ impl IgnoreCaseString {
 
     /// Gets this instance inner value as a `&str`.
     #[inline]
-    pub fn as_raw_str(&self) -> &str {
+    pub fn as_str(&self) -> &str {
         self.0.as_str()
     }
 
@@ -30,6 +31,21 @@ impl IgnoreCaseString {
     #[inline]
     pub fn get_mut(&mut self) -> &mut String {
         &mut self.0
+    }
+
+    /// Gets the length of the string.
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+}
+
+impl Deref for IgnoreCaseString {
+    type Target = str;
+
+    #[inline]
+    fn deref(&self) -> &str {
+        self.0.as_str()
     }
 }
 
