@@ -16,9 +16,6 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Clean
-      run: cargo clean
-
     - name: Build
       run: cargo build --verbose --all-features
       
