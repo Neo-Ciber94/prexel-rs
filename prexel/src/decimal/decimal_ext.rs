@@ -713,7 +713,7 @@ mod tests {
 
         assert_almost_eq(
             Decimal::checked_exp(dec!(3)).unwrap(),
-            dec!(20.0855369231876677409285296545),
+            dec!(20.085536923187667740928529654),
         );
         assert_almost_eq(
             Decimal::checked_exp(dec!(-4)).unwrap(),
@@ -735,7 +735,7 @@ mod tests {
         );
         assert_almost_eq_by(
             Decimal::checked_factorial(dec!(6.5)).unwrap(),
-            dec!(1871.254305797788346476077053604),
+            dec!(1871.25430579778834647607705360),
             10,
         );
     }
