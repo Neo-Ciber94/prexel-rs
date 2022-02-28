@@ -6,8 +6,10 @@ use crate::utils::ignore_case_str::eq_ignore_case;
 use crate::utils::ignore_case_string::IgnoreCaseString;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
-use validate::TokenKind;
 use crate::error::{Error, ErrorKind};
+
+#[cfg(debug_assertions)]
+use validate::TokenKind;
 
 /// Trait to provides the variables, constants and functions used for evaluate an expression.
 pub trait Context<'a, N> {

@@ -11,12 +11,14 @@ env:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v2
-    
+
+    - name: Clean
+      run: cargo clean
+
     - name: Build
       run: cargo build --verbose --all-features
       
