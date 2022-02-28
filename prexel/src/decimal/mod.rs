@@ -468,7 +468,7 @@ mod math_ops {
 
         #[inline]
         fn call(&self, left: Decimal, right: Decimal) -> Result<Decimal> {
-            left.checked_pow(right)
+            left.checked_powd(right)
                 .ok_or_else(|| Error::from(ErrorKind::Overflow))
         }
 
@@ -667,10 +667,10 @@ mod math_ops {
         fn call(&self, args: &[Decimal]) -> Result<Decimal> {
             match args.len() {
                 1 => args[0]
-                    .checked_log(consts::TEN)
+                    .checked_log10(consts::TEN)
                     .ok_or_else(|| Error::from(ErrorKind::Overflow)),
                 2 => args[0]
-                    .checked_log(args[1])
+                    .checked_log10(args[1])
                     .ok_or_else(|| Error::from(ErrorKind::Overflow)),
                 _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
             }
@@ -871,73 +871,73 @@ mod trig_ops {
         };
     }
 
-    #[cfg(feature = "docs")]
-    macro_rules! impl_trig {
-        ($struct_name:ident, $method_name:ident, $name:ident, $description:expr) => {
-            impl Function<Decimal> for $struct_name {
-                #[inline]
-                fn name(&self) -> &str {
-                    stringify!($name)
-                }
-
-                #[inline]
-                fn call(&self, args: &[Decimal]) -> Result<Decimal> {
-                    match args.len() {
-                        1 => Ok(args[0].to_radians().$method_name()),
-                        _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
-                    }
-                }
-
-                fn description(&self) -> Option<&str> {
-                    Some($description.into())
-                }
-            }
-        };
-
-        ($struct_name:ident, $method_name:ident, $description:expr) => {
-            impl_trig!($struct_name, $method_name, $method_name, $description);
-        };
-    }
-
-    #[cfg(feature = "docs")]
-    macro_rules! impl_trig_rec {
-        ($struct_name:ident, $method_name:ident, $name:ident, $description:expr) => {
-            impl Function<Decimal> for $struct_name {
-                #[inline]
-                fn name(&self) -> &str {
-                    stringify!($name)
-                }
-
-                #[inline]
-                fn call(&self, args: &[Decimal]) -> Result<Decimal> {
-                    match args.len() {
-                        1 => Ok(args[0].to_radians().$method_name().inv()),
-                        _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
-                    }
-                }
-
-                fn description(&self) -> Option<&str> {
-                    Some($description.into())
-                }
-            }
-        };
-
-        ($struct_name:ident, $method_name:ident, $description:expr) => {
-            impl_trig_rec!($struct_name, $method_name, $method_name, $description);
-        };
-    }
+    // #[cfg(feature = "docs")]
+    // macro_rules! impl_trig {
+    //     ($struct_name:ident, $method_name:ident, $name:ident, $description:expr) => {
+    //         impl Function<Decimal> for $struct_name {
+    //             #[inline]
+    //             fn name(&self) -> &str {
+    //                 stringify!($name)
+    //             }
+    //
+    //             #[inline]
+    //             fn call(&self, args: &[Decimal]) -> Result<Decimal> {
+    //                 match args.len() {
+    //                     1 => Ok(args[0].to_radians().$method_name()),
+    //                     _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
+    //                 }
+    //             }
+    //
+    //             fn description(&self) -> Option<&str> {
+    //                 Some($description.into())
+    //             }
+    //         }
+    //     };
+    //
+    //     ($struct_name:ident, $method_name:ident, $description:expr) => {
+    //         impl_trig!($struct_name, $method_name, $method_name, $description);
+    //     };
+    // }
+    //
+    // #[cfg(feature = "docs")]
+    // macro_rules! impl_trig_rec {
+    //     ($struct_name:ident, $method_name:ident, $name:ident, $description:expr) => {
+    //         impl Function<Decimal> for $struct_name {
+    //             #[inline]
+    //             fn name(&self) -> &str {
+    //                 stringify!($name)
+    //             }
+    //
+    //             #[inline]
+    //             fn call(&self, args: &[Decimal]) -> Result<Decimal> {
+    //                 match args.len() {
+    //                     1 => Ok(args[0].to_radians().$method_name().inv()),
+    //                     _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
+    //                 }
+    //             }
+    //
+    //             fn description(&self) -> Option<&str> {
+    //                 Some($description.into())
+    //             }
+    //         }
+    //     };
+    //
+    //     ($struct_name:ident, $method_name:ident, $description:expr) => {
+    //         impl_trig_rec!($struct_name, $method_name, $method_name, $description);
+    //     };
+    // }
 
     pub struct SinFunction;
     #[cfg(not(feature = "docs"))]
-    impl_trig!(SinFunction, sin);
+    impl_checked_trig!(SinFunction, checked_sin);
     #[cfg(feature = "docs")]
-    impl_trig!(SinFunction, sin, Description::Sin);
+    impl_checked_trig!(SinFunction, checked_sin, Description::Sin);
 
     pub struct CosFunction;
     #[cfg(not(feature = "docs"))]
-    impl_trig!(CosFunction, cos);
+    impl_checked_trig!(CosFunction, checked_cos);
     #[cfg(feature = "docs")]
-    impl_trig!(CosFunction, cos, Description::Cos);
+    impl_checked_trig!(CosFunction, checked_cos, Description::Cos);
 
     pub struct TanFunction;
     #[cfg(not(feature = "docs"))]
@@ -947,19 +947,19 @@ mod trig_ops {
 
     pub struct CscFunction;
     #[cfg(not(feature = "docs"))]
-    impl_trig_rec!(CscFunction, sin, csc);
+    impl_checked_trig_rec!(CscFunction, checked_sin, csc);
     #[cfg(feature = "docs")]
-    impl_trig_rec!(CscFunction, sin, csc, Description::Csc);
+    impl_checked_trig_rec!(CscFunction, checked_sin, csc, Description::Csc);
 
     pub struct SecFunction;
     #[cfg(not(feature = "docs"))]
-    impl_trig_rec!(SecFunction, cos, sec);
+    impl_checked_trig_rec!(SecFunction, checked_cos, sec);
     #[cfg(feature = "docs")]
-    impl_trig_rec!(SecFunction, cos, sec, Description::Sec);
+    impl_checked_trig_rec!(SecFunction, checked_cos, sec, Description::Sec);
 
     pub struct CotFunction;
     #[cfg(not(feature = "docs"))]
-    impl_checked_trig_rec!(CotFunction, tan, cot);
+    impl_checked_trig_rec!(CotFunction, checked_tan, cot);
     #[cfg(feature = "docs")]
     impl_checked_trig_rec!(CotFunction, checked_tan, cot, Description::Cot);
 
