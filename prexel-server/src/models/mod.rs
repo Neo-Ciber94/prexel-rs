@@ -21,7 +21,7 @@ impl Display for Variable {
 }
 
 /// Represents the type of the numbers of an expression.
-#[derive(Debug, PartialEq, Clone, Deserialize, Serialize)]
+#[derive(Debug, PartialEq, Clone, Copy, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum NumberType {
     /// Decimal numbers. (default)

@@ -241,10 +241,10 @@ pub mod checked {
 }
 
     // Implementing all the Checked operations
-    impl_checked_ops!(i8, i16, i32, i64, isize);
+    impl_checked_ops!(i8, i16, i32, i64, i128, isize);
 
     // Implementing only all the Checked binary operations
-    impl_checked_binary!(u8, u16, u32, u64, usize);
+    impl_checked_binary!(u8, u16, u32, u64, u128, usize);
 
     // Implementing all the Checked operations by forwarding to the corresponding std::ops,
     // necessary to have compatibility with f32 y f64.

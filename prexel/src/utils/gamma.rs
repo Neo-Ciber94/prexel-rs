@@ -1,6 +1,8 @@
 use num_traits::ToPrimitive;
 use std::f64::consts;
 
+/// Computes the Lanczos approximation of a float.
+#[doc(hidden)]
 pub fn gamma(mut x: f64) -> f64 {
     //Using Coefficients from: https://mrob.com/pub/ries/lanczos-gamma.html
     const G: f64 = 4.742_187_5;

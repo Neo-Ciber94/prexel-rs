@@ -1,9 +1,11 @@
 use prexel::context::{Config, Context, DefaultContext};
 use prexel::function::{Associativity, BinaryFunction, Notation, Precedence, UnaryFunction};
+use prexel::utils::splitter::{
+    rules, DefaultSplitter, DefaultSplitterBuilder, Outcome, SplitWhitespaceOption,
+};
 use std::fmt::Display;
 use std::iter::Peekable;
 use std::str::{Chars, FromStr};
-use prexel::utils::splitter::SplitterWithInterceptor;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Ord, PartialOrd)]
 pub struct Binary(pub i128);
@@ -26,34 +28,40 @@ impl Display for Binary {
     }
 }
 
-pub trait BinaryContext {
-    fn new_binary() -> Self;
-    fn with_config_binary(config: Config) -> Self;
-}
-
-pub fn binary_number_splitter() -> SplitterWithInterceptor<fn(char, &mut Peekable<Chars>) -> Option<String>> {
+pub fn binary_number_splitter<'a>() -> DefaultSplitter<'a> {
     fn is_next_binary(chars: &mut Peekable<Chars>) -> bool {
         chars.peek() == Some(&'1') || chars.peek() == Some(&'0')
     }
 
-    SplitterWithInterceptor::new(|c, mut rest| {
-        if c == 'b' && is_next_binary(&mut rest) {
-            let mut temp = String::new();
-            temp.push(c);
-            while let Some(c) = rest.peek() {
-                if c.is_ascii_digit() {
-                    temp.push(*c);
-                    rest.next();
-                } else {
-                    break;
+    DefaultSplitterBuilder::new()
+        .rule(|c, rest| {
+            if c == 'b' && is_next_binary(rest) {
+                let mut temp = String::new();
+                temp.push(c);
+                while let Some(c) = rest.peek() {
+                    if c.is_ascii_digit() {
+                        temp.push(*c);
+                        rest.next();
+                    } else {
+                        break;
+                    }
                 }
-            }
 
-            Some(temp)
-        } else {
-            None
-        }
-    })
+                Outcome::Data(temp)
+            } else {
+                Outcome::Continue
+            }
+        })
+        .rule(rules::next_numeric)
+        .rule(rules::next_identifier)
+        .rule(rules::next_operator)
+        .whitespace(SplitWhitespaceOption::Remove)
+        .build()
+}
+
+pub trait BinaryContext {
+    fn new_binary() -> Self;
+    fn with_config_binary(config: Config) -> Self;
 }
 
 impl<'a> BinaryContext for DefaultContext<'a, Binary> {
@@ -63,16 +71,18 @@ impl<'a> BinaryContext for DefaultContext<'a, Binary> {
 
     fn with_config_binary(config: Config) -> Self {
         let mut context = DefaultContext::<Binary>::with_config(config);
-        context.add_unary_function(NotFunction);
-        context.add_binary_function(AndFunction);
-        context.add_binary_function(OrFunction);
-        context.add_binary_function(XorFunction);
-        context.add_binary_function(EqFunction);
-        context.add_binary_function(NeFunction);
-        context.add_binary_function(GtFunction);
-        context.add_binary_function(LtFunction);
-        context.add_binary_function(GteFunction);
-        context.add_binary_function(LteFunction);
+        context.add_unary_function(NotFunction).unwrap();
+        context.add_binary_function(AndFunction).unwrap();
+        context.add_binary_function(OrFunction).unwrap();
+        context.add_binary_function(XorFunction).unwrap();
+        context.add_binary_function(EqFunction).unwrap();
+        context.add_binary_function(NeFunction).unwrap();
+        context.add_binary_function(GtFunction).unwrap();
+        context.add_binary_function(LtFunction).unwrap();
+        context.add_binary_function(GteFunction).unwrap();
+        context.add_binary_function(LteFunction).unwrap();
+        context.add_binary_function(ShrFunction).unwrap();
+        context.add_binary_function(ShlFunction).unwrap();
         context
     }
 }
@@ -89,6 +99,10 @@ impl UnaryFunction<Binary> for NotFunction {
 
     fn call(&self, value: Binary) -> prexel::Result<Binary> {
         Ok(Binary(!value.0))
+    }
+
+    fn description(&self) -> Option<&str> {
+        Some("Returns the bitwise NOT of the given value.")
     }
 }
 
@@ -109,6 +123,10 @@ impl BinaryFunction<Binary> for AndFunction {
     fn call(&self, left: Binary, right: Binary) -> prexel::Result<Binary> {
         Ok(Binary(left.0 & right.0))
     }
+
+    fn description(&self) -> Option<&str> {
+        Some("Returns the bitwise AND of the given values.")
+    }
 }
 
 struct OrFunction;
@@ -128,6 +146,10 @@ impl BinaryFunction<Binary> for OrFunction {
     fn call(&self, left: Binary, right: Binary) -> prexel::Result<Binary> {
         Ok(Binary(left.0 | right.0))
     }
+
+    fn description(&self) -> Option<&str> {
+        Some("Returns the bitwise OR of the given values.")
+    }
 }
 
 struct XorFunction;
@@ -146,6 +168,10 @@ impl BinaryFunction<Binary> for XorFunction {
 
     fn call(&self, left: Binary, right: Binary) -> prexel::Result<Binary> {
         Ok(Binary(left.0 ^ right.0))
+    }
+
+    fn description(&self) -> Option<&str> {
+        Some("Returns the bitwise XOR of the given values.")
     }
 }
 
@@ -167,6 +193,10 @@ impl BinaryFunction<Binary> for EqFunction {
         let result = if left.0 == right.0 { 1 } else { 0 };
         Ok(Binary(result))
     }
+
+    fn description(&self) -> Option<&str> {
+        Some("Returns 1 if the given values are equal, 0 otherwise.")
+    }
 }
 
 struct NeFunction;
@@ -186,6 +216,10 @@ impl BinaryFunction<Binary> for NeFunction {
     fn call(&self, left: Binary, right: Binary) -> prexel::Result<Binary> {
         let result = if left.0 != right.0 { 1 } else { 0 };
         Ok(Binary(result))
+    }
+
+    fn description(&self) -> Option<&str> {
+        Some("Returns 1 if the given values are not equal, 0 otherwise.")
     }
 }
 
@@ -207,6 +241,10 @@ impl BinaryFunction<Binary> for GtFunction {
         let result = if left.0 > right.0 { 1 } else { 0 };
         Ok(Binary(result))
     }
+
+    fn description(&self) -> Option<&str> {
+        Some("Returns 1 if the left value is greater than the right value, 0 otherwise.")
+    }
 }
 
 struct LtFunction;
@@ -226,6 +264,10 @@ impl BinaryFunction<Binary> for LtFunction {
     fn call(&self, left: Binary, right: Binary) -> prexel::Result<Binary> {
         let result = if left.0 < right.0 { 1 } else { 0 };
         Ok(Binary(result))
+    }
+
+    fn description(&self) -> Option<&str> {
+        Some("Returns 1 if the left value is less than the right value, 0 otherwise.")
     }
 }
 
@@ -247,6 +289,10 @@ impl BinaryFunction<Binary> for GteFunction {
         let result = if left.0 >= right.0 { 1 } else { 0 };
         Ok(Binary(result))
     }
+
+    fn description(&self) -> Option<&str> {
+        Some("Returns 1 if the left value is greater than or equal to the right value, 0 otherwise.")
+    }
 }
 
 struct LteFunction;
@@ -266,5 +312,55 @@ impl BinaryFunction<Binary> for LteFunction {
     fn call(&self, left: Binary, right: Binary) -> prexel::Result<Binary> {
         let result = if left.0 <= right.0 { 1 } else { 0 };
         Ok(Binary(result))
+    }
+
+    fn description(&self) -> Option<&str> {
+        Some("Returns 1 if the left value is less than or equal to the right value, 0 otherwise.")
+    }
+}
+
+struct ShrFunction;
+impl BinaryFunction<Binary> for ShrFunction {
+    fn name(&self) -> &str {
+        ">>"
+    }
+
+    fn precedence(&self) -> Precedence {
+        Precedence(7)
+    }
+
+    fn associativity(&self) -> Associativity {
+        Associativity::Left
+    }
+
+    fn call(&self, left: Binary, right: Binary) -> prexel::Result<Binary> {
+        Ok(Binary(left.0 >> right.0))
+    }
+
+    fn description(&self) -> Option<&str> {
+        Some("Returns the left value bits shifted right by the right value.")
+    }
+}
+
+struct ShlFunction;
+impl BinaryFunction<Binary> for ShlFunction {
+    fn name(&self) -> &str {
+        "<<"
+    }
+
+    fn precedence(&self) -> Precedence {
+        Precedence(7)
+    }
+
+    fn associativity(&self) -> Associativity {
+        Associativity::Left
+    }
+
+    fn call(&self, left: Binary, right: Binary) -> prexel::Result<Binary> {
+        Ok(Binary(left.0 << right.0))
+    }
+
+    fn description(&self) -> Option<&str> {
+        Some("Returns the left value bits shifted left by the right value.")
     }
 }

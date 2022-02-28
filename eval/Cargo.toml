@@ -1,8 +1,11 @@
 [package]
 name = "eval"
+description = "A command line app for evaluate mathematical expressions"
 version = "0.1.0"
 edition = "2018"
 
 [dependencies]
 prexel = { path="../prexel", features=["complex", "decimal"] }
-bigdecimal = "0.3.0"
+clap = { version="3.1.2", features=["derive"]}
+once_cell = "1.9.0"
+termcolor = "1.1.2"

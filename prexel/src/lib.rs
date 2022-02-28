@@ -37,8 +37,14 @@ pub mod num_traits {
 /// An convenient result type used for returning the result of evaluations.
 pub type Result<T> = std::result::Result<T, error::Error>;
 
+/// Support for decimal numbers.
 #[cfg(feature = "decimal")]
 pub mod decimal;
 
+/// Support for complex numbers.
 #[cfg(feature = "complex")]
 pub mod complex;
+
+#[doc(hidden)]
+#[cfg(feature = "docs")]
+pub mod descriptions;

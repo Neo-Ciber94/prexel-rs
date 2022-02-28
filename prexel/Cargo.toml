@@ -1,7 +1,7 @@
 [package]
 name = "prexel"
 description = "A math expression evaluator"
-version = "0.1.3"
+version = "0.1.8"
 authors = ["Freddy L"]
 edition = "2018"
 license = "MIT"
@@ -13,12 +13,14 @@ repository="https://github.com/Neo-Ciber94/prexel-rs/"
 [features]
 complex = ["num-complex"]
 decimal = ["rust_decimal", "rust_decimal_macros"]
+docs = []
+default = ["docs"]
 
 [dependencies]
 num-traits = "0.2"
 rand = "0.7"
-rust_decimal = {version = "1.2.1", optional = true}
-rust_decimal_macros = {version = "1.2.1", optional = true}
+rust_decimal = {version = "1.2.2", features=["maths"], optional = true}
+rust_decimal_macros = {version = "1.2.2", optional = true}
 num-complex = { version = "0.2.4", optional = true}
 
 [dev-dependencies]

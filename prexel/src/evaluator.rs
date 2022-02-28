@@ -11,10 +11,10 @@ use crate::tokenizer::Tokenizer;
 use crate::Result;
 
 /// Represents the default `Evaluator`.
-#[derive(Clone)]
 pub struct Evaluator<'a, N, C: Context<'a, N> = DefaultContext<'a, N>> {
     /// The context used for evaluation.
     context: C,
+    tokenizer: Tokenizer<'a, N, C>,
     _marker: &'a PhantomData<N>,
 }
 
@@ -30,6 +30,7 @@ impl<'a, N: CheckedNum> Evaluator<'a, N, DefaultContext<'a, N>> {
     pub fn new() -> Self {
         Evaluator {
             context: DefaultContext::new_checked(),
+            tokenizer: Tokenizer::new(),
             _marker: &PhantomData,
         }
     }
@@ -44,6 +45,7 @@ where
     pub fn with_context(context: C) -> Self {
         Evaluator {
             context,
+            tokenizer: Tokenizer::new(),
             _marker: &PhantomData,
         }
     }
@@ -58,6 +60,19 @@ where
     #[inline]
     pub fn mut_context(&mut self) -> &mut C {
         &mut self.context
+    }
+}
+
+impl<'a, N, C> Evaluator<'a, N, C>
+where
+    C: Context<'a, N>,
+{
+    pub fn with_context_and_tokenizer(context: C, tokenizer: Tokenizer<'a, N, C>) -> Self {
+        Evaluator {
+            context,
+            tokenizer,
+            _marker: &PhantomData,
+        }
     }
 }
 
@@ -84,8 +99,7 @@ where
     #[inline]
     pub fn eval(&'a self, expression: &str) -> Result<N> {
         let context = self.context();
-        let tokenizer = Tokenizer::with_context(context);
-        let tokens = tokenizer.tokenize(expression)?;
+        let tokens = self.tokenizer.tokenize(context, expression)?;
         self.eval_tokens(&tokens)
     }
 }
@@ -581,8 +595,8 @@ mod shunting_yard {
         while let Some(t) = operators.pop() {
             match t {
                 Token::GroupingOpen(c) => {
-                    if let Some(grouping) = context.config().get_group_symbol(c) {
-                        if grouping.group_close == group_close {
+                    if let Some((_, close)) = context.config().get_group_symbol(c) {
+                        if close == group_close {
                             is_group_open = true;
                             // If `arg_count` is not empty we are inside a function.
                             // So we pop the argument count and function token into the output stack.
@@ -897,11 +911,12 @@ mod shunting_yard {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::context::Config;
+    use crate::context::{Config, Grouping};
+    use crate::ops::math::Function;
 
     #[test]
     fn eval_test() {
-        let config = Config::new().with_group_symbol('[', ']');
+        let config = Config::new().with_grouping(Grouping::Parenthesis);
         let evaluator: Evaluator<i64> =
             Evaluator::with_context(DefaultContext::with_config_checked(config));
 
@@ -923,7 +938,7 @@ mod tests {
         assert!(evaluator.eval("((10)+(((2)))*(3))").is_ok());
         assert!(evaluator.eval("-(2)^(((4)))").is_ok());
         assert!(evaluator.eval("-(+(-(+(5))))").is_ok());
-        assert!(evaluator.eval("10--+2").is_ok());
+        assert!(evaluator.eval("10 - - +2").is_ok());
         assert!(evaluator.eval("+2!").is_ok());
         assert!(evaluator.eval("5 * Sin(40)").is_ok());
         assert!(evaluator.eval("Sin(30) * 5").is_ok());
@@ -955,10 +970,10 @@ mod tests {
         let context = DefaultContext::with_config_checked(config);
         let mut evaluator: Evaluator<i64> = Evaluator::with_context(context);
 
-        evaluator.mut_context().set_variable("x", 10);
+        evaluator.mut_context().set_variable("x", 10).unwrap();
         assert_eq!(evaluator.eval("2x").unwrap(), 20);
 
-        evaluator.mut_context().set_variable("x", 5);
+        evaluator.mut_context().set_variable("x", 5).unwrap();
         assert_eq!(evaluator.eval("3x").unwrap(), 15);
 
         assert!(evaluator.eval("2Sin(50)").is_ok());
@@ -1025,8 +1040,34 @@ mod tests {
     #[test]
     fn eval_using_variable_test() {
         let mut evaluator = Evaluator::new();
-        evaluator.mut_context().set_variable("x", 10);
+        evaluator.mut_context().set_variable("x", 10).unwrap();
 
         assert_eq!(evaluator.eval("x + 2").unwrap(), 12);
+    }
+
+    #[test]
+    fn eval_with_alias_test() {
+        struct SumFunction;
+        impl Function<f64> for SumFunction {
+            fn name(&self) -> &str {
+                "sum"
+            }
+
+            fn call(&self, args: &[f64]) -> Result<f64> {
+                Ok(args.iter().sum())
+            }
+
+            fn aliases(&self) -> Option<&[&str]> {
+                Some(&["add", "∑"])
+            }
+        }
+
+        let mut context: DefaultContext<f64> = DefaultContext::new();
+        context.add_function(SumFunction).unwrap();
+
+        let evaluator = Evaluator::with_context(context);
+        assert_eq!(evaluator.eval("sum(1, 2, 3, 4)").unwrap(), 10.0);
+        assert_eq!(evaluator.eval("add(1, 2, 3, 4)").unwrap(), 10.0);
+        assert_eq!(evaluator.eval("∑(1, 2, 3, 4)").unwrap(), 10.0);
     }
 }

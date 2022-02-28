@@ -1,13 +1,15 @@
-use std::collections::HashMap;
-use std::rc::Rc;
-
 use crate::function::{BinaryFunction, Function, UnaryFunction};
 use crate::num::checked::CheckedNum;
 use crate::num::unchecked::UncheckedNum;
 use crate::ops::math::*;
 use crate::utils::ignore_case_str::eq_ignore_case;
 use crate::utils::ignore_case_string::IgnoreCaseString;
-use validate::{OrPanic, TokenKind};
+use std::collections::{HashMap, HashSet};
+use std::rc::Rc;
+use crate::error::{Error, ErrorKind};
+
+#[cfg(debug_assertions)]
+use validate::TokenKind;
 
 /// Trait to provides the variables, constants and functions used for evaluate an expression.
 pub trait Context<'a, N> {
@@ -15,19 +17,19 @@ pub trait Context<'a, N> {
     fn config(&self) -> &Config;
 
     /// Adds a function to the context.
-    fn add_function<F: Function<N> + 'a>(&mut self, func: F);
+    fn add_function<F: Function<N> + 'a>(&mut self, func: F) -> crate::Result<()>;
 
     /// Adds an unary function to the context.
-    fn add_unary_function<F: UnaryFunction<N> + 'a>(&mut self, func: F);
+    fn add_unary_function<F: UnaryFunction<N> + 'a>(&mut self, func: F) -> crate::Result<()>;
 
     /// Adds a binary function to the context.
-    fn add_binary_function<F: BinaryFunction<N> + 'a>(&mut self, func: F);
+    fn add_binary_function<F: BinaryFunction<N> + 'a>(&mut self, func: F) -> crate::Result<()>;
 
     /// Adds a constant value to the context.
-    fn add_constant(&mut self, name: &str, value: N);
+    fn add_constant(&mut self, name: &str, value: N) -> crate::Result<()>;
 
     /// Adds or set the value of a variable in the context.
-    fn set_variable(&mut self, name: &str, value: N) -> Option<N>;
+    fn set_variable(&mut self, name: &str, value: N) -> crate::Result<Option<N>>;
 
     /// Gets the value of a variable in the context.
     fn get_variable(&self, name: &str) -> Option<&N>;
@@ -166,15 +168,27 @@ impl<'a, N> DefaultContext<'a, N> {
     /// context.add_function_as(MaxFunction, "Maximum");
     /// ```
     #[inline]
-    pub fn add_function_as<F: Function<N> + 'a>(&mut self, func: F, name: &str) {
+    pub fn add_function_as<F: Function<N> + 'a>(&mut self, func: F, name: &str) -> crate::Result<()> {
         #[cfg(debug_assertions)]
-        validate::check_token_name(TokenKind::Function, name).or_panic();
+        validate::check_token_name(TokenKind::Function, name)?;
 
         let function_name = IgnoreCaseString::from(name);
         if self.functions.contains_key(&function_name) {
-            panic!("A function named '{}' already exists", function_name);
+            Err(Error::new(ErrorKind::Unknown, format!("A function named '{}' already exists", function_name)))
         } else {
-            self.functions.insert(function_name, Rc::new(func));
+            let func = Rc::new(func);
+
+            if let Some(aliases) = func.aliases() {
+                for alias in aliases.iter().map(|s| IgnoreCaseString::from(*s)) {
+                    if self.functions.contains_key(&alias) {
+                        panic!("A function named '{}' already exists", alias);
+                    }
+
+                    self.functions.insert(alias, func.clone());
+                }
+            }
+            self.functions.insert(function_name, func);
+            Ok(())
         }
     }
 
@@ -183,15 +197,28 @@ impl<'a, N> DefaultContext<'a, N> {
     /// # Remarks
     /// - This allows to use an unary function with an alias.
     #[inline]
-    pub fn add_unary_function_as<F: UnaryFunction<N> + 'a>(&mut self, func: F, name: &str) {
+    pub fn add_unary_function_as<F: UnaryFunction<N> + 'a>(&mut self, func: F, name: &str) -> crate::Result<()> {
         #[cfg(debug_assertions)]
-        validate::check_token_name(TokenKind::Operator, name).or_panic();
+        validate::check_token_name(TokenKind::Operator, name)?;
 
         let function_name = IgnoreCaseString::from(name);
         if self.unary_functions.contains_key(&function_name) {
-            panic!("An unary function named '{}' already exists", function_name);
+            Err(Error::new(ErrorKind::Unknown, format!("An unary function named '{}' already exists", function_name)))
         } else {
-            self.unary_functions.insert(function_name, Rc::new(func));
+            let func = Rc::new(func);
+
+            if let Some(aliases) = func.aliases() {
+                for alias in aliases.iter().map(|s| IgnoreCaseString::from(*s)) {
+                    if self.unary_functions.contains_key(&alias) {
+                        panic!("An unary function named '{}' already exists", alias);
+                    }
+
+                    self.unary_functions.insert(alias, func.clone());
+                }
+            }
+
+            self.unary_functions.insert(function_name, func);
+            Ok(())
         }
     }
 
@@ -210,21 +237,28 @@ impl<'a, N> DefaultContext<'a, N> {
     /// context.add_binary_function_as(AddOperator, "Plus");
     /// ```
     #[inline]
-    pub fn add_binary_function_as<F: BinaryFunction<N> + 'a>(&mut self, func: F, name: &str) {
+    pub fn add_binary_function_as<F: BinaryFunction<N> + 'a>(&mut self, func: F, name: &str) -> crate::Result<()> {
         #[cfg(debug_assertions)]
-        {
-            if name.chars().count() == 1 {
-                validate::check_token_name(TokenKind::Operator, name).or_panic();
-            } else {
-                validate::check_token_name(TokenKind::Function, name).or_panic();
-            }
-        }
+        validate::check_token_name(TokenKind::Operator, name)?;
 
         let function_name = IgnoreCaseString::from(name);
         if self.binary_functions.contains_key(&function_name) {
-            panic!("A binary function named '{}' already exists", function_name);
+            Err(Error::new(ErrorKind::Unknown, format!("A binary function named '{}' already exists", function_name)))
         } else {
-            self.binary_functions.insert(function_name, Rc::new(func));
+            let func = Rc::new(func);
+
+            if let Some(aliases) = func.aliases() {
+                for alias in aliases.iter().map(|s| IgnoreCaseString::from(*s)) {
+                    if self.binary_functions.contains_key(&alias) {
+                        panic!("A binary function named '{}' already exists", alias);
+                    }
+
+                    self.binary_functions.insert(alias, func.clone());
+                }
+            }
+
+            self.binary_functions.insert(function_name, func);
+            Ok(())
         }
     }
 }
@@ -243,46 +277,51 @@ impl<'a, N> Context<'a, N> for DefaultContext<'a, N> {
     }
 
     #[inline]
-    fn add_function<F: Function<N> + 'a>(&mut self, func: F) {
+    fn add_function<F: Function<N> + 'a>(&mut self, func: F) -> crate::Result<()> {
         let name = func.name().to_string();
         self.add_function_as(func, &name)
     }
 
     #[inline]
-    fn add_unary_function<F: UnaryFunction<N> + 'a>(&mut self, func: F) {
+    fn add_unary_function<F: UnaryFunction<N> + 'a>(&mut self, func: F) -> crate::Result<()> {
         let name = func.name().to_string();
         self.add_unary_function_as(func, &name)
     }
 
     #[inline]
-    fn add_binary_function<F: BinaryFunction<N> + 'a>(&mut self, func: F) {
+    fn add_binary_function<F: BinaryFunction<N> + 'a>(&mut self, func: F) -> crate::Result<()> {
         let name = func.name().to_string();
         self.add_binary_function_as(func, &name)
     }
 
     #[inline]
-    fn add_constant(&mut self, name: &str, value: N) {
+    fn add_constant(&mut self, name: &str, value: N) -> crate::Result<()> {
         #[cfg(debug_assertions)]
-        validate::check_token_name(TokenKind::Constant, name).or_panic();
+        validate::check_token_name(TokenKind::Constant, name)?;
 
         //self.constants.insert(IgnoreCaseString::from(name), value);
         // let string = IgnoreCaseString::from(name);
         if self.variables.keys().any(|k| eq_ignore_case(k, name)) {
-            panic!("Invalid constant name, a variable named `{}` exists", name)
+            Err(Error::new(ErrorKind::Unknown, format!("Invalid constant name, a variable named `{}` exists", name)))
         } else {
             self.constants.insert(IgnoreCaseString::from(name), value);
+            Ok(())
         }
     }
 
     #[inline]
-    fn set_variable(&mut self, name: &str, value: N) -> Option<N> {
+    fn set_variable(&mut self, name: &str, value: N) -> crate::Result<Option<N>> {
         #[cfg(debug_assertions)]
-        validate::check_token_name(TokenKind::Variable, name).or_panic();
+        validate::check_token_name(TokenKind::Variable, name)?;
 
-        if self.constants.keys().any(|k| eq_ignore_case(k.as_raw_str(), name)) {
-            panic!("Invalid variable name, a constant named `{}` exists", name)
+        if self
+            .constants
+            .keys()
+            .any(|k| eq_ignore_case(k.as_str(), name))
+        {
+            Err(Error::new(ErrorKind::Unknown, format!("Invalid variable name, a constant named `{}` exists", name)))
         } else {
-            self.variables.insert(name.to_string(), value)
+            Ok(self.variables.insert(name.to_string(), value))
         }
     }
 
@@ -332,59 +371,59 @@ impl<'a, N: CheckedNum> DefaultContext<'a, N> {
         use crate::ops::checked::*;
 
         let mut context = Self::with_config(config);
-        context.add_constant("PI", N::from_f64(std::f64::consts::PI).unwrap());
-        context.add_constant("E", N::from_f64(std::f64::consts::E).unwrap());
-        context.add_binary_function(AddOperator);
-        context.add_binary_function(SubOperator);
-        context.add_binary_function(MulOperator);
-        context.add_binary_function(DivOperator);
-        context.add_binary_function(PowOperator);
-        context.add_binary_function(ModOperator);
-        context.add_unary_function(UnaryPlus);
-        context.add_unary_function(UnaryMinus);
-        context.add_unary_function(Factorial);
-        context.add_function(SumFunction);
-        context.add_function(ProdFunction);
-        context.add_function(AvgFunction);
-        context.add_function(MaxFunction);
-        context.add_function(MinFunction);
-        context.add_function(AbsFunction);
-        context.add_function(SqrtFunction);
-        context.add_function(LnFunction);
-        context.add_function(LogFunction);
-        context.add_function(ExpFunction);
-        context.add_function(FloorFunction);
-        context.add_function(CeilFunction);
-        context.add_function(TruncateFunction);
-        context.add_function(RoundFunction);
-        context.add_function(SignFunction);
-        context.add_function(RandFunction);
-        context.add_function(ToRadiansFunction);
-        context.add_function(ToDegreesFunction);
-        context.add_function(SinFunction);
-        context.add_function(CosFunction);
-        context.add_function(TanFunction);
-        context.add_function(CscFunction);
-        context.add_function(SecFunction);
-        context.add_function(CotFunction);
-        context.add_function(ASinFunction);
-        context.add_function(ACosFunction);
-        context.add_function(ATanFunction);
-        context.add_function(ACscFunction);
-        context.add_function(ASecFunction);
-        context.add_function(ACotFunction);
-        context.add_function(SinhFunction);
-        context.add_function(CoshFunction);
-        context.add_function(TanhFunction);
-        context.add_function(CschFunction);
-        context.add_function(SechFunction);
-        context.add_function(CothFunction);
-        context.add_function(ASinhFunction);
-        context.add_function(ACoshFunction);
-        context.add_function(ATanhFunction);
-        context.add_function(ACschFunction);
-        context.add_function(ASechFunction);
-        context.add_function(ACothFunction);
+        context.add_constant("PI", N::from_f64(std::f64::consts::PI).unwrap()).unwrap();
+        context.add_constant("E", N::from_f64(std::f64::consts::E).unwrap()).unwrap();
+        context.add_binary_function(AddOperator).unwrap();
+        context.add_binary_function(SubOperator).unwrap();
+        context.add_binary_function(MulOperator).unwrap();
+        context.add_binary_function(DivOperator).unwrap();
+        context.add_binary_function(PowOperator).unwrap();
+        context.add_binary_function(ModOperator).unwrap();
+        context.add_unary_function(UnaryPlus).unwrap();
+        context.add_unary_function(UnaryMinus).unwrap();
+        context.add_unary_function(Factorial).unwrap();
+        context.add_function(SumFunction).unwrap();
+        context.add_function(ProdFunction).unwrap();
+        context.add_function(AvgFunction).unwrap();
+        context.add_function(MaxFunction).unwrap();
+        context.add_function(MinFunction).unwrap();
+        context.add_function(AbsFunction).unwrap();
+        context.add_function(SqrtFunction).unwrap();
+        context.add_function(LnFunction).unwrap();
+        context.add_function(LogFunction).unwrap();
+        context.add_function(ExpFunction).unwrap();
+        context.add_function(FloorFunction).unwrap();
+        context.add_function(CeilFunction).unwrap();
+        context.add_function(TruncateFunction).unwrap();
+        context.add_function(RoundFunction).unwrap();
+        context.add_function(SignFunction).unwrap();
+        context.add_function(RandFunction).unwrap();
+        context.add_function(ToRadiansFunction).unwrap();
+        context.add_function(ToDegreesFunction).unwrap();
+        context.add_function(SinFunction).unwrap();
+        context.add_function(CosFunction).unwrap();
+        context.add_function(TanFunction).unwrap();
+        context.add_function(CscFunction).unwrap();
+        context.add_function(SecFunction).unwrap();
+        context.add_function(CotFunction).unwrap();
+        context.add_function(ASinFunction).unwrap();
+        context.add_function(ACosFunction).unwrap();
+        context.add_function(ATanFunction).unwrap();
+        context.add_function(ACscFunction).unwrap();
+        context.add_function(ASecFunction).unwrap();
+        context.add_function(ACotFunction).unwrap();
+        context.add_function(SinhFunction).unwrap();
+        context.add_function(CoshFunction).unwrap();
+        context.add_function(TanhFunction).unwrap();
+        context.add_function(CschFunction).unwrap();
+        context.add_function(SechFunction).unwrap();
+        context.add_function(CothFunction).unwrap();
+        context.add_function(ASinhFunction).unwrap();
+        context.add_function(ACoshFunction).unwrap();
+        context.add_function(ATanhFunction).unwrap();
+        context.add_function(ACschFunction).unwrap();
+        context.add_function(ASechFunction).unwrap();
+        context.add_function(ACothFunction).unwrap();
         context
     }
 }
@@ -407,53 +446,53 @@ impl<'a, N: UncheckedNum> DefaultContext<'a, N> {
         use crate::ops::unchecked::*;
 
         let mut context = Self::with_config(config);
-        context.add_constant("PI", N::from_f64(std::f64::consts::PI).unwrap());
-        context.add_constant("E", N::from_f64(std::f64::consts::E).unwrap());
-        context.add_binary_function(AddOperator);
-        context.add_binary_function(SubOperator);
-        context.add_binary_function(MulOperator);
-        context.add_binary_function(DivOperator);
-        context.add_binary_function(PowOperator);
-        context.add_binary_function(ModOperator);
-        context.add_unary_function(UnaryPlus);
-        context.add_unary_function(UnaryMinus);
-        context.add_unary_function(Factorial);
-        context.add_function(SumFunction);
-        context.add_function(AvgFunction);
-        context.add_function(ProdFunction);
-        context.add_function(MaxFunction);
-        context.add_function(MinFunction);
-        context.add_function(SqrtFunction);
-        context.add_function(LnFunction);
-        context.add_function(LogFunction);
-        context.add_function(RandFunction);
-        context.add_function(ToRadiansFunction);
-        context.add_function(ToDegreesFunction);
-        context.add_function(ExpFunction);
-        context.add_function(SinFunction);
-        context.add_function(CosFunction);
-        context.add_function(TanFunction);
-        context.add_function(CscFunction);
-        context.add_function(SecFunction);
-        context.add_function(CotFunction);
-        context.add_function(ASinFunction);
-        context.add_function(ACosFunction);
-        context.add_function(ATanFunction);
-        context.add_function(ACscFunction);
-        context.add_function(ASecFunction);
-        context.add_function(ACotFunction);
-        context.add_function(SinhFunction);
-        context.add_function(CoshFunction);
-        context.add_function(TanhFunction);
-        context.add_function(CschFunction);
-        context.add_function(SechFunction);
-        context.add_function(CothFunction);
-        context.add_function(ASinhFunction);
-        context.add_function(ACoshFunction);
-        context.add_function(ATanhFunction);
-        context.add_function(ACschFunction);
-        context.add_function(ASechFunction);
-        context.add_function(ACothFunction);
+        context.add_constant("PI", N::from_f64(std::f64::consts::PI).unwrap()).unwrap();
+        context.add_constant("E", N::from_f64(std::f64::consts::E).unwrap()).unwrap();
+        context.add_binary_function(AddOperator).unwrap();
+        context.add_binary_function(SubOperator).unwrap();
+        context.add_binary_function(MulOperator).unwrap();
+        context.add_binary_function(DivOperator).unwrap();
+        context.add_binary_function(PowOperator).unwrap();
+        context.add_binary_function(ModOperator).unwrap();
+        context.add_unary_function(UnaryPlus).unwrap();
+        context.add_unary_function(UnaryMinus).unwrap();
+        context.add_unary_function(Factorial).unwrap();
+        context.add_function(SumFunction).unwrap();
+        context.add_function(AvgFunction).unwrap();
+        context.add_function(ProdFunction).unwrap();
+        context.add_function(MaxFunction).unwrap();
+        context.add_function(MinFunction).unwrap();
+        context.add_function(SqrtFunction).unwrap();
+        context.add_function(LnFunction).unwrap();
+        context.add_function(LogFunction).unwrap();
+        context.add_function(RandFunction).unwrap();
+        context.add_function(ToRadiansFunction).unwrap();
+        context.add_function(ToDegreesFunction).unwrap();
+        context.add_function(ExpFunction).unwrap();
+        context.add_function(SinFunction).unwrap();
+        context.add_function(CosFunction).unwrap();
+        context.add_function(TanFunction).unwrap();
+        context.add_function(CscFunction).unwrap();
+        context.add_function(SecFunction).unwrap();
+        context.add_function(CotFunction).unwrap();
+        context.add_function(ASinFunction).unwrap();
+        context.add_function(ACosFunction).unwrap();
+        context.add_function(ATanFunction).unwrap();
+        context.add_function(ACscFunction).unwrap();
+        context.add_function(ASecFunction).unwrap();
+        context.add_function(ACotFunction).unwrap();
+        context.add_function(SinhFunction).unwrap();
+        context.add_function(CoshFunction).unwrap();
+        context.add_function(TanhFunction).unwrap();
+        context.add_function(CschFunction).unwrap();
+        context.add_function(SechFunction).unwrap();
+        context.add_function(CothFunction).unwrap();
+        context.add_function(ASinhFunction).unwrap();
+        context.add_function(ACoshFunction).unwrap();
+        context.add_function(ATanhFunction).unwrap();
+        context.add_function(ACschFunction).unwrap();
+        context.add_function(ASechFunction).unwrap();
+        context.add_function(ACothFunction).unwrap();
         context
     }
 }
@@ -465,10 +504,10 @@ pub struct Config {
     pub implicit_mul: bool,
     /// Allows complex numbers.
     pub complex_number: bool,
-    /// Allows using custom grouping symbols for function calls, eg: `Max[1,2,3]`, `Sum<2,4,6>`
+    /// Allows using custom grouping symbols for function calls, eg: `Max[1,2,3]`, `Sum{2,4,6}`
     pub custom_function_call: bool,
     /// Stores the grouping symbols as: `(`, `)`, `[`, `]`.
-    grouping: HashMap<char, GroupingSymbol>,
+    grouping: HashSet<Grouping>,
 }
 
 impl Config {
@@ -476,7 +515,7 @@ impl Config {
     /// if is need an empty `Config` use `Default` instead.
     #[inline]
     pub fn new() -> Self {
-        Config::default().with_group_symbol('(', ')')
+        Config::default().with_grouping(Grouping::Parenthesis)
     }
 
     /// Enables implicit multiplication for this `Config`.
@@ -511,30 +550,17 @@ impl Config {
 
     /// Adds a pair of grouping symbols to this `Config`.
     ///
-    /// # Panics
-    /// If the config already contains the given symbol.
-    ///
     /// # Example
     /// ```
-    /// use prexel::context::Config;
+    /// use prexel::context::{Config, Grouping};
     ///
     /// // `Default` allows to create an empty config
     /// let mut config = Config::default()
-    ///     .with_group_symbol('(', ')')
-    ///     .with_group_symbol('[', ']');
+    ///     .with_grouping(Grouping::Parenthesis)
+    ///     .with_grouping(Grouping::Bracket);
     /// ```
-    pub fn with_group_symbol(mut self, open_group: char, close_group: char) -> Config {
-        let grouping = &mut self.grouping;
-        let grouping_symbol = GroupingSymbol::new(open_group, close_group);
-
-        if grouping.insert(open_group, grouping_symbol).is_some() {
-            panic!("Duplicated symbol: `{}`", open_group);
-        }
-
-        if grouping.insert(close_group, grouping_symbol).is_some() {
-            panic!("Duplicated symbol: `{}`", close_group);
-        }
-
+    pub fn with_grouping(mut self, grouping: Grouping) -> Config {
+        self.grouping.insert(grouping);
         self
     }
 
@@ -542,25 +568,25 @@ impl Config {
     ///
     /// # Examples
     /// ```
-    /// use prexel::context::Config;
+    /// use prexel::context::{Config, Grouping};
     ///
-    /// let mut config = Config::new().with_group_symbol('[', ']');
-    /// assert_eq!(('(', ')'), config.get_group_symbol('(').unwrap().as_tuple());
+    /// let mut config = Config::new().with_grouping(Grouping::Parenthesis);
+    /// assert_eq!(('(', ')'), config.get_group_symbol('(').unwrap());
     /// ```
     #[inline]
-    pub fn get_group_symbol(&self, symbol: char) -> Option<&GroupingSymbol> {
-        self.grouping.get(&symbol)
+    pub fn get_group_symbol(&self, symbol: char) -> Option<(char, char)> {
+        Grouping::new(symbol).map(|g| g.symbols())
     }
 
     /// Gets the grouping close for the specified grouping open.
     ///
     /// # Example
     /// ```
-    /// use prexel::context::Config;
+    /// use prexel::context::{Config, Grouping};
     ///
     /// let config = Config::default()
-    ///     .with_group_symbol('(', ')')
-    ///     .with_group_symbol('[', ']');
+    ///     .with_grouping(Grouping::Parenthesis)
+    ///     .with_grouping(Grouping::Bracket);
     ///
     /// assert_eq!(Some('('), config.get_group_open_for(')'));
     /// assert_eq!(Some('['), config.get_group_open_for(']'));
@@ -568,21 +594,20 @@ impl Config {
     /// ```
     #[inline]
     pub fn get_group_open_for(&self, group_close: char) -> Option<char> {
-        match self.get_group_symbol(group_close) {
-            Some(s) if s.group_close == group_close => Some(s.group_open),
-            _ => None,
-        }
+        Grouping::new(group_close)
+            .map(|g| g.open_for(group_close))
+            .flatten()
     }
 
     /// Gets the grouping close for the specified grouping open.
     ///
     /// # Example
     /// ```
-    /// use prexel::context::Config;
+    /// use prexel::context::{Config, Grouping};
     ///
     /// let config = Config::default()
-    ///     .with_group_symbol('(', ')')
-    ///     .with_group_symbol('[', ']');
+    ///     .with_grouping(Grouping::Parenthesis)
+    ///     .with_grouping(Grouping::Bracket);
     ///
     /// assert_eq!(Some(')'), config.get_group_close_for('('));
     /// assert_eq!(Some(']'), config.get_group_close_for('['));
@@ -590,53 +615,99 @@ impl Config {
     /// ```
     #[inline]
     pub fn get_group_close_for(&self, group_open: char) -> Option<char> {
-        match self.get_group_symbol(group_open) {
-            Some(s) if s.group_open == group_open => Some(s.group_close),
-            _ => None,
-        }
+        Grouping::new(group_open)
+            .map(|g| g.close_for(group_open))
+            .flatten()
     }
 
     /// Checks a value indicating if the given `char` is a group close symbol.
     #[inline]
     pub fn is_group_close(&self, group_close: char) -> bool {
-        self.grouping
-            .get(&group_close)
-            .map_or(false, |s| s.group_close == group_close)
+        Grouping::new(group_close)
+            .map(|g| g.is_close(group_close))
+            .unwrap_or(false)
     }
 
     /// Checks a value indicating if the given `char` is a group open symbol.
     #[inline]
     pub fn is_group_open(&self, group_open: char) -> bool {
-        self.grouping
-            .get(&group_open)
-            .map_or(false, |s| s.group_open == group_open)
+        Grouping::new(group_open)
+            .map(|g| g.is_open(group_open))
+            .unwrap_or(false)
     }
 }
 
-/// Represents a grouping symbol.
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
-pub struct GroupingSymbol {
-    /// The open symbol of teh grouping.
-    pub group_open: char,
-    /// The close symbol of teh grouping.
-    pub group_close: char,
+/// Represents a grouping symbol pair.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Grouping {
+    /// Grouping using parentheses: `(` and `)`.
+    Parenthesis,
+    /// Grouping using square brackets: `[` and `]`.
+    Bracket,
+    /// Grouping using curly braces: `{` and `}`.
+    Brace,
 }
 
-impl GroupingSymbol {
-    /// Constructs a new `GroupingSymbol`.
-    #[inline]
-    pub fn new(group_open: char, group_close: char) -> Self {
-        assert_ne!(group_open, group_close);
-        GroupingSymbol {
-            group_open,
-            group_close,
+impl Grouping {
+    /// Constructs a `Grouping` from the given `char`s.
+    pub fn new(c: char) -> Option<Grouping> {
+        match c {
+            '(' | ')' => Some(Grouping::Parenthesis),
+            '[' | ']' => Some(Grouping::Bracket),
+            '{' | '}' => Some(Grouping::Brace),
+            _ => None,
         }
     }
 
-    /// Gets the open and close `char` symbols of this grouping.
     #[inline]
-    pub fn as_tuple(&self) -> (char, char) {
-        (self.group_open, self.group_close)
+    pub fn symbols(&self) -> (char, char) {
+        (self.open(), self.close())
+    }
+
+    pub fn open(&self) -> char {
+        match self {
+            Grouping::Parenthesis => '(',
+            Grouping::Bracket => '[',
+            Grouping::Brace => '{',
+        }
+    }
+
+    pub fn close(&self) -> char {
+        match self {
+            Grouping::Parenthesis => ')',
+            Grouping::Bracket => ']',
+            Grouping::Brace => '}',
+        }
+    }
+
+    /// Returns `true` if the given `char` is a grouping open symbol.
+    #[inline]
+    pub fn is_open(&self, c: char) -> bool {
+        self.open() == c
+    }
+
+    /// Returns `true` if the given `char` is a grouping close symbol.
+    #[inline]
+    pub fn is_close(&self, c: char) -> bool {
+        self.close() == c
+    }
+
+    /// Returns the grouping open symbol for the given `char`.
+    pub fn close_for(&self, c: char) -> Option<char> {
+        if self.is_open(c) {
+            Self::new(c).map(|g| g.close())
+        } else {
+            None
+        }
+    }
+
+    /// Returns the grouping close symbol for the given `char`.
+    pub fn open_for(&self, c: char) -> Option<char> {
+        if self.is_close(c) {
+            Self::new(c).map(|g| g.open())
+        } else {
+            None
+        }
     }
 }
 
@@ -784,37 +855,25 @@ mod tests {
     #[test]
     fn config_test() {
         let config = Config::default()
-            .with_group_symbol('(', ')')
-            .with_group_symbol('[', ']');
+            .with_grouping(Grouping::Parenthesis)
+            .with_grouping(Grouping::Bracket);
 
-        assert_eq!(
-            config.get_group_symbol('(').unwrap(),
-            &GroupingSymbol::new('(', ')')
-        );
-        assert_eq!(
-            config.get_group_symbol(')').unwrap(),
-            &GroupingSymbol::new('(', ')')
-        );
-        assert_eq!(
-            config.get_group_symbol('[').unwrap(),
-            &GroupingSymbol::new('[', ']')
-        );
-        assert_eq!(
-            config.get_group_symbol(']').unwrap(),
-            &GroupingSymbol::new('[', ']')
-        );
+        assert_eq!(config.get_group_symbol('(').unwrap(), ('(', ')'));
+        assert_eq!(config.get_group_symbol(')').unwrap(), ('(', ')'));
+        assert_eq!(config.get_group_symbol('[').unwrap(), ('[', ']'));
+        assert_eq!(config.get_group_symbol(']').unwrap(), ('[', ']'));
     }
 
     #[test]
     fn operators_symbols_test() {
         let mut context: DefaultContext<f64> = DefaultContext::new_unchecked();
-        context.add_constant("∞", f64::INFINITY);
-        context.add_constant("π", std::f64::consts::PI);
-        context.add_binary_function(Dummy("√".to_string()));
-        context.add_binary_function(Dummy("∋".to_string()));
-        context.add_unary_function(Dummy("ℝ".to_string()));
-        context.add_unary_function(Dummy("λ".to_string()));
-        context.add_function(Dummy("f".to_string()));
+        context.add_constant("∞", f64::INFINITY).unwrap();
+        context.add_constant("π", std::f64::consts::PI).unwrap();
+        context.add_binary_function(Dummy("√".to_string())).unwrap();
+        context.add_binary_function(Dummy("∋".to_string())).unwrap();
+        context.add_unary_function(Dummy("ℝ".to_string())).unwrap();
+        context.add_unary_function(Dummy("λ".to_string())).unwrap();
+        context.add_function(Dummy("f".to_string())).unwrap();
 
         assert!(context.is_constant("∞"));
         assert!(context.is_constant("π"));
@@ -823,5 +882,102 @@ mod tests {
         assert!(context.is_unary_function("ℝ"));
         assert!(context.is_unary_function("λ"));
         assert!(context.is_function("f"));
+    }
+
+    #[test]
+    fn function_aliases_test() {
+        struct SumFunction;
+        impl Function<f64> for SumFunction {
+            fn name(&self) -> &str {
+                "sum"
+            }
+
+            fn call(&self, args: &[f64]) -> Result<f64> {
+                Ok(args.iter().sum())
+            }
+
+            fn aliases(&self) -> Option<&[&str]> {
+                Some(&["add", "∑"])
+            }
+        }
+
+        let mut context: DefaultContext<f64> = DefaultContext::new();
+        context.add_function(SumFunction).unwrap();
+
+        assert!(context.is_function("sum"));
+        assert!(context.is_function("add"));
+        assert!(context.is_function("∑"));
+
+        assert!(context.get_function("sum").is_some());
+        assert!(context.get_function("add").is_some());
+        assert!(context.get_function("∑").is_some());
+    }
+
+    #[test]
+    fn binary_function_alias_test() {
+        struct AddFunction;
+        impl BinaryFunction<f64> for AddFunction {
+            fn name(&self) -> &str {
+                "+"
+            }
+
+            fn aliases(&self) -> Option<&[&str]> {
+                Some(&["add", "plus"])
+            }
+
+            fn precedence(&self) -> Precedence {
+                Precedence::VERY_LOW
+            }
+
+            fn associativity(&self) -> Associativity {
+                Associativity::Left
+            }
+
+            fn call(&self, left: f64, right: f64) -> Result<f64> {
+                Ok(left + right)
+            }
+        }
+
+        let mut context: DefaultContext<f64> = DefaultContext::new();
+        context.add_binary_function(AddFunction).unwrap();
+
+        assert!(context.is_binary_function("+"));
+        assert!(context.is_binary_function("add"));
+        assert!(context.is_binary_function("plus"));
+
+        assert!(context.get_binary_function("+").is_some());
+        assert!(context.get_binary_function("add").is_some());
+        assert!(context.get_binary_function("plus").is_some());
+    }
+
+    #[test]
+    fn unary_function_alias_test() {
+        struct NotFunction;
+        impl UnaryFunction<i64> for NotFunction {
+            fn name(&self) -> &str {
+                "not"
+            }
+
+            fn aliases(&self) -> Option<&[&str]> {
+                Some(&["¬"])
+            }
+
+            fn notation(&self) -> Notation {
+                Notation::Prefix
+            }
+
+            fn call(&self, arg: i64) -> Result<i64> {
+                Ok(!arg)
+            }
+        }
+
+        let mut context: DefaultContext<i64> = DefaultContext::new();
+        context.add_unary_function(NotFunction).unwrap();
+
+        assert!(context.is_unary_function("not"));
+        assert!(context.is_unary_function("¬"));
+
+        assert!(context.get_unary_function("not").is_some());
+        assert!(context.get_unary_function("¬").is_some());
     }
 }

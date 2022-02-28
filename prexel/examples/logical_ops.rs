@@ -8,11 +8,11 @@ fn main() {
 
     if USE_U8 {
         let mut context: DefaultContext<u8> = DefaultContext::new();
-        context.add_constant("true", 1);
-        context.add_constant("false", 0);
-        context.add_binary_function(AndOperator);
-        context.add_binary_function(OrOperator);
-        context.add_binary_function(XorOperator);
+        context.add_constant("true", 1).unwrap();
+        context.add_constant("false", 0).unwrap();
+        context.add_binary_function(AndOperator).unwrap();
+        context.add_binary_function(OrOperator).unwrap();
+        context.add_binary_function(XorOperator).unwrap();
 
         let evaluator = Evaluator::with_context(context);
 
@@ -27,11 +27,11 @@ fn main() {
         println!("{} = {}", expression2, evaluator.eval(expression2).unwrap());
     } else {
         let mut context: DefaultContext<bool> = DefaultContext::new();
-        context.add_constant("true", true);
-        context.add_constant("false", false);
-        context.add_binary_function(AndOperator);
-        context.add_binary_function(OrOperator);
-        context.add_binary_function(XorOperator);
+        context.add_constant("true", true).unwrap();
+        context.add_constant("false", false).unwrap();
+        context.add_binary_function(AndOperator).unwrap();
+        context.add_binary_function(OrOperator).unwrap();
+        context.add_binary_function(XorOperator).unwrap();
 
         let evaluator = Evaluator::with_context(context);
 

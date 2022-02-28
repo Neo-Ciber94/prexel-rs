@@ -1,9 +1,9 @@
 use crate::decimal::consts;
+use crate::utils::approx::{Approx, ApproxEq};
 use rust_decimal::prelude::{FromPrimitive, One, ToPrimitive, Zero};
 use rust_decimal::Decimal;
 use rust_decimal_macros::*;
 use std::ops::Neg;
-use crate::utils::approx::{ApproxEq, Approx};
 
 /// Extended methods for `Decimal`.
 pub trait DecimalExt {
@@ -12,17 +12,17 @@ pub trait DecimalExt {
     fn to_degrees(&self) -> Decimal;
     fn inv(self) -> Decimal;
     fn checked_inv(self) -> Option<Decimal>;
-    fn checked_pow(self, exponent: Decimal) -> Option<Decimal>;
-    fn checked_pow_n(self, exponent: i64) -> Option<Decimal>;
+    fn checked_powd(self, exponent: Decimal) -> Option<Decimal>;
+    fn checked_powi(self, exponent: i64) -> Option<Decimal>;
     fn checked_sqrt(self) -> Option<Decimal>;
     fn checked_cbrt(self) -> Option<Decimal>;
     fn checked_log(self, exponent: Decimal) -> Option<Decimal>;
     fn checked_ln(self) -> Option<Decimal>;
     fn checked_exp(self) -> Option<Decimal>;
     fn checked_factorial(self) -> Option<Decimal>;
-    fn sin(self) -> Decimal;
-    fn cos(self) -> Decimal;
-    fn tan(self) -> Option<Decimal>;
+    fn checked_sin(self) -> Option<Decimal>;
+    fn checked_cos(self) -> Option<Decimal>;
+    fn checked_tan(self) -> Option<Decimal>;
     fn asin(self) -> Option<Decimal>;
     fn acos(self) -> Option<Decimal>;
     fn atan(self) -> Decimal;
@@ -58,17 +58,16 @@ impl DecimalExt for Decimal {
 
     #[inline]
     fn checked_inv(self) -> Option<Decimal> {
-        if self.is_zero(){
+        if self.is_zero() {
             None
-        }
-        else{
+        } else {
             Some(self.inv())
         }
     }
 
-    fn checked_pow(self, exponent: Decimal) -> Option<Decimal> {
+    fn checked_powd(self, exponent: Decimal) -> Option<Decimal> {
         if exponent.is_integer() {
-            return self.checked_pow_n(exponent.to_i64().unwrap());
+            return self.checked_powi(exponent.to_i64().unwrap());
         }
 
         if self.is_zero() {
@@ -90,7 +89,7 @@ impl DecimalExt for Decimal {
         Some(result)
     }
 
-    fn checked_pow_n(self, mut exponent: i64) -> Option<Decimal> {
+    fn checked_powi(self, mut exponent: i64) -> Option<Decimal> {
         if exponent == 0 {
             return Some(Decimal::one());
         }
@@ -100,7 +99,7 @@ impl DecimalExt for Decimal {
         }
 
         if exponent < 0 {
-            return Self::checked_pow_n(Decimal::one() / self, -exponent);
+            return Self::checked_powi(Decimal::one() / self, -exponent);
         }
 
         let mut result = Decimal::one();
@@ -210,9 +209,9 @@ impl DecimalExt for Decimal {
         let mut result = Decimal::zero();
 
         for n in 1..ITERATIONS {
-            let sign = Self::checked_pow_n(consts::ONE_MINUS, (n + 1).into())?;
+            let sign = Self::checked_powi(consts::ONE_MINUS, (n + 1).into())?;
             let x = self.checked_sub(Decimal::one())?;
-            let xn = Self::checked_pow_n(x, n.into())?;
+            let xn = Self::checked_powi(x, n.into())?;
             let div = xn.checked_div(n.into())?;
             let y = div.checked_mul(sign)?;
 
@@ -291,24 +290,24 @@ impl DecimalExt for Decimal {
         Some(result.round_dp(MAX_DECIMAL_PLACES))
     }
 
-    fn sin(self) -> Decimal {
+    fn checked_sin(self) -> Option<Decimal> {
         let radians: Decimal = self % consts::PI_2;
 
         if radians == Decimal::zero()
             || ApproxEq::approx_eq(&radians.abs(), &consts::PI, &consts::PRECISION)
             || ApproxEq::approx_eq(&radians.abs(), &consts::PI_2, &consts::PRECISION)
         {
-            return Decimal::zero();
+            return Some(Decimal::zero());
         }
 
         if ApproxEq::approx_eq(&radians, &consts::PI_FRACT_2, &consts::PRECISION) {
-            return consts::ONE;
+            return Some(consts::ONE);
         }
 
         if ApproxEq::approx_eq(&radians, &consts::PI_3_FRACT_2, &consts::PRECISION)
             || ApproxEq::approx_eq(&radians.abs(), &consts::PI_FRACT_2, &consts::PRECISION)
         {
-            return consts::ONE_MINUS;
+            return Some(consts::ONE_MINUS);
         }
 
         // Using Taylor Series
@@ -319,22 +318,22 @@ impl DecimalExt for Decimal {
         let mut result = radians;
 
         for n in 1..consts::TAYLOR_SERIES_ITERATIONS {
-            factor *= -xx / Decimal::from_u32((2 * n + 1) * (2 * n)).unwrap();
+            factor *= -xx / Decimal::from_u32((2 * n + 1) * (2 * n))?;
             result += factor;
         }
 
-        result.approx()
+        Some(result.approx())
     }
 
-    fn cos(self) -> Decimal {
+    fn checked_cos(self) -> Option<Decimal> {
         let radians: Decimal = self % consts::PI_2;
 
         if radians.is_zero() {
-            return Decimal::one();
+            return Some(Decimal::one());
         }
 
         if ApproxEq::approx_eq(&radians, &consts::PI_FRACT_2, &consts::PRECISION) {
-            return Decimal::zero();
+            return Some(Decimal::zero());
         }
 
         // Using Taylor Series
@@ -344,19 +343,19 @@ impl DecimalExt for Decimal {
         let mut result = Decimal::one() + factor;
 
         for n in 2..consts::TAYLOR_SERIES_ITERATIONS {
-            factor *= -xx / Decimal::from_u32(2 * n * (2 * n - 1)).unwrap();
+            factor *= -xx / Decimal::from_u32(2 * n * (2 * n - 1))?;
             result += factor;
         }
 
-        result.approx()
+        Some(result.approx())
     }
 
-    fn tan(self) -> Option<Decimal> {
-        let cos = self.cos();
+    fn checked_tan(self) -> Option<Decimal> {
+        let cos = self.checked_cos()?;
         if cos.is_zero() {
             None
         } else {
-            let result: Decimal = self.sin() / cos;
+            let result = self.checked_sin()? / cos;
             Some(result.approx())
         }
     }
@@ -378,7 +377,7 @@ impl DecimalExt for Decimal {
             }
 
             let xx = self * self;
-            let a0 = Decimal::checked_sqrt(consts::ONE - xx).unwrap();
+            let a0 = Decimal::checked_sqrt(consts::ONE - xx)?;
             let b0 = a0 + consts::ONE;
             let result: Decimal = consts::TWO * Decimal::atan(self / b0);
             Some(result.approx())
@@ -402,7 +401,7 @@ impl DecimalExt for Decimal {
             }
 
             let xx = self * self;
-            let a0 = Decimal::checked_sqrt(consts::ONE - xx).unwrap();
+            let a0 = Decimal::checked_sqrt(consts::ONE - xx)?;
             let b0 = consts::ONE + self;
             let result = consts::TWO * Decimal::atan(a0 / b0);
             Some(result.approx())
@@ -570,7 +569,7 @@ fn gamma(mut x: Decimal) -> Option<Decimal> {
     // ~10^-13 precision
     // See: https://en.wikipedia.org/wiki/Lanczos_approximation
     if x < consts::HALF {
-        Some(consts::PI / Decimal::sin(consts::PI * x) * gamma(Decimal::one() - x)?)
+        Some(consts::PI / Decimal::checked_sin(consts::PI * x)? * gamma(Decimal::one() - x)?)
     } else {
         // Lanczos solve gamma for (x + 1)
         x -= Decimal::one();
@@ -582,7 +581,7 @@ fn gamma(mut x: Decimal) -> Option<Decimal> {
 
         let t: Decimal = x + G + consts::HALF;
         let result = Decimal::checked_sqrt(consts::TWO * consts::PI)?
-            * Decimal::checked_pow(t, x + consts::HALF)?
+            * Decimal::checked_powd(t, x + consts::HALF)?
             * Decimal::checked_exp(-t)?
             * factor;
 
@@ -613,28 +612,32 @@ mod tests {
         }};
 
         ($left:expr, $right:expr) => {{
-            assert_approx_eq!($left, $right, consts::PRECISION)
+            assert_approx_eq2!($left, $right, consts::PRECISION)
+        }};
+    }
+
+    macro_rules! assert_almost_eq {
+        ($left:expr, $right:expr $(,)?) => {{
+            assert_almost_eq_by!($left, $right, 20);
+        }};
+    }
+
+    macro_rules! assert_almost_eq_by {
+        ($left:expr, $right:expr, $dp:expr $(,)?) => {{
+            match (&$left, &$right, $dp) {
+                (left_val, right_val, dp) => {
+                    let a = left_val.round_dp(dp);
+                    let b = right_val.round_dp(dp);
+                    assert_eq!(a, b);
+                }
+            }
         }};
     }
 
     macro_rules! decimal {
-        ($value:expr) => {
+        ($value:literal) => {
             dec!($value) as Decimal
         };
-    }
-
-    fn assert_almost_eq(x: Decimal, y: Decimal) {
-        const DP: u32 = 20;
-        let a = x.round_dp(DP);
-        let b = y.round_dp(DP);
-        assert_eq!(a, b);
-    }
-
-    #[allow(dead_code)]
-    fn assert_almost_eq_by(x: Decimal, y: Decimal, dp: u32) {
-        let a = x.round_dp(dp);
-        let b = y.round_dp(dp);
-        assert_eq!(a, b);
     }
 
     #[test]
@@ -650,208 +653,263 @@ mod tests {
 
     #[test]
     fn checked_sqrt_test() {
-        assert_almost_eq(Decimal::checked_sqrt(dec!(25)).unwrap(), dec!(5));
-        assert_almost_eq(
-            Decimal::checked_sqrt(dec!(2)).unwrap(),
-            dec!(1.41421356237309504880),
+        assert_almost_eq!(decimal!(25).checked_sqrt().unwrap(), decimal!(5));
+        assert_almost_eq!(
+            decimal!(2).checked_sqrt().unwrap(),
+            decimal!(1.41421356237309504880),
         );
     }
 
     #[test]
     fn checked_cbrt_test() {
-        assert_almost_eq(
-            dec!(10).checked_cbrt().unwrap(),
-            dec!(2.1544346900318837217592935665194),
+        assert_almost_eq!(
+            decimal!(10).checked_cbrt().unwrap(),
+            decimal!(2.1544346900318837217592935665),
         );
-        assert_almost_eq(
-            dec!(-5).checked_cbrt().unwrap(),
-            dec!(-1.7099759466766969893531088725439),
+        assert_almost_eq!(
+            decimal!(-5).checked_cbrt().unwrap(),
+            decimal!(-1.7099759466766969893531088725),
         );
     }
 
     #[test]
     fn checked_pow_n_test() {
-        assert_almost_eq(Decimal::checked_pow_n(dec!(5), 0).unwrap(), dec!(1));
-        assert_almost_eq(Decimal::checked_pow_n(dec!(8), 1).unwrap(), dec!(8));
-        assert_almost_eq(Decimal::checked_pow_n(dec!(0), 0).unwrap(), dec!(1));
-        assert_almost_eq(Decimal::checked_pow_n(dec!(2), 3).unwrap(), dec!(8));
-        assert_almost_eq(Decimal::checked_pow_n(dec!(5), -3).unwrap(), dec!(0.008));
+        assert_almost_eq!(decimal!(5).checked_powi(0).unwrap(), decimal!(1));
+        assert_almost_eq!(decimal!(8).checked_powi(1).unwrap(), decimal!(8));
+        assert_almost_eq!(decimal!(0).checked_powi(0).unwrap(), decimal!(1));
+        assert_almost_eq!(decimal!(2).checked_powi(3).unwrap(), decimal!(8));
+        assert_almost_eq!(decimal!(5).checked_powi(-3).unwrap(), decimal!(0.008));
     }
 
     #[test]
     fn checked_pow_test() {
-        assert_almost_eq(Decimal::checked_pow(dec!(9), dec!(0.5)).unwrap(), 3.into());
-        assert_almost_eq(
-            Decimal::checked_pow(dec!(4), dec!(-0.25)).unwrap(),
-            dec!(0.70710678118654752440),
+        assert_almost_eq!(
+            decimal!(9).checked_powd(decimal!(0.5)).unwrap(),
+            decimal!(3)
+        );
+        assert_almost_eq!(
+            decimal!(4).checked_powd(decimal!(-0.25)).unwrap(),
+            decimal!(0.70710678118654752440),
         );
     }
 
     #[test]
     fn checked_ln_test() {
-        assert_eq!(Decimal::checked_ln(dec!(0)), None);
-        assert_eq!(Decimal::checked_ln(dec!(-2)), None);
+        assert_eq!(decimal!(0).checked_ln(), None);
+        assert_eq!(decimal!(-2).checked_ln(), None);
 
-        assert_almost_eq(
-            Decimal::checked_ln(dec!(10)).unwrap(),
-            dec!(2.3025850929940456840179914546844),
+        assert_almost_eq!(
+            decimal!(10).checked_ln().unwrap(),
+            decimal!(2.3025850929940456840179914546),
         );
-        assert_almost_eq(
-            Decimal::checked_ln(dec!(9)).unwrap(),
-            dec!(2.1972245773362193827904904738451),
+        assert_almost_eq!(
+            decimal!(9).checked_ln().unwrap(),
+            decimal!(2.1972245773362193827904904738),
         );
-        assert_almost_eq(
-            Decimal::checked_ln(dec!(25)).unwrap(),
-            dec!(3.2188758248682007492015186664524),
+        assert_almost_eq!(
+            decimal!(25).checked_ln().unwrap(),
+            decimal!(3.2188758248682007492015186664),
         );
     }
 
     #[test]
     fn checked_exp_test() {
-        assert_almost_eq(Decimal::checked_exp(dec!(0)).unwrap(), dec!(1));
-        assert_eq!(Decimal::checked_exp(dec!(1)).unwrap(), consts::E);
+        assert_almost_eq!(decimal!(0).checked_exp().unwrap(), decimal!(1));
+        assert_eq!(decimal!(1).checked_exp().unwrap(), consts::E);
 
-        assert_almost_eq(
-            Decimal::checked_exp(dec!(3)).unwrap(),
-            dec!(20.085536923187667740928529654582),
+        assert_almost_eq!(
+            decimal!(3).checked_exp().unwrap(),
+            decimal!(20.085536923187667740928529654),
         );
-        assert_almost_eq(
-            Decimal::checked_exp(dec!(-4)).unwrap(),
-            dec!(0.01831563888873418029371802127324),
+        assert_almost_eq!(
+            decimal!(-4).checked_exp().unwrap(),
+            decimal!(0.0183156388887341802937180212),
         );
-        assert_almost_eq(
-            Decimal::checked_exp(dec!(0.5)).unwrap(),
-            dec!(1.6487212707001281468486507878142),
+        assert_almost_eq!(
+            decimal!(0.5).checked_exp().unwrap(),
+            decimal!(1.6487212707001281468486507878),
         );
     }
 
     #[test]
     fn checked_factorial_test() {
-        assert_almost_eq(Decimal::checked_factorial(dec!(10)).unwrap(), dec!(3628800));
-        assert_almost_eq_by(
-            Decimal::checked_factorial(dec!(0.3)).unwrap(),
-            dec!(0.89747069630627718849375495477148),
+        assert_almost_eq!(decimal!(10).checked_factorial().unwrap(), decimal!(3628800));
+        assert_almost_eq_by!(
+            decimal!(0.3).checked_factorial().unwrap(),
+            decimal!(0.8974706963062771884937549547),
             10,
         );
-        assert_almost_eq_by(
-            Decimal::checked_factorial(dec!(6.5)).unwrap(),
-            dec!(1871.254305797788346476077053604),
+        assert_almost_eq_by!(
+            decimal!(6.5).checked_factorial().unwrap(),
+            decimal!(1871.254305797788346476077053),
             10,
         );
     }
 
     #[test]
     fn sin_test() {
-        assert_almost_eq(Decimal::sin(dec!(180).to_radians()), Decimal::zero());
-        assert_almost_eq(Decimal::sin(dec!(-180).to_radians()), Decimal::zero());
-        assert_almost_eq(Decimal::sin(dec!(90).to_radians()), dec!(1));
-        assert_almost_eq(Decimal::sin(dec!(-90).to_radians()), dec!(-1));
-        assert_almost_eq(
-            Decimal::sin(dec!(45).to_radians()),
-            dec!(0.70710678118654752440084436210485),
+        assert_almost_eq!(
+            decimal!(180).to_radians().checked_sin().unwrap(),
+            Decimal::zero(),
+        );
+        assert_almost_eq!(
+            decimal!(-180).to_radians().checked_sin().unwrap(),
+            Decimal::zero(),
+        );
+        assert_almost_eq!(
+            decimal!(90).to_radians().checked_sin().unwrap(),
+            decimal!(1)
+        );
+        assert_almost_eq!(
+            decimal!(-90).to_radians().checked_sin().unwrap(),
+            decimal!(-1)
+        );
+        assert_almost_eq!(
+            decimal!(45).to_radians().checked_sin().unwrap(),
+            decimal!(0.7071067811865475244008443621),
         );
     }
 
     #[test]
     fn cos_test() {
-        assert_almost_eq(Decimal::cos(dec!(90).to_radians()), Decimal::zero());
-        assert_almost_eq(Decimal::cos(dec!(0).to_radians()), Decimal::one());
-        assert_almost_eq(
-            Decimal::cos(dec!(45).to_radians()),
-            dec!(0.70710678118654752440084436210485),
+        assert_almost_eq!(
+            decimal!(90).to_radians().checked_cos().unwrap(),
+            Decimal::zero(),
         );
-        assert_almost_eq(
-            Decimal::cos(dec!(30).to_radians()),
-            dec!(0.86602540378443864676372317075294),
+        assert_almost_eq!(
+            decimal!(0).to_radians().checked_cos().unwrap(),
+            Decimal::one(),
+        );
+        assert_almost_eq!(
+            decimal!(45).to_radians().checked_cos().unwrap(),
+            decimal!(0.7071067811865475244008443621),
+        );
+        assert_almost_eq!(
+            decimal!(30).to_radians().checked_cos().unwrap(),
+            decimal!(0.8660254037844386467637231707),
         );
     }
 
     #[test]
     fn tan_test() {
-        assert_almost_eq(Decimal::tan(dec!(45).to_radians()).unwrap(), Decimal::one());
-        assert_almost_eq(
-            Decimal::tan(dec!(30).to_radians()).unwrap(),
-            dec!(0.57735026918962576451),
+        assert_almost_eq!(
+            decimal!(45).to_radians().checked_tan().unwrap(),
+            Decimal::one(),
+        );
+        assert_almost_eq!(
+            decimal!(30).to_radians().checked_tan().unwrap(),
+            decimal!(0.57735026918962576451),
         );
     }
 
     #[test]
     fn asin_test() {
-        assert!(dec!(1).asin().is_some());
-        assert!(dec!(-1).asin().is_some());
+        assert!(decimal!(1).asin().is_some());
+        assert!(decimal!(-1).asin().is_some());
 
-        assert!(dec!(2).asin().is_none());
-        assert!(dec!(-2).asin().is_none());
+        assert!(decimal!(2).asin().is_none());
+        assert!(decimal!(-2).asin().is_none());
 
-        assert_almost_eq(dec!(1).asin().unwrap().to_degrees(), dec!(90));
-        assert_almost_eq(
-            dec!(0.707106781186547524400).asin().unwrap().to_degrees(),
-            dec!(45),
+        assert_almost_eq!(decimal!(1).asin().unwrap().to_degrees(), decimal!(90));
+        assert_almost_eq!(
+            decimal!(0.707106781186547524400)
+                .asin()
+                .unwrap()
+                .to_degrees(),
+            decimal!(45),
         );
     }
 
     #[test]
     fn acos_test() {
-        assert!(dec!(1).acos().is_some());
-        assert!(dec!(-1).acos().is_some());
+        assert!(decimal!(1).acos().is_some());
+        assert!(decimal!(-1).acos().is_some());
 
-        assert!(dec!(2).acos().is_none());
-        assert!(dec!(-2).acos().is_none());
+        assert!(decimal!(2).acos().is_none());
+        assert!(decimal!(-2).acos().is_none());
 
-        assert_almost_eq(dec!(0).acos().unwrap().to_degrees(), dec!(90));
-        assert_almost_eq(
-            dec!(0.707106781186547524400).acos().unwrap().to_degrees(),
-            dec!(45),
+        assert_almost_eq!(decimal!(0).acos().unwrap().to_degrees(), decimal!(90));
+        assert_almost_eq!(
+            decimal!(0.707106781186547524400)
+                .acos()
+                .unwrap()
+                .to_degrees(),
+            decimal!(45),
         );
     }
 
     #[test]
     fn atan_test() {
-        assert_almost_eq(dec!(0).atan().to_degrees(), dec!(0));
-        assert_almost_eq(dec!(1).atan().to_degrees(), dec!(45));
-        assert_almost_eq(dec!(-1).atan().to_degrees(), dec!(-45));
+        assert_almost_eq!(decimal!(0).atan().to_degrees(), decimal!(0));
+        assert_almost_eq!(decimal!(1).atan().to_degrees(), decimal!(45));
+        assert_almost_eq!(decimal!(-1).atan().to_degrees(), decimal!(-45));
     }
 
     #[test]
     fn sinh_test() {
-        assert_almost_eq(dec!(2).sinh().unwrap(), dec!(3.62686040784701876766821));
-        assert_almost_eq(dec!(0).sinh().unwrap(), dec!(0));
-        assert_almost_eq(dec!(-1).sinh().unwrap(), dec!(-1.175201193643801456882))
+        assert_almost_eq!(
+            decimal!(2).sinh().unwrap(),
+            decimal!(3.62686040784701876766821)
+        );
+        assert_almost_eq!(decimal!(0).sinh().unwrap(), decimal!(0));
+        assert_almost_eq!(
+            decimal!(-1).sinh().unwrap(),
+            decimal!(-1.175201193643801456882)
+        )
     }
 
     #[test]
     fn cosh_test() {
-        assert_almost_eq(dec!(2).cosh().unwrap(), dec!(3.7621956910836314595622134));
-        assert_almost_eq(dec!(0).cosh().unwrap(), dec!(1));
-        assert_almost_eq(dec!(-1).cosh().unwrap(), dec!(1.543080634815243778477905))
+        assert_almost_eq!(
+            decimal!(2).cosh().unwrap(),
+            decimal!(3.7621956910836314595622134)
+        );
+        assert_almost_eq!(decimal!(0).cosh().unwrap(), decimal!(1));
+        assert_almost_eq!(
+            decimal!(-1).cosh().unwrap(),
+            decimal!(1.543080634815243778477905)
+        )
     }
 
     #[test]
     fn tanh_test() {
-        assert_almost_eq(dec!(2).tanh().unwrap(), dec!(0.9640275800758168839464137));
-        assert_almost_eq(dec!(0).tanh().unwrap(), dec!(0));
-        assert_almost_eq(dec!(-1).tanh().unwrap(), dec!(-0.76159415595576488811945))
+        assert_almost_eq!(
+            decimal!(2).tanh().unwrap(),
+            decimal!(0.9640275800758168839464137)
+        );
+        assert_almost_eq!(decimal!(0).tanh().unwrap(), decimal!(0));
+        assert_almost_eq!(
+            decimal!(-1).tanh().unwrap(),
+            decimal!(-0.76159415595576488811945)
+        )
     }
 
     #[test]
     fn asinh_test() {
-        assert_almost_eq(dec!(1).asinh(), dec!(0.88137358701954302523260932));
-        assert_almost_eq(dec!(0).asinh(), dec!(0));
-        assert_almost_eq(dec!(-1).asinh(), dec!(-0.881373587019543025232609))
+        assert_almost_eq!(decimal!(1).asinh(), decimal!(0.88137358701954302523260932));
+        assert_almost_eq!(decimal!(0).asinh(), decimal!(0));
+        assert_almost_eq!(decimal!(-1).asinh(), decimal!(-0.881373587019543025232609))
     }
 
     #[test]
     fn acosh_test() {
-        assert!(dec!(0).acosh().is_none());
-        assert_almost_eq(dec!(1).acosh().unwrap(), dec!(0));
-        assert_almost_eq_by(dec!(2).acosh().unwrap(), dec!(1.316957896924816708), 10);
+        assert!(decimal!(0).acosh().is_none());
+        assert_almost_eq!(decimal!(1).acosh().unwrap(), decimal!(0));
+        assert_almost_eq_by!(
+            decimal!(2).acosh().unwrap(),
+            decimal!(1.316957896924816708),
+            10
+        );
     }
 
     #[test]
     fn atanh_test() {
-        assert!(dec!(-2).atanh().is_none());
-        assert!(dec!(2).atanh().is_none());
-        assert_almost_eq(dec!(0).atanh().unwrap(), dec!(0));
-        assert_almost_eq(dec!(0.25).atanh().unwrap(), dec!(0.25541281188299534160275));
+        assert!(decimal!(-2).atanh().is_none());
+        assert!(decimal!(2).atanh().is_none());
+        assert_almost_eq!(decimal!(0).atanh().unwrap(), decimal!(0));
+        assert_almost_eq!(
+            decimal!(0.25).atanh().unwrap(),
+            decimal!(0.25541281188299534160275)
+        );
     }
 }

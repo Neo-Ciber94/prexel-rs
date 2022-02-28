@@ -4,30 +4,69 @@ use crate::Result;
 pub trait Function<N> {
     /// Gets the name of the function.
     fn name(&self) -> &str;
+
     /// Calls this function with the given number of arguments.
     fn call(&self, args: &[N]) -> Result<N>;
+
+    /// Returns the aliases of this function.
+    fn aliases(&self) -> Option<&[&str]> {
+        None
+    }
+
+    /// Gets information about the usage of this function.
+    #[cfg(feature="docs")]
+    fn description(&self) -> Option<&str> {
+        None
+    }
 }
 
 /// A trait for a function that takes 2 arguments.
 pub trait BinaryFunction<N> {
     /// Gets the name of the function.
     fn name(&self) -> &str;
+
+    /// Returns the aliases of this function.
+    fn aliases(&self) -> Option<&[&str]> {
+        None
+    }
+
     /// Gets the `Precedence` of the function.
     fn precedence(&self) -> Precedence;
+
     /// Gets the `Associativity` of the function.
     fn associativity(&self) -> Associativity;
+
     /// Calls this function with the given arguments.
     fn call(&self, left: N, right: N) -> Result<N>;
+
+    /// Gets information about the usage of this function.
+    #[cfg(feature="docs")]
+    fn description(&self) -> Option<&str> {
+        None
+    }
 }
 
 /// A trait a function that takes 1 argument.
 pub trait UnaryFunction<N> {
     /// Gets the name of the function.
     fn name(&self) -> &str;
+
+    /// Returns the aliases of this function.
+    fn aliases(&self) -> Option<&[&str]> {
+        None
+    }
+
     /// Gets the `Notation` of this function.
     fn notation(&self) -> Notation;
+
     /// Calls this function with the given argument.
     fn call(&self, value: N) -> Result<N>;
+
+    /// Gets information about the usage of this function.
+    #[cfg(feature="docs")]
+    fn description(&self) -> Option<&str> {
+        None
+    }
 }
 
 /// Represents the associativity of an operator.

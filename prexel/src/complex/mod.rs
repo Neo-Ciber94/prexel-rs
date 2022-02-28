@@ -3,12 +3,15 @@ pub type Complex<T> = num_complex::Complex<T>;
 pub mod ops {
     use num_complex::Complex;
     use num_traits::{Float, FromPrimitive};
+    use rand::random;
+    use std::fmt::{Display, Debug};
 
     use crate::error::*;
     use crate::function::{Associativity, BinaryFunction, Function, Precedence};
     use crate::Result;
-    use rand::random;
-    use std::fmt::{Display, Debug};
+
+    #[cfg(feature = "docs")]
+    use crate::descriptions::Description;
 
     pub struct PowOperator;
     impl<T> BinaryFunction<Complex<T>> for PowOperator where T: Float{
@@ -26,6 +29,11 @@ pub mod ops {
 
         fn call(&self, left: Complex<T>, right: Complex<T>) -> Result<Complex<T>> {
             Ok(Complex::powc(&left, right))
+        }
+
+        #[cfg(feature = "docs")]
+        fn description(&self) -> Option<&str> {
+            Some(Description::Pow.into())
         }
     }
 
@@ -50,6 +58,11 @@ pub mod ops {
                 },
                 _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
             }
+        }
+
+        #[cfg(feature = "docs")]
+        fn description(&self) -> Option<&str> {
+            Some(Description::Log.into())
         }
     }
 
@@ -111,8 +124,14 @@ pub mod ops {
                 _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
             }
         }
+
+        #[cfg(feature = "docs")]
+        fn description(&self) -> Option<&str> {
+            Some(Description::Rand.into())
+        }
     }
 
+    #[cfg(not(feature = "docs"))]
     macro_rules! forward_impl_func {
         ($t:ty, $method_name:ident) => {
             forward_impl_func!($t, $method_name, $method_name);
@@ -134,6 +153,7 @@ pub mod ops {
         };
     }
 
+    #[cfg(not(feature = "docs"))]
     macro_rules! forward_impl_func_inv {
         ($t:ty, $method_name:ident) => {
             forward_impl_func_inv!($t, $method_name, $method_name);
@@ -155,94 +175,227 @@ pub mod ops {
         };
     }
 
+    #[cfg(feature = "docs")]
+    macro_rules! forward_impl_func {
+        ($t:ty, $method_name:ident, $description:expr) => {
+            forward_impl_func!($t, $method_name, $method_name, $description);
+        };
+
+        ($t:ty, $method_name:ident, $name:ident, $description:expr) => {
+            impl<T> Function<Complex<T>> for $t where T: Float{
+                fn name(&self) -> &str {
+                    stringify!($name)
+                }
+
+                fn call(&self, args: &[Complex<T>]) -> Result<Complex<T>> {
+                    match args.len() {
+                        1 => Ok(args[0].$method_name()),
+                        _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
+                    }
+                }
+
+                fn description(&self) -> Option<&str> {
+                    Some($description.into())
+                }
+            }
+        };
+    }
+
+    #[cfg(feature = "docs")]
+    macro_rules! forward_impl_func_inv {
+        ($t:ty, $method_name:ident, $description:expr) => {
+            forward_impl_func_inv!($t, $method_name, $method_name);
+        };
+
+        ($t:ty, $method_name:ident, $name:ident, $description:expr) => {
+            impl<T> Function<Complex<T>> for $t where T: Float {
+                fn name(&self) -> &str {
+                    stringify!($name)
+                }
+
+                fn call(&self, args: &[Complex<T>]) -> Result<Complex<T>> {
+                    match args.len() {
+                        1 => Ok(args[0].$method_name().inv()),
+                        _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
+                    }
+                }
+
+                fn description(&self) -> Option<&str> {
+                    Some($description.into())
+                }
+            }
+        };
+    }
+
     pub struct SqrtFunction;
+    #[cfg(not(feature = "docs"))]
     forward_impl_func!(SqrtFunction, sqrt);
+    #[cfg(feature = "docs")]
+    forward_impl_func!(SqrtFunction, sqrt, Description::Sqrt);
 
     pub struct LnFunction;
+    #[cfg(not(feature = "docs"))]
     forward_impl_func!(LnFunction, ln);
+    #[cfg(feature = "docs")]
+    forward_impl_func!(LnFunction, ln, Description::Ln);
 
     pub struct ExpFunction;
+    #[cfg(not(feature = "docs"))]
     forward_impl_func!(ExpFunction, exp);
+    #[cfg(feature = "docs")]
+    forward_impl_func!(ExpFunction, exp, Description::Exp);
 
     //////////////////// Trigonometric ////////////////////
 
     pub struct SinFunction;
+    #[cfg(not(feature = "docs"))]
     forward_impl_func!(SinFunction, sin);
+    #[cfg(feature = "docs")]
+    forward_impl_func!(SinFunction, sin, Description::Sin);
 
     pub struct CosFunction;
+    #[cfg(not(feature = "docs"))]
     forward_impl_func!(CosFunction, cos);
+    #[cfg(feature = "docs")]
+    forward_impl_func!(CosFunction, cos, Description::Cos);
 
     pub struct TanFunction;
+    #[cfg(not(feature = "docs"))]
     forward_impl_func!(TanFunction, tan);
+    #[cfg(feature = "docs")]
+    forward_impl_func!(TanFunction, tan, Description::Tan);
 
     pub struct CscFunction;
+    #[cfg(not(feature = "docs"))]
     forward_impl_func_inv!(CscFunction, sin, csc);
+    #[cfg(feature = "docs")]
+    forward_impl_func_inv!(CscFunction, sin, csc, Description::Csc);
 
     pub struct SecFunction;
+    #[cfg(not(feature = "docs"))]
     forward_impl_func_inv!(SecFunction, cos, sec);
+    #[cfg(feature = "docs")]
+    forward_impl_func_inv!(SecFunction, cos, sec, Description::Sec);
 
     pub struct CotFunction;
+    #[cfg(not(feature = "docs"))]
     forward_impl_func_inv!(CotFunction, tan, cot);
+    #[cfg(feature = "docs")]
+    forward_impl_func_inv!(CotFunction, tan, cot, Description::Cot);
 
     //////////////////// Inverse Trigonometric ////////////////////
 
     pub struct ASinFunction;
+    #[cfg(not(feature = "docs"))]
     forward_impl_func!(ASinFunction, asin);
+    #[cfg(feature = "docs")]
+    forward_impl_func!(ASinFunction, asin, Description::ASin);
 
     pub struct ACosFunction;
+    #[cfg(not(feature = "docs"))]
     forward_impl_func!(ACosFunction, acos);
+    #[cfg(feature = "docs")]
+    forward_impl_func!(ACosFunction, acos, Description::ACos);
 
     pub struct ATanFunction;
+    #[cfg(not(feature = "docs"))]
     forward_impl_func!(ATanFunction, atan);
+    #[cfg(feature = "docs")]
+    forward_impl_func!(ATanFunction, atan, Description::ATan);
 
     pub struct ACscFunction;
+    #[cfg(not(feature = "docs"))]
     forward_impl_func_inv!(ACscFunction, asin, acsc);
+    #[cfg(feature = "docs")]
+    forward_impl_func_inv!(ACscFunction, asin, acsc, Description::ACsc);
 
     pub struct ASecFunction;
+    #[cfg(not(feature = "docs"))]
     forward_impl_func_inv!(ASecFunction, acos, asec);
+    #[cfg(feature = "docs")]
+    forward_impl_func_inv!(ASecFunction, acos, asec, Description::ASec);
 
     pub struct ACotFunction;
+    #[cfg(not(feature = "docs"))]
     forward_impl_func_inv!(ACotFunction, atan, acot);
+    #[cfg(feature = "docs")]
+    forward_impl_func_inv!(ACotFunction, atan, acot, Description::ACot);
 
     //////////////////// Hyperbolic Trigonometric ////////////////////
 
     pub struct SinhFunction;
+    #[cfg(not(feature = "docs"))]
     forward_impl_func!(SinhFunction, sinh);
+    #[cfg(feature = "docs")]
+    forward_impl_func!(SinhFunction, sinh, Description::Sinh);
 
     pub struct CoshFunction;
+    #[cfg(not(feature = "docs"))]
     forward_impl_func!(CoshFunction, cosh);
+    #[cfg(feature = "docs")]
+    forward_impl_func!(CoshFunction, cosh, Description::Cosh);
 
     pub struct TanhFunction;
+    #[cfg(not(feature = "docs"))]
     forward_impl_func!(TanhFunction, tanh);
+    #[cfg(feature = "docs")]
+    forward_impl_func!(TanhFunction, tanh, Description::Tanh);
 
     pub struct CschFunction;
+    #[cfg(not(feature = "docs"))]
     forward_impl_func_inv!(CschFunction, sinh, csch);
+    #[cfg(feature = "docs")]
+    forward_impl_func_inv!(CschFunction, sinh, csch, Description::Csch);
 
     pub struct SechFunction;
+    #[cfg(not(feature = "docs"))]
     forward_impl_func_inv!(SechFunction, cosh, sech);
+    #[cfg(feature = "docs")]
+    forward_impl_func_inv!(SechFunction, cosh, sech, Description::Sech);
 
     pub struct CothFunction;
+    #[cfg(not(feature = "docs"))]
     forward_impl_func_inv!(CothFunction, tanh, coth);
+    #[cfg(feature = "docs")]
+    forward_impl_func_inv!(CothFunction, tanh, coth, Description::Coth);
 
     //////////////////// Hyperbolic Inverse Trigonometric ////////////////////
 
     pub struct ASinhFunction;
+    #[cfg(not(feature = "docs"))]
     forward_impl_func!(ASinhFunction, asinh);
+    #[cfg(feature = "docs")]
+    forward_impl_func!(ASinhFunction, asinh, Description::ASinh);
 
     pub struct ACoshFunction;
+    #[cfg(not(feature = "docs"))]
     forward_impl_func!(ACoshFunction, acosh);
+    #[cfg(feature = "docs")]
+    forward_impl_func!(ACoshFunction, acosh, Description::ACosh);
 
     pub struct ATanhFunction;
+    #[cfg(not(feature = "docs"))]
     forward_impl_func!(ATanhFunction, atanh);
+    #[cfg(feature = "docs")]
+    forward_impl_func!(ATanhFunction, atanh, Description::ATanh);
 
     pub struct ACschFunction;
+    #[cfg(not(feature = "docs"))]
     forward_impl_func_inv!(ACschFunction, asinh, acsch);
+    #[cfg(feature = "docs")]
+    forward_impl_func_inv!(ACschFunction, asinh, acsch, Description::ACsch);
 
     pub struct ASechFunction;
+    #[cfg(not(feature = "docs"))]
     forward_impl_func_inv!(ASechFunction, acosh, asech);
+    #[cfg(feature = "docs")]
+    forward_impl_func_inv!(ASechFunction, acosh, asech, Description::ASech);
 
     pub struct ACothFunction;
+    #[cfg(not(feature = "docs"))]
     forward_impl_func_inv!(ACothFunction, atanh, acoth);
+    #[cfg(feature = "docs")]
+    forward_impl_func_inv!(ACothFunction, atanh, acoth, Description::ACoth);
 }
 
 pub mod context {
@@ -259,55 +412,55 @@ pub mod context {
     impl<'a, T> DefaultContext<'a, Complex<T>> where T: Float + FromPrimitive + Debug + Display {
         #[inline]
         pub fn new_complex() -> Self {
-            Self::new_complex_with_config(Config::new()
+            Self::with_config_complex(Config::new()
                 .with_complex_number(true))
         }
 
-        pub fn new_complex_with_config(config: Config) -> Self {
+        pub fn with_config_complex(config: Config) -> Self {
             let mut context = DefaultContext::with_config(config.with_complex_number(true));
-            context.add_constant("PI", Complex::from_f64(std::f64::consts::PI).unwrap());
-            context.add_constant("E", Complex::from_f64(std::f64::consts::E).unwrap());
-            context.add_constant("i", Complex::i());
-            context.add_binary_function(AddOperator);
-            context.add_binary_function(SubOperator);
-            context.add_binary_function(MulOperator);
-            context.add_binary_function(DivOperator);
-            context.add_binary_function(ModOperator);
-            context.add_binary_function(PowOperator);
-            context.add_unary_function(UnaryPlus);
-            context.add_unary_function(UnaryMinus);
-            context.add_function(SumFunction);
-            context.add_function(AvgFunction);
-            context.add_function(ProdFunction);
-            context.add_function(SqrtFunction);
-            context.add_function(LnFunction);
-            context.add_function(LogFunction);
-            context.add_function(RandFunction);
-            context.add_function(ExpFunction);
-            context.add_function(SinFunction);
-            context.add_function(CosFunction);
-            context.add_function(TanFunction);
-            context.add_function(CscFunction);
-            context.add_function(SecFunction);
-            context.add_function(CotFunction);
-            context.add_function(ASinFunction);
-            context.add_function(ACosFunction);
-            context.add_function(ATanFunction);
-            context.add_function(ACscFunction);
-            context.add_function(ASecFunction);
-            context.add_function(ACotFunction);
-            context.add_function(SinhFunction);
-            context.add_function(CoshFunction);
-            context.add_function(TanhFunction);
-            context.add_function(CschFunction);
-            context.add_function(SechFunction);
-            context.add_function(CothFunction);
-            context.add_function(ASinhFunction);
-            context.add_function(ACoshFunction);
-            context.add_function(ATanhFunction);
-            context.add_function(ACschFunction);
-            context.add_function(ASechFunction);
-            context.add_function(ACothFunction);
+            context.add_constant("PI", Complex::from_f64(std::f64::consts::PI).unwrap()).unwrap();
+            context.add_constant("E", Complex::from_f64(std::f64::consts::E).unwrap()).unwrap();
+            context.add_constant("i", Complex::i()).unwrap();
+            context.add_binary_function(AddOperator).unwrap();
+            context.add_binary_function(SubOperator).unwrap();
+            context.add_binary_function(MulOperator).unwrap();
+            context.add_binary_function(DivOperator).unwrap();
+            context.add_binary_function(ModOperator).unwrap();
+            context.add_binary_function(PowOperator).unwrap();
+            context.add_unary_function(UnaryPlus).unwrap();
+            context.add_unary_function(UnaryMinus).unwrap();
+            context.add_function(SumFunction).unwrap();
+            context.add_function(AvgFunction).unwrap();
+            context.add_function(ProdFunction).unwrap();
+            context.add_function(SqrtFunction).unwrap();
+            context.add_function(LnFunction).unwrap();
+            context.add_function(LogFunction).unwrap();
+            context.add_function(RandFunction).unwrap();
+            context.add_function(ExpFunction).unwrap();
+            context.add_function(SinFunction).unwrap();
+            context.add_function(CosFunction).unwrap();
+            context.add_function(TanFunction).unwrap();
+            context.add_function(CscFunction).unwrap();
+            context.add_function(SecFunction).unwrap();
+            context.add_function(CotFunction).unwrap();
+            context.add_function(ASinFunction).unwrap();
+            context.add_function(ACosFunction).unwrap();
+            context.add_function(ATanFunction).unwrap();
+            context.add_function(ACscFunction).unwrap();
+            context.add_function(ASecFunction).unwrap();
+            context.add_function(ACotFunction).unwrap();
+            context.add_function(SinhFunction).unwrap();
+            context.add_function(CoshFunction).unwrap();
+            context.add_function(TanhFunction).unwrap();
+            context.add_function(CschFunction).unwrap();
+            context.add_function(SechFunction).unwrap();
+            context.add_function(CothFunction).unwrap();
+            context.add_function(ASinhFunction).unwrap();
+            context.add_function(ACoshFunction).unwrap();
+            context.add_function(ATanhFunction).unwrap();
+            context.add_function(ACschFunction).unwrap();
+            context.add_function(ASechFunction).unwrap();
+            context.add_function(ACothFunction).unwrap();
             context
         }
     }
