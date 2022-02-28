@@ -1,5 +1,5 @@
 mod endpoints;
-mod evaluator;
+mod services;
 mod models;
 mod context;
 
@@ -15,6 +15,9 @@ pub type ApiResponse = Result<HttpResponse, HttpResponse>;
 async fn main() -> std::io::Result<()> {
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
 
+    const MAX_REQUESTS : usize = 100;
+    const TIME_BETWEEN_REQUESTS : Duration = Duration::from_secs(60);
+
     let store = MemoryStore::new();
     let port = env::var("PORT")
         .map(|s| s.parse::<u16>().ok())
@@ -27,10 +30,13 @@ async fn main() -> std::io::Result<()> {
             .wrap(Logger::default())
             .wrap(
                 RateLimiter::new(MemoryStoreActor::from(store.clone()).start())
-                    .with_interval(Duration::from_secs(60))
-                    .with_max_requests(100),
+                    .with_interval(TIME_BETWEEN_REQUESTS)
+                    .with_max_requests(MAX_REQUESTS),
             )
             .service(endpoints::eval)
+            .service(endpoints::get_operators)
+            .service(endpoints::get_functions)
+            .service(endpoints::get_constants)
     })
     .bind(format!("0.0.0.0:{}", port))?
     .run()

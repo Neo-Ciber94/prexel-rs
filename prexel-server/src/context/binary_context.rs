@@ -100,6 +100,10 @@ impl UnaryFunction<Binary> for NotFunction {
     fn call(&self, value: Binary) -> prexel::Result<Binary> {
         Ok(Binary(!value.0))
     }
+
+    fn description(&self) -> Option<&str> {
+        Some("Returns the bitwise NOT of the given value.")
+    }
 }
 
 struct AndFunction;
@@ -118,6 +122,10 @@ impl BinaryFunction<Binary> for AndFunction {
 
     fn call(&self, left: Binary, right: Binary) -> prexel::Result<Binary> {
         Ok(Binary(left.0 & right.0))
+    }
+
+    fn description(&self) -> Option<&str> {
+        Some("Returns the bitwise AND of the given values.")
     }
 }
 
@@ -138,6 +146,10 @@ impl BinaryFunction<Binary> for OrFunction {
     fn call(&self, left: Binary, right: Binary) -> prexel::Result<Binary> {
         Ok(Binary(left.0 | right.0))
     }
+
+    fn description(&self) -> Option<&str> {
+        Some("Returns the bitwise OR of the given values.")
+    }
 }
 
 struct XorFunction;
@@ -156,6 +168,10 @@ impl BinaryFunction<Binary> for XorFunction {
 
     fn call(&self, left: Binary, right: Binary) -> prexel::Result<Binary> {
         Ok(Binary(left.0 ^ right.0))
+    }
+
+    fn description(&self) -> Option<&str> {
+        Some("Returns the bitwise XOR of the given values.")
     }
 }
 
@@ -177,6 +193,10 @@ impl BinaryFunction<Binary> for EqFunction {
         let result = if left.0 == right.0 { 1 } else { 0 };
         Ok(Binary(result))
     }
+
+    fn description(&self) -> Option<&str> {
+        Some("Returns 1 if the given values are equal, 0 otherwise.")
+    }
 }
 
 struct NeFunction;
@@ -196,6 +216,10 @@ impl BinaryFunction<Binary> for NeFunction {
     fn call(&self, left: Binary, right: Binary) -> prexel::Result<Binary> {
         let result = if left.0 != right.0 { 1 } else { 0 };
         Ok(Binary(result))
+    }
+
+    fn description(&self) -> Option<&str> {
+        Some("Returns 1 if the given values are not equal, 0 otherwise.")
     }
 }
 
@@ -217,6 +241,10 @@ impl BinaryFunction<Binary> for GtFunction {
         let result = if left.0 > right.0 { 1 } else { 0 };
         Ok(Binary(result))
     }
+
+    fn description(&self) -> Option<&str> {
+        Some("Returns 1 if the left value is greater than the right value, 0 otherwise.")
+    }
 }
 
 struct LtFunction;
@@ -236,6 +264,10 @@ impl BinaryFunction<Binary> for LtFunction {
     fn call(&self, left: Binary, right: Binary) -> prexel::Result<Binary> {
         let result = if left.0 < right.0 { 1 } else { 0 };
         Ok(Binary(result))
+    }
+
+    fn description(&self) -> Option<&str> {
+        Some("Returns 1 if the left value is less than the right value, 0 otherwise.")
     }
 }
 
@@ -257,6 +289,10 @@ impl BinaryFunction<Binary> for GteFunction {
         let result = if left.0 >= right.0 { 1 } else { 0 };
         Ok(Binary(result))
     }
+
+    fn description(&self) -> Option<&str> {
+        Some("Returns 1 if the left value is greater than or equal to the right value, 0 otherwise.")
+    }
 }
 
 struct LteFunction;
@@ -277,6 +313,10 @@ impl BinaryFunction<Binary> for LteFunction {
         let result = if left.0 <= right.0 { 1 } else { 0 };
         Ok(Binary(result))
     }
+
+    fn description(&self) -> Option<&str> {
+        Some("Returns 1 if the left value is less than or equal to the right value, 0 otherwise.")
+    }
 }
 
 struct ShrFunction;
@@ -296,6 +336,10 @@ impl BinaryFunction<Binary> for ShrFunction {
     fn call(&self, left: Binary, right: Binary) -> prexel::Result<Binary> {
         Ok(Binary(left.0 >> right.0))
     }
+
+    fn description(&self) -> Option<&str> {
+        Some("Returns the left value bits shifted right by the right value.")
+    }
 }
 
 struct ShlFunction;
@@ -314,5 +358,9 @@ impl BinaryFunction<Binary> for ShlFunction {
 
     fn call(&self, left: Binary, right: Binary) -> prexel::Result<Binary> {
         Ok(Binary(left.0 << right.0))
+    }
+
+    fn description(&self) -> Option<&str> {
+        Some("Returns the left value bits shifted left by the right value.")
     }
 }
