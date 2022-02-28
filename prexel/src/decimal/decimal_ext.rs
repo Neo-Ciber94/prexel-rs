@@ -16,7 +16,7 @@ pub trait DecimalExt {
     fn checked_powi(self, exponent: i64) -> Option<Decimal>;
     fn checked_sqrt(self) -> Option<Decimal>;
     fn checked_cbrt(self) -> Option<Decimal>;
-    fn checked_log10(self, exponent: Decimal) -> Option<Decimal>;
+    fn checked_log(self, exponent: Decimal) -> Option<Decimal>;
     fn checked_ln(self) -> Option<Decimal>;
     fn checked_exp(self) -> Option<Decimal>;
     fn checked_factorial(self) -> Option<Decimal>;
@@ -165,7 +165,7 @@ impl DecimalExt for Decimal {
         Some(x)
     }
 
-    fn checked_log10(self, base: Decimal) -> Option<Decimal> {
+    fn checked_log(self, base: Decimal) -> Option<Decimal> {
         let a = Self::checked_ln(self)?;
         if base == consts::TEN {
             return a.checked_div(consts::LN_10);

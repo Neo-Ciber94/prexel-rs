@@ -667,10 +667,10 @@ mod math_ops {
         fn call(&self, args: &[Decimal]) -> Result<Decimal> {
             match args.len() {
                 1 => args[0]
-                    .checked_log10(consts::TEN)
+                    .checked_log(consts::TEN)
                     .ok_or_else(|| Error::from(ErrorKind::Overflow)),
                 2 => args[0]
-                    .checked_log10(args[1])
+                    .checked_log(args[1])
                     .ok_or_else(|| Error::from(ErrorKind::Overflow)),
                 _ => Err(Error::from(ErrorKind::InvalidArgumentCount)),
             }
