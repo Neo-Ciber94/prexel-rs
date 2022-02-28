@@ -661,11 +661,11 @@ mod tests {
     fn checked_cbrt_test() {
         assert_almost_eq(
             dec!(10).checked_cbrt().unwrap(),
-            dec!(2.1544346900318837217592935665194),
+            dec!(2.1544346900318837217592935665),
         );
         assert_almost_eq(
             dec!(-5).checked_cbrt().unwrap(),
-            dec!(-1.7099759466766969893531088725439),
+            dec!(-1.7099759466766969893531088725),
         );
     }
 
@@ -694,15 +694,15 @@ mod tests {
 
         assert_almost_eq(
             Decimal::checked_ln(dec!(10)).unwrap(),
-            dec!(2.3025850929940456840179914546844),
+            dec!(2.3025850929940456840179914546),
         );
         assert_almost_eq(
             Decimal::checked_ln(dec!(9)).unwrap(),
-            dec!(2.1972245773362193827904904738451),
+            dec!(2.1972245773362193827904904738),
         );
         assert_almost_eq(
             Decimal::checked_ln(dec!(25)).unwrap(),
-            dec!(3.2188758248682007492015186664524),
+            dec!(3.2188758248682007492015186664),
         );
     }
 
@@ -713,15 +713,15 @@ mod tests {
 
         assert_almost_eq(
             Decimal::checked_exp(dec!(3)).unwrap(),
-            dec!(20.085536923187667740928529654582),
+            dec!(20.0855369231876677409285296545),
         );
         assert_almost_eq(
             Decimal::checked_exp(dec!(-4)).unwrap(),
-            dec!(0.01831563888873418029371802127324),
+            dec!(0.0183156388887341802937180212),
         );
         assert_almost_eq(
             Decimal::checked_exp(dec!(0.5)).unwrap(),
-            dec!(1.6487212707001281468486507878142),
+            dec!(1.6487212707001281468486507878),
         );
     }
 
@@ -730,7 +730,7 @@ mod tests {
         assert_almost_eq(Decimal::checked_factorial(dec!(10)).unwrap(), dec!(3628800));
         assert_almost_eq_by(
             Decimal::checked_factorial(dec!(0.3)).unwrap(),
-            dec!(0.89747069630627718849375495477148),
+            dec!(0.8974706963062771884937549547),
             10,
         );
         assert_almost_eq_by(
@@ -748,7 +748,7 @@ mod tests {
         assert_almost_eq(Decimal::sin(dec!(-90).to_radians()), dec!(-1));
         assert_almost_eq(
             Decimal::sin(dec!(45).to_radians()),
-            dec!(0.70710678118654752440084436210485),
+            dec!(0.7071067811865475244008443621),
         );
     }
 
@@ -758,11 +758,11 @@ mod tests {
         assert_almost_eq(Decimal::cos(dec!(0).to_radians()), Decimal::one());
         assert_almost_eq(
             Decimal::cos(dec!(45).to_radians()),
-            dec!(0.70710678118654752440084436210485),
+            dec!(0.7071067811865475244008443621),
         );
         assert_almost_eq(
             Decimal::cos(dec!(30).to_radians()),
-            dec!(0.86602540378443864676372317075294),
+            dec!(0.8660254037844386467637231707),
         );
     }
 
