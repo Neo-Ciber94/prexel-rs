@@ -1,4 +1,4 @@
-use crate::{ColorWriter, EvalType, Intense};
+use crate::{ColorWriter, EvalType};
 use prexel::context::DefaultContext;
 use std::fmt::Display;
 use prexel::complex::Complex;
@@ -54,9 +54,8 @@ where
         + MIN_WIDTH;
 
     for (name, value) in variables {
-        writer.write_blue(Intense::Yes, pad_right(name, max_name_length));
-        writer.write_white(Intense::No, value);
-        writer.writeln();
+        writer.blue().write(pad_right(name, max_name_length));
+        writer.white().writeln(value);
     }
 }
 
@@ -73,9 +72,8 @@ where
         + MIN_WIDTH;
 
     for (name, value) in constants {
-        writer.write_blue(Intense::Yes, pad_right(name, max_name_length));
-        writer.write_white(Intense::No, value);
-        writer.writeln();
+        writer.blue().write(pad_right(name, max_name_length));
+        writer.white().writeln(value);
     }
 }
 
@@ -109,9 +107,8 @@ where
         + MIN_WIDTH;
 
     for op in operators {
-        writer.write_blue(Intense::Yes, pad_right(&op.name, max_name_length));
-        writer.write_white(Intense::No, op.description);
-        writer.writeln();
+        writer.blue().write(pad_right(&op.name, max_name_length));
+        writer.white().writeln(op.description);
     }
 }
 
@@ -128,9 +125,8 @@ where
 
     for (name, f) in functions {
         let description = f.description().unwrap_or_default();
-        writer.write_blue(Intense::Yes, pad_right(name, max_name_length));
-        writer.write_white(Intense::No, description);
-        writer.writeln();
+        writer.blue().write(pad_right(name, max_name_length));
+        writer.white().writeln(description);
     }
 }
 

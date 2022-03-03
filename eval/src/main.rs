@@ -3,7 +3,7 @@ mod eval_expr;
 mod list;
 mod repl;
 
-use crate::writer::{ColorWriter, Intense};
+use crate::writer::ColorWriter;
 use crate::eval_expr::EvalExpr;
 use crate::list::ListKind;
 use clap::{Parser, Subcommand};
@@ -80,12 +80,12 @@ enum Commands {
 fn main() {
     let cli: Cli = Cli::parse();
     let no_color = cli.no_color;
-    let mut writer = ColorWriter::new(!no_color);
+    let mut writer = ColorWriter::new(no_color);
 
     match cli.commands {
         Commands::Eval { r#type, expression } => match EvalExpr::new(r#type).eval(&expression) {
-            Ok(result) => println!("{}", result),
-            Err(err) => writer.write_err_red(Intense::Yes, format!("{}", err)),
+            Ok(result) => writer.writeln(result, None),
+            Err(err) => writer.red().writeln_err(err),
         },
         Commands::Repl { r#type } => {
             repl::run_repl(writer, r#type);
