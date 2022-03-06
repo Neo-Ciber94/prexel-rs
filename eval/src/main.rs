@@ -2,7 +2,6 @@ mod writer;
 mod eval_expr;
 mod list;
 mod repl;
-mod repl_writer;
 mod style;
 mod collections;
 
@@ -60,7 +59,7 @@ enum Commands {
     Repl {
         #[clap(long, short, default_value = "decimal")]
         r#type: EvalType,
-        #[clap(long, short)]
+        #[clap(long)]
         history: Option<usize>
     },
 
