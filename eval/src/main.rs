@@ -2,12 +2,16 @@ mod writer;
 mod eval_expr;
 mod list;
 mod repl;
+mod repl_writer;
+mod style;
+mod collections;
 
 use crate::writer::ColorWriter;
 use crate::eval_expr::EvalExpr;
 use crate::list::ListKind;
 use clap::{Parser, Subcommand};
 use std::str::FromStr;
+use crate::repl::ReplConfig;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum EvalType {
@@ -36,7 +40,7 @@ impl FromStr for EvalType {
 #[derive(Parser, Debug)]
 #[clap(version, author, about, propagate_version = true)]
 struct Cli {
-    #[clap(long, help = "Disables color output")]
+    #[clap(long, global = true, help = "Disables color output")]
     no_color: bool,
 
     #[clap(subcommand)]
@@ -56,6 +60,8 @@ enum Commands {
     Repl {
         #[clap(long, short, default_value = "decimal")]
         r#type: EvalType,
+        #[clap(long, short)]
+        history: Option<usize>
     },
 
     #[clap(about = "Prints the constants")]
@@ -84,11 +90,15 @@ fn main() {
 
     match cli.commands {
         Commands::Eval { r#type, expression } => match EvalExpr::new(r#type).eval(&expression) {
-            Ok(result) => writer.writeln(result, None),
+            Ok(result) => writer.writeln(result),
             Err(err) => writer.red().writeln_err(err),
         },
-        Commands::Repl { r#type } => {
-            repl::run_repl(writer, r#type);
+        Commands::Repl { r#type, history } => {
+            repl::run_repl(ReplConfig {
+                history_size: history,
+                eval_type: r#type,
+                writer
+            });
         }
         Commands::Constants { r#type } => {
             list::list(writer, r#type, ListKind::Constants);

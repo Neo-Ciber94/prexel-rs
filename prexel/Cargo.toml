@@ -13,15 +13,18 @@ repository="https://github.com/Neo-Ciber94/prexel-rs/"
 [features]
 complex = ["num-complex"]
 decimal = ["rust_decimal", "rust_decimal_macros"]
+linked-hashmap = ["ritelinked"]
 docs = []
-default = ["docs"]
+default = ["docs", "linked-hashmap"]
 
 [dependencies]
 num-traits = "0.2"
 rand = "0.7"
+
 rust_decimal = {version = "1.2.2", features=["maths"], optional = true}
 rust_decimal_macros = {version = "1.2.2", optional = true}
 num-complex = { version = "0.2.4", optional = true}
+ritelinked = { version = "0.3.2", optional = true}
 
 [dev-dependencies]
 bigdecimal = "0.1.0"

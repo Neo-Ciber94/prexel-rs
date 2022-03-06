@@ -9,5 +9,4 @@ prexel = { path="../prexel", features=["complex", "decimal"] }
 clap = { version="3.1.2", features=["derive"]}
 once_cell = "1.9.0"
 crossterm = "0.23.0"
-lru = "0.7.3"
 ctrlc = "3.2.1"

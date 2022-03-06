@@ -1,10 +1,8 @@
-use std::fmt::{Debug, Display};
-use std::io::Write;
-use std::ops::ControlFlow;
-use std::str::FromStr;
-use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::time::Duration;
+use crate::collections::carray::CircularArray;
+use crate::eval_expr::CONFIG;
+use crate::repl_writer::ReplWriter;
+use crate::style::{ColoredText, TextStyling};
+use crate::{ColorWriter, EvalType};
 use crossterm::event::{self, Event, KeyCode};
 use crossterm::style::Color;
 use prexel::complex::Complex;
@@ -13,64 +11,61 @@ use prexel::evaluator::Evaluator;
 use prexel::num_traits::Zero;
 use prexel::tokenizer::Tokenizer;
 use prexel::utils::splitter::{DefaultSplitter, Outcome};
-use crate::{ColorWriter, EvalType};
-use crate::eval_expr::CONFIG;
-use crate::writer::TextStyling;
+use std::fmt::{Debug, Display};
+use std::ops::ControlFlow;
+use std::str::FromStr;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+use std::time::Duration;
 
-struct Repl<'a> {
-    writer: ColorWriter<'a>,
-    prompt: Option<String>,
-    prompt_style: Option<TextStyling>,
-    pre_text: Option<String>,
-    exit_text: Option<String>,
-    text_style: Option<TextStyling>,
-    pre_text_style: Option<TextStyling>,
-    exit_text_style: Option<TextStyling>,
+pub struct ReplConfig {
+    pub history_size: Option<usize>,
+    pub writer: ColorWriter,
+    pub eval_type: EvalType,
 }
 
-impl<'a> Repl<'a> {
+struct Repl {
+    writer: ReplWriter,
+    history_size: usize,
+    text: Option<ColoredText<String>>,
+    pre_text: Option<ColoredText<String>>,
+    exit_text: Option<ColoredText<String>>,
+}
+
+#[allow(unused)]
+impl Repl {
+    fn print_prompt(&mut self) {
+        self.writer.write_prompt();
+    }
+
     fn print_pre_text(&mut self) {
         if let Some(pre_text) = &self.pre_text {
-            if let Some(style) = self.pre_text_style {
-                self.writer.styled(style).write(pre_text);
-            } else {
-                self.writer.write(pre_text, None);
-            }
-
-            std::io::stdout().flush().unwrap();
+            self.writer
+                .fg(pre_text.fg)
+                .bg(pre_text.bg)
+                .writeln(&pre_text.content);
         }
     }
 
     fn print_exit_text(&mut self) {
         if let Some(exit_text) = &self.exit_text {
-            if let Some(style) = self.exit_text_style {
-                self.writer.styled(style).write(exit_text);
-            } else {
-                self.writer.write(exit_text, None);
-            }
+            self.writer
+                .fg(exit_text.fg)
+                .bg(exit_text.bg)
+                .rewrite(&exit_text.content);
 
-            std::io::stdout().flush().unwrap();
-        }
-    }
-
-    fn print_prompt(&mut self) {
-        if let Some(prompt) = &self.prompt {
-            if let Some(style) = self.prompt_style {
-                self.writer.styled(style).write(prompt);
-            } else {
-                self.writer.write(prompt, None);
-            }
-
-            std::io::stdout().flush().unwrap();
+            self.writer.write("\n");
         }
     }
 
     pub fn run<F>(mut self, mut f: F)
     where
-        F: FnMut(String, &mut ColorWriter) -> Option<ControlFlow<()>>,
+        F: FnMut(String, &mut ReplWriter) -> Option<ControlFlow<()>>,
     {
         let running = Arc::new(AtomicBool::new(true));
         let notifier = running.clone();
+        let mut history = CircularArray::<String>::new(self.history_size);
+        let mut history_cursor = 0_usize;
 
         ctrlc::set_handler(move || {
             notifier.store(false, Ordering::SeqCst);
@@ -79,7 +74,12 @@ impl<'a> Repl<'a> {
 
         let mut buf = String::new();
         self.print_pre_text();
-        self.print_prompt();
+
+        if self.pre_text.is_none() {
+            self.print_prompt();
+        }
+
+        self.writer.flush();
 
         while running.load(Ordering::SeqCst) {
             // Checks for an event each 100ms
@@ -92,39 +92,60 @@ impl<'a> Repl<'a> {
                     KeyCode::Backspace => {
                         if buf.len() > 0 {
                             buf.pop();
-                            print!("\x08 \x08");
+                            self.writer.write("\x08 \x08");
                         }
                     }
+                    KeyCode::Delete => {}
                     KeyCode::Enter => {
                         let s = buf.drain(..).collect::<String>();
-                        println!();
+                        self.writer.writeln("");
 
-                        match f(s, &mut self.writer) {
+                        match f(s.clone(), &mut self.writer) {
                             Some(ControlFlow::Break(_)) => {
-                                println!();
                                 break;
                             }
                             Some(ControlFlow::Continue(_)) => {
-                                self.print_prompt();
                                 continue;
                             }
-                            None => {
-                                self.print_prompt();
+                            None => {}
+                        }
+
+                        if s.trim().len() > 0 {
+                            if history.last() != Some(&s) {
+                                history.push(s);
                             }
+                            history_cursor = history.len();
                         }
                     }
-                    KeyCode::Up => {}
-                    KeyCode::Down => {}
-                    KeyCode::Tab => {}
-                    KeyCode::BackTab => {}
-                    KeyCode::Delete => {}
+                    KeyCode::Up => {
+                        if history_cursor > 0 {
+                            history_cursor -= 1;
+                            buf.clear();
+                            buf.push_str(&history[history_cursor]);
+                            self.writer.rewrite(&buf);
+                        }
+                    }
+                    KeyCode::Down => {
+                        if history_cursor < history.len() {
+                            history_cursor += 1;
+                            if history_cursor == history.len() {
+                                buf.clear();
+                            } else {
+                                buf.clear();
+                                buf.push_str(&history[history_cursor]);
+                            }
+                            self.writer.rewrite(&buf);
+                        }
+                    }
+                    KeyCode::Left => {}
+                    KeyCode::Right => {}
                     KeyCode::Char(c) => {
                         buf.push(c);
 
-                        if let Some(style) = self.text_style {
-                            self.writer.styled(style).write(c);
+                        if let Some(style) = &self.text {
+                            self.writer.fg(style.fg).bg(style.bg).write(c);
                         } else {
-                            self.writer.write(c, None);
+                            self.writer.write(c);
                         }
                     }
                     KeyCode::Esc => {
@@ -136,126 +157,165 @@ impl<'a> Repl<'a> {
             }
 
             // Flush the output
-            std::io::stdout().flush().unwrap();
+            self.writer.flush();
         }
 
         self.print_exit_text();
     }
 }
 
-struct ReplBuilder<'a> {
-    writer: Option<ColorWriter<'a>>,
-    prompt: Option<String>,
-    pre_text: Option<String>,
-    exit_text: Option<String>,
-    prompt_style: Option<TextStyling>,
-    text_style: Option<TextStyling>,
-    pre_text_style: Option<TextStyling>,
-    exit_text_style: Option<TextStyling>,
+struct ReplBuilder {
+    writer: Option<ReplWriter>,
+    history_size: Option<usize>,
+    prompt: Option<ColoredText<String>>,
+    text: Option<ColoredText<String>>,
+    pre_text: Option<ColoredText<String>>,
+    exit_text: Option<ColoredText<String>>,
 }
 
-impl<'a> ReplBuilder<'a> {
+#[allow(unused)]
+impl ReplBuilder {
     pub fn new() -> Self {
         ReplBuilder {
             writer: None,
+            history_size: None,
+            text: None,
             prompt: None,
             pre_text: None,
             exit_text: None,
-            prompt_style: None,
-            text_style: None,
-            pre_text_style: None,
-            exit_text_style: None,
         }
     }
 
-    pub fn writer(mut self, writer: ColorWriter<'a>) -> Self {
+    pub fn writer(mut self, writer: ReplWriter) -> Self {
         self.writer = Some(writer);
         self
     }
 
+    pub fn history_size(mut self, size: Option<usize>) -> Self {
+        self.history_size = size;
+        self
+    }
+
     pub fn prompt(mut self, prompt: &str) -> Self {
-        self.prompt = Some(prompt.into());
+        if let Some(colored) = &mut self.prompt {
+            colored.content = prompt.into();
+        } else {
+            self.prompt = Some(ColoredText::new(prompt.into()));
+        }
+
         self
     }
 
     pub fn prompt_style(mut self, style: TextStyling) -> Self {
-        self.prompt_style = Some(style);
+        let mut colored = self
+            .prompt
+            .get_or_insert_with(|| ColoredText::new("".into()));
+        colored.fg = style.fg;
+        colored.bg = style.bg;
         self
     }
 
     pub fn text_style(mut self, style: TextStyling) -> Self {
-        self.text_style = Some(style);
+        let mut colored = self.text.get_or_insert_with(|| ColoredText::new("".into()));
+        colored.fg = style.fg;
+        colored.bg = style.bg;
         self
     }
 
     pub fn pre_text(mut self, pre_text: &str) -> Self {
-        self.pre_text = Some(pre_text.into());
+        if let Some(colored) = &mut self.pre_text {
+            colored.content = pre_text.into();
+        } else {
+            self.pre_text = Some(ColoredText::new(pre_text.into()));
+        }
+
         self
     }
 
     pub fn pre_text_style(mut self, style: TextStyling) -> Self {
-        self.pre_text_style = Some(style);
+        let mut colored = self
+            .pre_text
+            .get_or_insert_with(|| ColoredText::new("".into()));
+        colored.fg = style.fg;
+        colored.bg = style.bg;
         self
     }
 
     pub fn exit_text(mut self, exit_text: &str) -> Self {
-        self.prompt = Some(exit_text.into());
+        if let Some(colored) = &mut self.exit_text {
+            colored.content = exit_text.into();
+        } else {
+            self.exit_text = Some(ColoredText::new(exit_text.into()));
+        }
+
         self
     }
 
     pub fn exit_text_style(mut self, style: TextStyling) -> Self {
-        self.exit_text_style = Some(style);
+        let mut colored = self
+            .exit_text
+            .get_or_insert_with(|| ColoredText::new("".into()));
+        colored.fg = style.fg;
+        colored.bg = style.bg;
         self
     }
 
-    pub fn build(self) -> Repl<'a> {
-        let writer = self.writer.unwrap_or_else(|| ColorWriter::colorized());
+    pub fn build(self) -> Repl {
+        let mut writer = self.writer.unwrap_or_else(|| ReplWriter::colored());
+        let history_size = self.history_size.unwrap_or(100);
+
+        if let Some(prompt) = self.prompt {
+            writer.set_prompt(Some(prompt));
+        }
 
         Repl {
             writer,
-            prompt: self.prompt,
-            prompt_style: self.prompt_style,
-            text_style: self.text_style,
+            history_size,
+            text: self.text,
             pre_text: self.pre_text,
-            pre_text_style: self.pre_text_style,
             exit_text: self.exit_text,
-            exit_text_style: self.exit_text_style,
         }
     }
 }
 
-pub fn run_repl(writer: ColorWriter, eval_type: EvalType) {
-    match eval_type {
+pub fn run_repl(config: ReplConfig) {
+    match config.eval_type {
         EvalType::Decimal => {
             let context = DefaultContext::with_config_decimal(CONFIG.lock().unwrap().clone());
-            eval_loop(writer, move || context)
+            eval_loop(config, move || context)
         }
         EvalType::Float => {
             let context =
                 DefaultContext::<f64>::with_config_unchecked(CONFIG.lock().unwrap().clone());
-            eval_loop(writer, move || context)
+            eval_loop(config, move || context)
         }
         EvalType::Integer => {
             let context =
                 DefaultContext::<i128>::with_config_checked(CONFIG.lock().unwrap().clone());
-            eval_loop(writer, move || context)
+            eval_loop(config, move || context)
         }
         EvalType::Complex => {
             let context = DefaultContext::<Complex<f64>>::with_config_complex(
                 CONFIG.lock().unwrap().clone().with_complex_number(true),
             );
-            eval_loop(writer, move || context)
+            eval_loop(config, move || context)
         }
     }
 }
 
-fn eval_loop<'a, N, F>(writer: ColorWriter, factory: F)
+fn eval_loop<'a, N, F>(config: ReplConfig, factory: F)
 where
     N: FromStr + Clone + Display + Debug + Zero + 'a,
     F: FnOnce() -> DefaultContext<'a, N>,
     <N as FromStr>::Err: Display,
 {
     const RESULT: &str = "$result";
+
+    let ReplConfig {
+        writer,
+        history_size,
+        ..
+    } = config;
 
     let mut context = factory();
     context.set_variable(RESULT, N::zero()).unwrap();
@@ -265,13 +325,13 @@ where
 
     let repl = ReplBuilder::new()
         .prompt(">>> ")
-        .prompt_style(TextStyling::new().fg(Color::Cyan))
-        .text_style(TextStyling::new().fg(Color::Yellow))
-        .pre_text("Press CTRL+C or type 'exit' to Exit\n")
-        .pre_text_style(TextStyling::new().fg(Color::Blue))
+        .prompt_style(TextStyling::new().fg(Some(Color::Cyan)))
+        .pre_text("Press CTRL+C or type 'exit' to Exit")
+        .pre_text_style(TextStyling::new().fg(Some(Color::Blue)))
         .exit_text("Bye bye!")
-        .exit_text_style(TextStyling::new().fg(Color::Yellow))
-        .writer(writer)
+        .exit_text_style(TextStyling::new().fg(Some(Color::Yellow)))
+        .history_size(history_size)
+        .writer(ReplWriter::new(writer))
         .build();
 
     repl.run(|s, writer| {
