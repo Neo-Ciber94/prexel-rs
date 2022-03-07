@@ -314,10 +314,12 @@ fn is_number(value: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use std::iter::Peekable;
+    use std::str::Chars;
     use crate::impl_checked_num_traits_with_field;
     use crate::token::Token::*;
-    use crate::utils::splitter::Outcome;
-
+    use crate::utils::splitter::rules::Outcome;
+    use crate::utils::splitter::rules::SplitRule;
     use super::*;
 
     #[test]
@@ -469,24 +471,29 @@ mod tests {
 
         impl_checked_num_traits_with_field!(AtNumber => 0, i64);
 
-        let splitter = DefaultSplitter::with_numeric_rule(|c, rest| {
-            if c == '@' {
-                let mut temp = String::new();
-                temp.push(c);
+        struct CustomRule;
+        impl SplitRule for CustomRule {
+            fn split(&self, c: char, rest: &mut Peekable<Chars>) -> Outcome {
+                if c == '@' {
+                    let mut temp = String::new();
+                    temp.push(c);
 
-                while let Some(c) = rest.peek() {
-                    if c.is_alphanumeric() {
-                        temp.push(*c);
-                        rest.next();
-                    } else {
-                        break;
+                    while let Some(c) = rest.peek() {
+                        if c.is_alphanumeric() {
+                            temp.push(*c);
+                            rest.next();
+                        } else {
+                            break;
+                        }
                     }
+                    Outcome::Data(temp)
+                } else {
+                    Outcome::Continue
                 }
-                Outcome::Data(temp)
-            } else {
-                Outcome::Continue
             }
-        });
+        }
+
+        let splitter = DefaultSplitter::with_numeric_rule(CustomRule);
 
         let context = DefaultContext::<AtNumber>::new_checked();
         let tokenizer = Tokenizer::with_splitter(splitter);

@@ -1,12 +1,33 @@
-use std::fmt::{Debug, Display};
-use std::iter::Peekable;
-use std::str::{Chars, FromStr};
 use crate::context::{Config, Context, DefaultContext};
-use crate::utils::splitter::{DefaultSplitter, DefaultSplitterBuilder, Outcome, rules, SplitWhitespaceOption};
+use crate::utils::splitter::{
+    rules, DefaultSplitter, DefaultSplitterBuilder, SplitWhitespaceOption,
+};
+use std::fmt::{Debug, Display};
+use std::ops::Add;
+use std::str::FromStr;
+use num_traits::Zero;
 
 /// Represents a binary number.
 #[derive(Clone, Debug, Copy, PartialEq, Eq, Ord, PartialOrd)]
 pub struct Binary(pub i128);
+
+impl Zero for Binary {
+    fn zero() -> Self {
+        Binary(0)
+    }
+
+    fn is_zero(&self) -> bool {
+        self.0 == 0
+    }
+}
+
+impl Add for Binary {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Binary(self.0 + rhs.0)
+    }
+}
 
 impl FromStr for Binary {
     type Err = <i128 as FromStr>::Err;
@@ -24,53 +45,6 @@ impl Display for Binary {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "{:b}", self.0)
     }
-}
-
-/// Returns a splitter for binary data.
-///
-/// # Example
-/// ```
-/// use prexel::binary::{Binary, binary_number_splitter};
-/// use prexel::context::DefaultContext;
-/// use prexel::evaluator::Evaluator;
-/// use prexel::tokenizer::Tokenizer;
-///
-/// let tokenizer = Tokenizer::with_splitter(binary_number_splitter());
-/// let context = DefaultContext::new_binary();
-/// let evaluator = Evaluator::with_context_and_tokenizer(context, tokenizer);
-///
-/// let result = evaluator.eval("b1000 > b0111");
-/// assert_eq!(result, Ok(Binary(1)));
-/// ```
-pub fn binary_number_splitter<'a>() -> DefaultSplitter<'a> {
-    fn is_next_binary(chars: &mut Peekable<Chars>) -> bool {
-        chars.peek() == Some(&'1') || chars.peek() == Some(&'0')
-    }
-
-    DefaultSplitterBuilder::new()
-        .rule(|c, rest| {
-            if c == 'b' && is_next_binary(rest) {
-                let mut temp = String::new();
-                temp.push(c);
-                while let Some(c) = rest.peek() {
-                    if c.is_ascii_digit() {
-                        temp.push(*c);
-                        rest.next();
-                    } else {
-                        break;
-                    }
-                }
-
-                Outcome::Data(temp)
-            } else {
-                Outcome::Continue
-            }
-        })
-        .rule(rules::next_numeric)
-        .rule(rules::next_identifier)
-        .rule(rules::next_operator)
-        .whitespace(SplitWhitespaceOption::Remove)
-        .build()
 }
 
 impl<'a> DefaultContext<'a, Binary> {
@@ -100,7 +74,33 @@ impl<'a> DefaultContext<'a, Binary> {
     }
 }
 
-mod math {
+/// Returns a splitter for binary data.
+///
+/// # Example
+/// ```
+/// use prexel::binary::{Binary, binary_number_splitter};
+/// use prexel::context::DefaultContext;
+/// use prexel::evaluator::Evaluator;
+/// use prexel::tokenizer::Tokenizer;
+///
+/// let tokenizer = Tokenizer::with_splitter(binary_number_splitter());
+/// let context = DefaultContext::new_binary();
+/// let evaluator = Evaluator::with_context_and_tokenizer(context, tokenizer);
+///
+/// let result = evaluator.eval("b1000 > b0111");
+/// assert_eq!(result, Ok(Binary(1)));
+/// ```
+pub fn binary_number_splitter<'a>() -> DefaultSplitter<'a> {
+    DefaultSplitterBuilder::new()
+        .rule(rules::SplitBinary)
+        .rule(rules::SplitNumeric)
+        .rule(rules::SplitIdentifier)
+        .rule(rules::SplitOperator)
+        .whitespace(SplitWhitespaceOption::Remove)
+        .build()
+}
+
+pub mod math {
     use crate::binary::Binary;
     use crate::function::{Associativity, BinaryFunction, Notation, Precedence, UnaryFunction};
 
@@ -433,9 +433,9 @@ mod math {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::evaluator::Evaluator;
     use crate::tokenizer::Tokenizer;
-    use super::*;
 
     fn eval(expr: &str) -> crate::Result<Binary> {
         let tokenizer = Tokenizer::with_splitter(binary_number_splitter());
@@ -458,8 +458,8 @@ mod tests {
 
     #[test]
     fn or_test() {
-        assert_eq!( eval("b101 | b110").unwrap(), Binary(7));
-        assert_eq!( eval("b101 or b110").unwrap(), Binary(7));
+        assert_eq!(eval("b101 | b110").unwrap(), Binary(7));
+        assert_eq!(eval("b101 or b110").unwrap(), Binary(7));
     }
 
     #[test]
