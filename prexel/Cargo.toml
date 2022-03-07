@@ -14,6 +14,7 @@ repository="https://github.com/Neo-Ciber94/prexel-rs/"
 complex = ["num-complex"]
 decimal = ["rust_decimal", "rust_decimal_macros"]
 linked-hashmap = ["ritelinked"]
+binary = []
 docs = []
 default = ["docs", "linked-hashmap"]
 

@@ -48,3 +48,7 @@ pub mod complex;
 #[doc(hidden)]
 #[cfg(feature = "docs")]
 pub mod descriptions;
+
+/// Support for binary numbers.
+#[cfg(feature = "binary")]
+pub mod binary;
