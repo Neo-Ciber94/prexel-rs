@@ -18,7 +18,7 @@ pub enum EvalType {
     Float,
     Integer,
     Complex,
-    //Binary,
+    Binary,
 }
 
 impl FromStr for EvalType {
@@ -30,7 +30,7 @@ impl FromStr for EvalType {
             "float" => Ok(EvalType::Float),
             "integer" => Ok(EvalType::Integer),
             "complex" => Ok(EvalType::Complex),
-            //"binary" => Ok(EvalType::Binary),
+            "binary" => Ok(EvalType::Binary),
             _ => Err(format!("Unknown eval type: {}", s)),
         }
     }

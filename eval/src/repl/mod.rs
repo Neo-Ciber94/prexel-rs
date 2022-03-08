@@ -1,13 +1,14 @@
 use std::fmt::{Debug, Display};
+use std::iter::Peekable;
 use std::ops::ControlFlow;
-use std::str::FromStr;
+use std::str::{Chars, FromStr};
 use crossterm::style::Color;
 use prexel::complex::Complex;
 use prexel::context::{Context, DefaultContext};
 use prexel::evaluator::Evaluator;
 use prexel::num_traits::Zero;
 use prexel::tokenizer::Tokenizer;
-use prexel::utils::splitter::{DefaultSplitter, Outcome};
+use prexel::utils::splitter::{DefaultSplitterBuilder, Outcome, rules, SplitWhitespaceOption};
 use crate::eval_expr::CONFIG;
 use crate::{ColorWriter, EvalType};
 use crate::repl::repl::ReplBuilder;
@@ -44,7 +45,11 @@ pub fn run_repl(config: ReplConfig) {
                 CONFIG.lock().unwrap().clone().with_complex_number(true),
             );
             eval_loop(config, move || context)
-        }
+        },
+        EvalType::Binary => {
+            let context = DefaultContext::with_config_binary(CONFIG.lock().unwrap().clone());
+            eval_loop(config, move || context)
+        },
     }
 }
 
@@ -59,13 +64,14 @@ fn eval_loop<'a, N, F>(config: ReplConfig, factory: F)
     let ReplConfig {
         writer,
         history_size,
-        ..
+        eval_type
     } = config;
 
     let mut context = factory();
     context.set_variable(RESULT, N::zero()).unwrap();
 
-    let tokenizer = repl_tokenizer();
+    let is_binary = matches!(eval_type, EvalType::Binary);
+    let tokenizer = repl_tokenizer(is_binary);
     let mut evaluator = Evaluator::with_context_and_tokenizer(context, tokenizer);
 
     let repl = ReplBuilder::new()
@@ -131,12 +137,12 @@ fn eval_loop<'a, N, F>(config: ReplConfig, factory: F)
     });
 }
 
-fn repl_tokenizer<'a, N>() -> Tokenizer<'a, N>
+fn repl_tokenizer<'a, N>(is_binary: bool) -> Tokenizer<'a, N>
     where
         N: FromStr + Clone + Display + Debug + 'a,
         <N as FromStr>::Err: Display,
 {
-    let splitter = DefaultSplitter::with_identifier_rule(|c, rest| {
+    fn next_ident(c: char, rest: &mut Peekable<Chars>) -> Outcome {
         #[inline]
         fn is_valid_char(c: &char) -> bool {
             matches!(c, 'a'..='z' | 'A'..='Z' | '0'..='9' | '_')
@@ -154,7 +160,18 @@ fn repl_tokenizer<'a, N>() -> Tokenizer<'a, N>
         } else {
             Outcome::Continue
         }
-    });
+    }
 
-    Tokenizer::with_splitter(splitter)
+    let mut builder = DefaultSplitterBuilder::new()
+        .rule(next_ident)
+        .rule(rules::next_numeric)
+        .rule(rules::next_identifier)
+        .rule(rules::next_operator)
+        .whitespace(SplitWhitespaceOption::Remove);
+
+    if is_binary {
+        builder = builder.insert_rule(0, rules::next_binary);
+    }
+
+    Tokenizer::with_splitter(builder.build())
 }

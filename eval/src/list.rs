@@ -28,6 +28,9 @@ pub fn list(writer: ColorWriter, eval_type: EvalType, list: ListKind) {
         EvalType::Complex => {
             list_with_context(writer, list, &DefaultContext::<Complex<f64>>::new_complex());
         }
+        EvalType::Binary => {
+            list_with_context(writer, list, &DefaultContext::new_binary());
+        }
     }
 }
 

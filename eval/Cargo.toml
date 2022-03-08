@@ -5,7 +5,7 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
-prexel = { path="../prexel", features=["complex", "decimal"] }
+prexel = { path="../prexel", features=["complex", "decimal", "binary"] }
 clap = { version="3.1.2", features=["derive"]}
 once_cell = "1.9.0"
 crossterm = "0.23.0"
