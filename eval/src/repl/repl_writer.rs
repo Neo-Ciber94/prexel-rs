@@ -58,7 +58,7 @@ impl ReplWriter {
         self.writer.flush();
     }
 
-    pub fn write_prompt(&mut self) {
+    pub fn write_prompt_prefix(&mut self) {
         if let Some(prompt) = &self.prompt {
             self.writer
                 .fg(prompt.fg)
@@ -75,7 +75,7 @@ impl ReplWriter {
 
     pub fn writeln<D: Display>(&mut self, data: D) {
         self.writer.writeln(data);
-        self.write_prompt();
+        self.write_prompt_prefix();
     }
 
     pub fn write_err<D: Display>(&mut self, data: D) {
@@ -84,7 +84,7 @@ impl ReplWriter {
 
     pub fn writeln_err<D: Display>(&mut self, data: D) {
         self.writer.writeln_err(data);
-        self.write_prompt();
+        self.write_prompt_prefix();
     }
 
     pub fn rewrite<D: Display>(&mut self, data: D) {
@@ -98,7 +98,7 @@ impl ReplWriter {
         )
         .unwrap();
 
-        self.write_prompt();
+        self.write_prompt_prefix();
         self.fg(fg).bg(bg).write(data);
     }
 
@@ -113,7 +113,7 @@ impl ReplWriter {
         )
         .unwrap();
 
-        self.write_prompt();
+        self.write_prompt_prefix();
         self.fg(fg).bg(bg).write(data);
     }
 

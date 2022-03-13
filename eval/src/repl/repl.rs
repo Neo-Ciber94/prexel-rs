@@ -18,11 +18,11 @@ pub struct Repl {
 
 #[allow(unused)]
 impl Repl {
-    fn print_prompt(&mut self) {
-        self.writer.write_prompt();
+    fn print_prompt_prefix(&mut self) {
+        self.writer.write_prompt_prefix();
     }
 
-    fn print_pre_text(&mut self) {
+    fn print_start_text(&mut self) {
         if let Some(pre_text) = &self.pre_text {
             self.writer
                 .fg(pre_text.fg)
@@ -57,10 +57,10 @@ impl Repl {
         .expect("Error setting Ctrl-C handler");
 
         let mut buf = String::new();
-        self.print_pre_text();
+        self.print_start_text();
 
         if self.pre_text.is_none() {
-            self.print_prompt();
+            self.print_prompt_prefix();
         }
 
         self.writer.flush();

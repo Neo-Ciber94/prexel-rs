@@ -8,7 +8,8 @@ use prexel::context::{Context, DefaultContext};
 use prexel::evaluator::Evaluator;
 use prexel::num_traits::Zero;
 use prexel::tokenizer::Tokenizer;
-use prexel::utils::splitter::{DefaultSplitterBuilder, Outcome, rules, SplitWhitespaceOption};
+use prexel::utils::splitter::{DefaultSplitterBuilder, SplitWhitespaceOption};
+use prexel::utils::splitter::rules::{self, Outcome, SplitRule};
 use crate::eval_expr::CONFIG;
 use crate::{ColorWriter, EvalType};
 use crate::repl::repl::ReplBuilder;
@@ -17,6 +18,7 @@ use crate::style::TextStyling;
 
 pub mod repl;
 pub mod repl_writer;
+pub mod theme;
 
 pub struct ReplConfig {
     pub history_size: Option<usize>,
@@ -142,35 +144,38 @@ fn repl_tokenizer<'a, N>(is_binary: bool) -> Tokenizer<'a, N>
         N: FromStr + Clone + Display + Debug + 'a,
         <N as FromStr>::Err: Display,
 {
-    fn next_ident(c: char, rest: &mut Peekable<Chars>) -> Outcome {
-        #[inline]
-        fn is_valid_char(c: &char) -> bool {
-            matches!(c, 'a'..='z' | 'A'..='Z' | '0'..='9' | '_')
-        }
-
-        if c == '$' {
-            let mut buf = String::new();
-            buf.push(c);
-
-            while let Some(c) = rest.next_if(is_valid_char) {
-                buf.push(c);
+    struct SplitRepl;
+    impl SplitRule for SplitRepl {
+        fn split(&self, c: char, rest: &mut Peekable<Chars>) -> Outcome {
+            #[inline]
+            fn is_valid_char(c: &char) -> bool {
+                matches!(c, 'a'..='z' | 'A'..='Z' | '0'..='9' | '_')
             }
 
-            Outcome::Data(buf)
-        } else {
-            Outcome::Continue
+            if c == '$' {
+                let mut buf = String::new();
+                buf.push(c);
+
+                while let Some(c) = rest.next_if(is_valid_char) {
+                    buf.push(c);
+                }
+
+                Outcome::Data(buf)
+            } else {
+                Outcome::Continue
+            }
         }
     }
 
     let mut builder = DefaultSplitterBuilder::new()
-        .rule(next_ident)
-        .rule(rules::next_numeric)
-        .rule(rules::next_identifier)
-        .rule(rules::next_operator)
+        .rule(SplitRepl)
+        .rule(rules::SplitNumeric)
+        .rule(rules::SplitIdentifier)
+        .rule(rules::SplitWithOperatorsBuilder::with_default_operators().except('$').build())
         .whitespace(SplitWhitespaceOption::Remove);
 
     if is_binary {
-        builder = builder.insert_rule(0, rules::next_binary);
+        builder = builder.insert_rule(0, rules::SplitBinary);
     }
 
     Tokenizer::with_splitter(builder.build())

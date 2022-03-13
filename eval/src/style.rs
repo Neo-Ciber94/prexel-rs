@@ -24,7 +24,7 @@ impl TextStyling {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ColoredText<D> {
     pub content: D,
     pub fg: Option<Color>,
