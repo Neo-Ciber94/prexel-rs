@@ -1,18 +1,16 @@
 use crossterm::style::Color;
-use crate::repl::repl_writer::ReplWriter;
+use crate::ColorWriter;
 use crate::style::{ColoredText, TextStyling};
 
 pub trait ReplTheme {
-    fn write_prompt(&mut self, writer: &mut ReplWriter, prompt: &str);
-    fn write_prompt_prefix(&mut self, writer: &mut ReplWriter);
-    fn write_error(&mut self, writer: &mut ReplWriter, error: &str);
-    fn write_start_text(&mut self, writer: &mut ReplWriter, text: &str);
-    fn write_exit_text(&mut self, writer: &mut ReplWriter, text: &str);
+    fn write_prompt(&mut self, writer: &mut ColorWriter, prompt: &str);
+    fn write_prompt_prefix(&mut self, writer: &mut ColorWriter);
+    fn write_error(&mut self, writer: &mut ColorWriter, error: &str);
+    fn write_start_text(&mut self, writer: &mut ColorWriter, text: &str);
+    fn write_exit_text(&mut self, writer: &mut ColorWriter, text: &str);
 
-    fn writeln_prompt(&mut self, writer: &mut ReplWriter, prompt: &str);
-    fn writeln_error(&mut self, writer: &mut ReplWriter, error: &str);
-    fn writeln_start_text(&mut self, writer: &mut ReplWriter, text: &str);
-    fn writeln_exit_text(&mut self, writer: &mut ReplWriter, text: &str);
+    fn writeln_prompt(&mut self, writer: &mut ColorWriter, prompt: &str);
+    fn writeln_error(&mut self, writer: &mut ColorWriter, error: &str);
 }
 
 pub struct SimpleTheme {
@@ -42,7 +40,7 @@ impl SimpleTheme {
 
 #[allow(unused)]
 impl ReplTheme for SimpleTheme {
-    fn write_prompt(&mut self, writer: &mut ReplWriter, prompt: &str) {
+    fn write_prompt(&mut self, writer: &mut ColorWriter, prompt: &str) {
         if let Some(style) = self.prompt {
             writer.styled(style).write(prompt);
         } else {
@@ -50,7 +48,7 @@ impl ReplTheme for SimpleTheme {
         }
     }
 
-    fn write_prompt_prefix(&mut self, writer: &mut ReplWriter) {
+    fn write_prompt_prefix(&mut self, writer: &mut ColorWriter) {
         if let Some(style) = &self.prompt_prefix {
             writer.fg(style.fg)
                 .bg(style.bg)
@@ -58,31 +56,31 @@ impl ReplTheme for SimpleTheme {
         }
     }
 
-    fn write_error(&mut self, writer: &mut ReplWriter, error: &str) {
+    fn write_error(&mut self, writer: &mut ColorWriter, error: &str) {
         if let Some(style) = self.error {
-            writer.styled(style).write(error);
+            writer.styled(style).write_err(error);
         } else {
-            writer.write(error);
+            writer.write_err(error);
         }
     }
 
-    fn write_start_text(&mut self, writer: &mut ReplWriter, text: &str) {
+    fn write_start_text(&mut self, writer: &mut ColorWriter, text: &str) {
         if let Some(style) = self.start_text {
-            writer.styled(style).write(text);
+            writer.styled(style).writeln(text);
         } else {
-            writer.write(text);
+            writer.writeln(text);
         }
     }
 
-    fn write_exit_text(&mut self, writer: &mut ReplWriter, text: &str) {
+    fn write_exit_text(&mut self, writer: &mut ColorWriter, text: &str) {
         if let Some(style) = self.exit_text {
-            writer.styled(style).write(text);
+            writer.styled(style).writeln(text);
         } else {
-            writer.write(text);
+            writer.writeln(text);
         }
     }
 
-    fn writeln_prompt(&mut self, writer: &mut ReplWriter, prompt: &str) {
+    fn writeln_prompt(&mut self, writer: &mut ColorWriter, prompt: &str) {
         if let Some(style) = self.prompt {
             writer.styled(style).writeln(prompt);
         } else {
@@ -90,27 +88,11 @@ impl ReplTheme for SimpleTheme {
         }
     }
 
-    fn writeln_error(&mut self, writer: &mut ReplWriter, error: &str) {
+    fn writeln_error(&mut self, writer: &mut ColorWriter, error: &str) {
         if let Some(style) = self.error {
-            writer.styled(style).writeln(error);
+            writer.styled(style).writeln_err(error);
         } else {
-            writer.writeln(error);
-        }
-    }
-
-    fn writeln_start_text(&mut self, writer: &mut ReplWriter, text: &str) {
-        if let Some(style) = self.start_text {
-            writer.styled(style).writeln(text);
-        } else {
-            writer.writeln(text);
-        }
-    }
-
-    fn writeln_exit_text(&mut self, writer: &mut ReplWriter, text: &str) {
-        if let Some(style) = self.exit_text {
-            writer.styled(style).writeln(text);
-        } else {
-            writer.writeln(text);
+            writer.writeln_err(error);
         }
     }
 }
@@ -175,39 +157,31 @@ pub struct DefaultTheme;
 
 #[allow(unused)]
 impl ReplTheme for DefaultTheme {
-    fn write_prompt(&mut self, writer: &mut ReplWriter, prompt: &str) {
+    fn write_prompt(&mut self, writer: &mut ColorWriter, prompt: &str) {
         writer.write(prompt);
     }
 
-    fn write_prompt_prefix(&mut self, writer: &mut ReplWriter) {
+    fn write_prompt_prefix(&mut self, writer: &mut ColorWriter) {
         writer.fg(Some(Color::Cyan)).write(">>> ");
     }
 
-    fn write_error(&mut self, writer: &mut ReplWriter, error: &str) {
-        writer.fg(Some(Color::Red)).write(error);
+    fn write_error(&mut self, writer: &mut ColorWriter, error: &str) {
+        writer.fg(Some(Color::Red)).write_err(error);
     }
 
-    fn write_start_text(&mut self, writer: &mut ReplWriter, text: &str) {
+    fn write_start_text(&mut self, writer: &mut ColorWriter, text: &str) {
         writer.fg(Some(Color::Green)).write(text);
     }
 
-    fn write_exit_text(&mut self, writer: &mut ReplWriter, text: &str) {
+    fn write_exit_text(&mut self, writer: &mut ColorWriter, text: &str) {
         writer.fg(Some(Color::Yellow)).write(text);
     }
 
-    fn writeln_prompt(&mut self, writer: &mut ReplWriter, prompt: &str) {
+    fn writeln_prompt(&mut self, writer: &mut ColorWriter, prompt: &str) {
         writer.writeln(prompt);
     }
 
-    fn writeln_error(&mut self, writer: &mut ReplWriter, error: &str) {
-        writer.fg(Some(Color::Red)).writeln(error);
-    }
-
-    fn writeln_start_text(&mut self, writer: &mut ReplWriter, text: &str) {
-        writer.fg(Some(Color::Green)).writeln(text);
-    }
-
-    fn writeln_exit_text(&mut self, writer: &mut ReplWriter, text: &str) {
-        writer.fg(Some(Color::Yellow)).writeln(text);
+    fn writeln_error(&mut self, writer: &mut ColorWriter, error: &str) {
+        writer.fg(Some(Color::Red)).writeln_err(error);
     }
 }

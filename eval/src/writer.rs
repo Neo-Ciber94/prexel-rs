@@ -1,5 +1,6 @@
 use std::fmt::Display;
 use std::io::Write;
+use std::sync::atomic::{AtomicBool, Ordering};
 use crossterm::style::{Color, StyledContent, Stylize};
 use crate::style::TextStyling;
 
@@ -14,25 +15,30 @@ macro_rules! impl_colored_methods {
     }
 }
 
+/// Whether if use or not colored output.
+static USE_COLORS : AtomicBool = AtomicBool::new(true);
+
+pub fn use_colors() -> bool {
+    USE_COLORS.load(Ordering::SeqCst)
+}
+
+pub fn set_use_colors(value: bool) {
+    USE_COLORS.store(value, Ordering::SeqCst);
+}
+
 #[derive(Debug, Clone)]
 pub struct ColorWriter {
-    pub(crate) no_color: bool,
     pub(crate) fg: Option<Color>,
     pub(crate) bg: Option<Color>
 }
 
 #[allow(unused)]
 impl ColorWriter {
-    pub fn new(no_color: bool) -> Self {
+    pub fn new() -> Self {
         ColorWriter {
-            no_color,
             fg: None,
             bg: None
         }
-    }
-
-    pub fn colored() -> Self {
-        ColorWriter::new(false)
     }
 
     pub fn flush(&self) {
@@ -57,7 +63,7 @@ impl ColorWriter {
     }
 
     pub fn write<D: Display>(&mut self, data: D) {
-        if self.no_color {
+        if !use_colors() {
             print!("{}", data);
         } else {
             let mut styled = StyledContent::new(Default::default(), data);
@@ -81,7 +87,7 @@ impl ColorWriter {
     }
 
     pub fn write_err<D: Display>(&mut self, data: D) {
-        if self.no_color {
+        if !use_colors() {
             eprint!("{}", data);
         } else {
             let mut styled = StyledContent::new(Default::default(), data);
@@ -102,10 +108,6 @@ impl ColorWriter {
     pub fn writeln_err<D: Display>(&mut self, data: D) {
         self.write_err(data);
         self.write_err("\n");
-    }
-
-    pub fn no_color(&self) -> bool {
-        self.no_color
     }
 
     pub fn reset(&mut self) -> &mut Self {

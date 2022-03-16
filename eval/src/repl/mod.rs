@@ -2,7 +2,6 @@ use std::fmt::{Debug, Display};
 use std::iter::Peekable;
 use std::ops::ControlFlow;
 use std::str::{Chars, FromStr};
-use crossterm::style::Color;
 use prexel::complex::Complex;
 use prexel::context::{Context, DefaultContext};
 use prexel::evaluator::Evaluator;
@@ -11,10 +10,9 @@ use prexel::tokenizer::Tokenizer;
 use prexel::utils::splitter::{DefaultSplitterBuilder, SplitWhitespaceOption};
 use prexel::utils::splitter::rules::{self, Outcome, SplitRule};
 use crate::eval_expr::CONFIG;
-use crate::{ColorWriter, EvalType};
+use crate::EvalType;
 use crate::repl::repl::ReplBuilder;
 use crate::repl::repl_writer::ReplWriter;
-use crate::style::TextStyling;
 
 pub mod repl;
 pub mod repl_writer;
@@ -22,7 +20,6 @@ pub mod theme;
 
 pub struct ReplConfig {
     pub history_size: Option<usize>,
-    pub writer: ColorWriter,
     pub eval_type: EvalType,
 }
 
@@ -64,7 +61,6 @@ fn eval_loop<'a, N, F>(config: ReplConfig, factory: F)
     const RESULT: &str = "$result";
 
     let ReplConfig {
-        writer,
         history_size,
         eval_type
     } = config;
@@ -77,14 +73,10 @@ fn eval_loop<'a, N, F>(config: ReplConfig, factory: F)
     let mut evaluator = Evaluator::with_context_and_tokenizer(context, tokenizer);
 
     let repl = ReplBuilder::new()
-        .prompt(">>> ")
-        .prompt_style(TextStyling::new().fg(Some(Color::Cyan)))
         .pre_text("Press CTRL+C or type 'exit' to Exit")
-        .pre_text_style(TextStyling::new().fg(Some(Color::Blue)))
         .exit_text("Bye bye!")
-        .exit_text_style(TextStyling::new().fg(Some(Color::Yellow)))
         .history_size(history_size)
-        .writer(ReplWriter::new(writer))
+        .writer(ReplWriter::new())
         .build();
 
     repl.run(|s, writer| {
@@ -104,18 +96,18 @@ fn eval_loop<'a, N, F>(config: ReplConfig, factory: F)
                     .collect::<Vec<_>>();
 
                 if parts.len() != 2 {
-                    writer.red().writeln("Invalid assignment");
+                    writer.writeln_error("Invalid assignment");
                 } else {
                     let variable = &parts[0];
                     match N::from_str(&parts[1]) {
                         Ok(value) => {
                             if let Err(err) = evaluator.mut_context().set_variable(variable, value)
                             {
-                                writer.red().writeln(err);
+                                writer.writeln_error(&err.to_string());
                             }
                         }
                         Err(err) => {
-                            writer.red().writeln(err);
+                            writer.writeln_error(&err.to_string());
                         }
                     }
                 }
@@ -126,11 +118,11 @@ fn eval_loop<'a, N, F>(config: ReplConfig, factory: F)
                 Ok(result) => {
                     writer.green().writeln(&result);
                     if let Err(err) = evaluator.mut_context().set_variable(RESULT, result) {
-                        writer.red().writeln(err);
+                        writer.writeln_error(&err.to_string());
                     }
                 }
                 Err(err) => {
-                    writer.red().writeln(err);
+                    writer.writeln_error(&err.to_string());
                 }
             },
         }

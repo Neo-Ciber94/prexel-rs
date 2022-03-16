@@ -14,28 +14,30 @@ pub enum ListKind {
     Functions,
 }
 
-pub fn list(writer: ColorWriter, eval_type: EvalType, list: ListKind) {
+pub fn list(eval_type: EvalType, list: ListKind) {
     match eval_type {
         EvalType::Decimal => {
-            list_with_context(writer, list, &DefaultContext::new_decimal());
+            list_with_context(list, &DefaultContext::new_decimal());
         },
         EvalType::Float => {
-            list_with_context(writer, list, &DefaultContext::<f64>::new_unchecked());
+            list_with_context(list, &DefaultContext::<f64>::new_unchecked());
         },
         EvalType::Integer => {
-            list_with_context(writer, list, &DefaultContext::<i128>::new_checked());
+            list_with_context(list, &DefaultContext::<i128>::new_checked());
         }
         EvalType::Complex => {
-            list_with_context(writer, list, &DefaultContext::<Complex<f64>>::new_complex());
+            list_with_context(list, &DefaultContext::<Complex<f64>>::new_complex());
         }
         EvalType::Binary => {
-            list_with_context(writer, list, &DefaultContext::new_binary());
+            list_with_context(list, &DefaultContext::new_binary());
         }
     }
 }
 
-pub fn list_with_context<N>(mut writer: ColorWriter, list: ListKind, context: &DefaultContext<'_, N>) where
+pub fn list_with_context<N>(list: ListKind, context: &DefaultContext<'_, N>) where
     N: Display{
+    let mut writer = ColorWriter::new();
+
     match list {
         ListKind::Variables => list_variables(&mut writer, context),
         ListKind::Constants => list_constants(&mut writer, context),

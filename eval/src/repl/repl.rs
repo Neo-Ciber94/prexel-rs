@@ -6,42 +6,16 @@ use crossterm::event;
 use crossterm::event::{Event, KeyCode};
 use crate::collections::carray::CircularArray;
 use crate::repl::repl_writer::ReplWriter;
-use crate::style::{ColoredText, TextStyling};
 
 pub struct Repl {
     writer: ReplWriter,
     history_size: usize,
-    text: Option<ColoredText<String>>,
-    pre_text: Option<ColoredText<String>>,
-    exit_text: Option<ColoredText<String>>,
+    pre_text: Option<String>,
+    exit_text: Option<String>,
 }
 
 #[allow(unused)]
 impl Repl {
-    fn print_prompt_prefix(&mut self) {
-        self.writer.write_prompt_prefix();
-    }
-
-    fn print_start_text(&mut self) {
-        if let Some(pre_text) = &self.pre_text {
-            self.writer
-                .fg(pre_text.fg)
-                .bg(pre_text.bg)
-                .writeln(&pre_text.content);
-        }
-    }
-
-    fn print_exit_text(&mut self) {
-        if let Some(exit_text) = &self.exit_text {
-            self.writer
-                .fg(exit_text.fg)
-                .bg(exit_text.bg)
-                .rewrite(&exit_text.content);
-
-            self.writer.write("\n");
-        }
-    }
-
     pub fn run<F>(mut self, mut f: F)
     where
         F: FnMut(String, &mut ReplWriter) -> Option<ControlFlow<()>>,
@@ -57,10 +31,10 @@ impl Repl {
         .expect("Error setting Ctrl-C handler");
 
         let mut buf = String::new();
-        self.print_start_text();
-
-        if self.pre_text.is_none() {
-            self.print_prompt_prefix();
+        if let Some(pre_text) = self.pre_text {
+            self.writer.write_start_text(&pre_text);
+        } else {
+            self.writer.write_prompt_prefix();
         }
 
         self.writer.flush();
@@ -126,11 +100,15 @@ impl Repl {
                     KeyCode::Char(c) => {
                         buf.push(c);
 
-                        if let Some(style) = &self.text {
-                            self.writer.fg(style.fg).bg(style.bg).write(c);
-                        } else {
-                            self.writer.write(c);
-                        }
+                        // if let Some(style) = &self.text {
+                        //     self.writer.fg(style.fg).bg(style.bg).write(c);
+                        // } else {
+                        //     self.writer.write(c);
+                        // }
+
+                        let mut char_buf = [0; 4];
+                        let char_str = c.encode_utf8(&mut char_buf);
+                        self.writer.write_prompt(char_str);
                     }
                     KeyCode::Esc => {
                         break;
@@ -144,17 +122,17 @@ impl Repl {
             self.writer.flush();
         }
 
-        self.print_exit_text();
+        if let Some(exit_text) = self.exit_text {
+            self.writer.write_exit_text(&exit_text);
+        }
     }
 }
 
 pub struct ReplBuilder {
     writer: Option<ReplWriter>,
     history_size: Option<usize>,
-    prompt: Option<ColoredText<String>>,
-    text: Option<ColoredText<String>>,
-    pre_text: Option<ColoredText<String>>,
-    exit_text: Option<ColoredText<String>>,
+    pre_text: Option<String>,
+    exit_text: Option<String>,
 }
 
 #[allow(unused)]
@@ -163,8 +141,6 @@ impl ReplBuilder {
         ReplBuilder {
             writer: None,
             history_size: None,
-            text: None,
-            prompt: None,
             pre_text: None,
             exit_text: None,
         }
@@ -180,82 +156,23 @@ impl ReplBuilder {
         self
     }
 
-    pub fn prompt(mut self, prompt: &str) -> Self {
-        if let Some(colored) = &mut self.prompt {
-            colored.content = prompt.into();
-        } else {
-            self.prompt = Some(ColoredText::new(prompt.into()));
-        }
-
-        self
-    }
-
-    pub fn prompt_style(mut self, style: TextStyling) -> Self {
-        let mut colored = self
-            .prompt
-            .get_or_insert_with(|| ColoredText::new("".into()));
-        colored.fg = style.fg;
-        colored.bg = style.bg;
-        self
-    }
-
-    pub fn text_style(mut self, style: TextStyling) -> Self {
-        let mut colored = self.text.get_or_insert_with(|| ColoredText::new("".into()));
-        colored.fg = style.fg;
-        colored.bg = style.bg;
-        self
-    }
-
     pub fn pre_text(mut self, pre_text: &str) -> Self {
-        if let Some(colored) = &mut self.pre_text {
-            colored.content = pre_text.into();
-        } else {
-            self.pre_text = Some(ColoredText::new(pre_text.into()));
-        }
-
-        self
-    }
-
-    pub fn pre_text_style(mut self, style: TextStyling) -> Self {
-        let mut colored = self
-            .pre_text
-            .get_or_insert_with(|| ColoredText::new("".into()));
-        colored.fg = style.fg;
-        colored.bg = style.bg;
+        self.pre_text = Some(pre_text.to_owned());
         self
     }
 
     pub fn exit_text(mut self, exit_text: &str) -> Self {
-        if let Some(colored) = &mut self.exit_text {
-            colored.content = exit_text.into();
-        } else {
-            self.exit_text = Some(ColoredText::new(exit_text.into()));
-        }
-
-        self
-    }
-
-    pub fn exit_text_style(mut self, style: TextStyling) -> Self {
-        let mut colored = self
-            .exit_text
-            .get_or_insert_with(|| ColoredText::new("".into()));
-        colored.fg = style.fg;
-        colored.bg = style.bg;
+        self.exit_text = Some(exit_text.to_owned());
         self
     }
 
     pub fn build(self) -> Repl {
-        let mut writer = self.writer.unwrap_or_else(|| ReplWriter::colored());
+        let mut writer = self.writer.unwrap_or_else(|| ReplWriter::new());
         let history_size = self.history_size.unwrap_or(100);
-
-        if let Some(prompt) = self.prompt {
-            writer.set_prompt(Some(prompt));
-        }
 
         Repl {
             writer,
             history_size,
-            text: self.text,
             pre_text: self.pre_text,
             exit_text: self.exit_text,
         }
