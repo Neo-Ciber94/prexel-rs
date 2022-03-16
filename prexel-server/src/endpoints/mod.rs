@@ -5,7 +5,6 @@ use actix_web::{get, post, web, HttpRequest, HttpResponse, Responder, Result};
 use prexel::complex::Complex;
 use prexel::context::DefaultContext;
 use serde::{Deserialize, Serialize};
-use crate::context::BinaryContext;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct EvalParams {

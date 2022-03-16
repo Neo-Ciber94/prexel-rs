@@ -1,4 +1,4 @@
-use crate::{ColorWriter, EvalType, Intense};
+use crate::{ColorWriter, EvalType};
 use prexel::context::DefaultContext;
 use std::fmt::Display;
 use prexel::complex::Complex;
@@ -14,25 +14,30 @@ pub enum ListKind {
     Functions,
 }
 
-pub fn list(writer: ColorWriter, eval_type: EvalType, list: ListKind) {
+pub fn list(eval_type: EvalType, list: ListKind) {
     match eval_type {
         EvalType::Decimal => {
-            list_with_context(writer, list, &DefaultContext::new_decimal());
+            list_with_context(list, &DefaultContext::new_decimal());
         },
         EvalType::Float => {
-            list_with_context(writer, list, &DefaultContext::<f64>::new_unchecked());
+            list_with_context(list, &DefaultContext::<f64>::new_unchecked());
         },
         EvalType::Integer => {
-            list_with_context(writer, list, &DefaultContext::<i128>::new_checked());
+            list_with_context(list, &DefaultContext::<i128>::new_checked());
         }
         EvalType::Complex => {
-            list_with_context(writer, list, &DefaultContext::<Complex<f64>>::new_complex());
+            list_with_context(list, &DefaultContext::<Complex<f64>>::new_complex());
+        }
+        EvalType::Binary => {
+            list_with_context(list, &DefaultContext::new_binary());
         }
     }
 }
 
-pub fn list_with_context<N>(mut writer: ColorWriter, list: ListKind, context: &DefaultContext<'_, N>) where
+pub fn list_with_context<N>(list: ListKind, context: &DefaultContext<'_, N>) where
     N: Display{
+    let mut writer = ColorWriter::new();
+
     match list {
         ListKind::Variables => list_variables(&mut writer, context),
         ListKind::Constants => list_constants(&mut writer, context),
@@ -54,9 +59,8 @@ where
         + MIN_WIDTH;
 
     for (name, value) in variables {
-        writer.write_blue(Intense::Yes, pad_right(name, max_name_length));
-        writer.write_white(Intense::No, value);
-        writer.writeln();
+        writer.blue().write(pad_right(name, max_name_length));
+        writer.white().writeln(value);
     }
 }
 
@@ -73,9 +77,8 @@ where
         + MIN_WIDTH;
 
     for (name, value) in constants {
-        writer.write_blue(Intense::Yes, pad_right(name, max_name_length));
-        writer.write_white(Intense::No, value);
-        writer.writeln();
+        writer.blue().write(pad_right(name, max_name_length));
+        writer.white().writeln(value);
     }
 }
 
@@ -109,9 +112,8 @@ where
         + MIN_WIDTH;
 
     for op in operators {
-        writer.write_blue(Intense::Yes, pad_right(&op.name, max_name_length));
-        writer.write_white(Intense::No, op.description);
-        writer.writeln();
+        writer.blue().write(pad_right(&op.name, max_name_length));
+        writer.white().writeln(op.description);
     }
 }
 
@@ -128,9 +130,8 @@ where
 
     for (name, f) in functions {
         let description = f.description().unwrap_or_default();
-        writer.write_blue(Intense::Yes, pad_right(name, max_name_length));
-        writer.write_white(Intense::No, description);
-        writer.writeln();
+        writer.blue().write(pad_right(name, max_name_length));
+        writer.white().writeln(description);
     }
 }
 

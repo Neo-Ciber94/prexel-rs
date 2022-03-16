@@ -1,19 +1,4 @@
-use std::iter::Peekable;
-use std::marker::PhantomData;
-use std::str::Chars;
-
-/// The result of a split rule.
-pub enum Outcome {
-    /// The result of a split.
-    Data(String),
-    /// Continue to the next rule.
-    Continue,
-    /// Skips the current `char`.
-    Skip,
-}
-
-/// A rule for splitting a string into tokens.
-pub type SplitRule<'a> = Box<dyn Fn(char, &mut Peekable<Chars>) -> Outcome + 'a>;
+use crate::utils::splitter::rules::{Outcome, SplitRule};
 
 /// A trait that provides a method to convert a string into a sequence of tokens.
 pub trait Splitter {
@@ -41,45 +26,44 @@ pub enum SplitWhitespaceOption {
 /// assert_eq!(["2", "+", "3"].to_vec(), tokens);
 /// ```
 pub struct DefaultSplitter<'a> {
-    rules: Vec<SplitRule<'a>>,
+    rules: Vec<Box<dyn SplitRule + 'a>>,
 }
 
 impl<'a> DefaultSplitter<'a> {
     #[inline]
     pub fn new(kind: SplitWhitespaceOption) -> DefaultSplitter<'a> {
         DefaultSplitterBuilder::default()
-            .rule(rules::next_numeric)
-            .rule(rules::next_identifier)
-            .rule(rules::next_operator)
+            .rule(rules::SplitNumeric)
+            .rule(rules::SplitIdentifier)
+            .rule(rules::SplitOperator)
             .whitespace(kind)
             .build()
     }
 
     pub fn with_numeric_rule<F: 'a>(rule: F) -> Self
     where
-        F: Fn(char, &mut Peekable<Chars>) -> Outcome,
+        F: SplitRule + 'a,
     {
         DefaultSplitterBuilder::default()
             .rule(rule)
-            .rule(rules::next_identifier)
-            .rule(rules::next_operator)
+            .rule(rules::SplitIdentifier)
+            .rule(rules::SplitOperator)
             .whitespace(SplitWhitespaceOption::Remove)
             .build()
     }
 
     pub fn with_identifier_rule<F: 'a>(rule: F) -> Self
-        where
-            F: Fn(char, &mut Peekable<Chars>) -> Outcome,
+    where
+        F: SplitRule + 'a,
     {
         DefaultSplitterBuilder::default()
-            .rule(rules::next_numeric)
+            .rule(rules::SplitNumeric)
             .rule(rule)
-            .rule(rules::next_identifier)
-            .rule(rules::next_operator)
+            .rule(rules::SplitIdentifier)
+            .rule(rules::SplitOperator)
             .whitespace(SplitWhitespaceOption::Remove)
             .build()
     }
-
 
     #[inline]
     pub fn builder() -> DefaultSplitterBuilder<'a> {
@@ -87,8 +71,8 @@ impl<'a> DefaultSplitter<'a> {
     }
 
     #[inline]
-    pub fn rules(&self) -> &[SplitRule] {
-        &self.rules
+    pub fn rules(&self) -> &[Box<dyn SplitRule + 'a>] {
+        self.rules.as_slice()
     }
 }
 
@@ -103,7 +87,7 @@ impl Splitter for DefaultSplitter<'_> {
             let mut next = false;
 
             for rule in &self.rules {
-                match rule(c, &mut iterator) {
+                match rule.split(c, &mut iterator) {
                     Outcome::Data(s) => {
                         tokens.push(s);
                         next = true;
@@ -135,9 +119,8 @@ impl Default for DefaultSplitter<'_> {
 }
 
 pub struct DefaultSplitterBuilder<'a> {
-    rules: Vec<SplitRule<'a>>,
+    rules: Vec<Box<dyn SplitRule + 'a>>,
     whitespace_option: Option<SplitWhitespaceOption>,
-    _marker: &'a PhantomData<()>,
 }
 
 impl<'a> DefaultSplitterBuilder<'a> {
@@ -145,13 +128,20 @@ impl<'a> DefaultSplitterBuilder<'a> {
         DefaultSplitterBuilder {
             rules: Vec::new(),
             whitespace_option: None,
-            _marker: &PhantomData,
         }
+    }
+
+    pub fn insert_rule<F: 'a>(mut self, index: usize, rule: F) -> Self
+    where
+        F: SplitRule + 'a,
+    {
+        self.rules.insert(index, Box::new(rule));
+        self
     }
 
     pub fn rule<F: 'a>(mut self, rule: F) -> Self
     where
-        F: Fn(char, &mut Peekable<Chars>) -> Outcome,
+        F: SplitRule + 'a,
     {
         self.rules.push(Box::new(rule));
         self
@@ -173,8 +163,8 @@ impl<'a> DefaultSplitterBuilder<'a> {
         let whitespace_option = whitespace_option.unwrap_or(SplitWhitespaceOption::None);
 
         match whitespace_option {
-            SplitWhitespaceOption::None => {},
-            SplitWhitespaceOption::Remove => rules.push(Box::new(rules::skip_whitespace)),
+            SplitWhitespaceOption::None => {}
+            SplitWhitespaceOption::Remove => rules.push(Box::new(rules::SkipWhitespace)),
         };
 
         DefaultSplitter { rules }
@@ -188,115 +178,238 @@ impl Default for DefaultSplitterBuilder<'_> {
 }
 
 pub mod rules {
-    use crate::utils::splitter::Outcome;
+    use std::collections::HashSet;
     use std::iter::Peekable;
     use std::str::Chars;
 
-    pub fn next_identifier(c: char, rest: &mut Peekable<Chars>) -> Outcome {
-        #[inline]
-        fn is_valid_char(c: &char) -> bool {
-            matches!(c, 'a'..='z' | 'A'..='Z' | '0'..='9' | '_')
-        }
-
-        match c {
-            'a'..='z' | 'A'..='Z' | '_' => {
-                let mut temp = String::new();
-                temp.push(c);
-
-                while let Some(c) = rest.next_if(is_valid_char) {
-                    temp.push(c);
-                }
-
-                Outcome::Data(temp)
-            }
-            _ => Outcome::Continue,
-        }
+    /// The result of a split rule.
+    pub enum Outcome {
+        /// The result of a split.
+        Data(String),
+        /// Continue to the next rule.
+        Continue,
+        /// Skips the current `char`.
+        Skip,
     }
 
-    pub fn next_numeric(c: char, rest: &mut Peekable<Chars>) -> Outcome {
-        #[inline]
-        fn is_valid_char(c: &char) -> bool {
-            matches!(c, '0'..='9' | '.')
-        }
+    pub trait SplitRule {
+        fn split(&self, c: char, rest: &mut Peekable<Chars>) -> Outcome;
+    }
 
-        match c {
-            '0'..='9' => {
-                let mut temp = String::new();
-                temp.push(c);
+    pub struct SplitIdentifier;
+    impl SplitRule for SplitIdentifier {
+        fn split(&self, c: char, rest: &mut Peekable<Chars>) -> Outcome {
+            #[inline]
+            fn is_valid_char(c: &char) -> bool {
+                matches!(c, 'a'..='z' | 'A'..='Z' | '0'..='9' | '_')
+            }
 
-                let mut has_decimal_point = false;
+            match c {
+                'a'..='z' | 'A'..='Z' | '_' => {
+                    let mut temp = String::new();
+                    temp.push(c);
 
-                while let Some(c) = rest.next_if(is_valid_char) {
-                    if c == '.' {
-                        if has_decimal_point {
-                            break;
-                        }
-
-                        has_decimal_point = true;
+                    while let Some(c) = rest.next_if(is_valid_char) {
+                        temp.push(c);
                     }
 
-                    temp.push(c);
+                    Outcome::Data(temp)
                 }
-
-                Outcome::Data(temp)
+                _ => Outcome::Continue,
             }
-            _ => Outcome::Continue,
         }
     }
 
-    pub fn next_operator(c: char, rest: &mut Peekable<Chars>) -> Outcome {
-        fn is_valid_char(c: &char) -> bool {
-            matches!(
-                c, '~'
-                | '`'
-                | '!'
-                | '@'
-                | '#'
-                | '$'
-                | '%'
-                | '^'
-                | '&'
-                | '*'
-                | '-'
-                | '+'
-                | '_'
-                | ':'
-                | ';'
-                | '"'
-                | '\''
-                | '|'
-                | '\\'
-                | '?'
-                | '.'
-                | '<'
-                | '>'
-                | '/'
-                | '='
-                | ','
-            )
+    pub struct SplitNumeric;
+    impl SplitRule for SplitNumeric {
+        fn split(&self, c: char, rest: &mut Peekable<Chars>) -> Outcome {
+            #[inline]
+            fn is_valid_char(c: &char) -> bool {
+                matches!(c, '0'..='9' | '.')
+            }
+
+            match c {
+                '0'..='9' => {
+                    let mut temp = String::new();
+                    temp.push(c);
+
+                    let mut has_decimal_point = false;
+
+                    while let Some(c) = rest.next_if(is_valid_char) {
+                        if c == '.' {
+                            if has_decimal_point {
+                                break;
+                            }
+
+                            has_decimal_point = true;
+                        }
+
+                        temp.push(c);
+                    }
+
+                    Outcome::Data(temp)
+                }
+                _ => Outcome::Continue,
+            }
+        }
+    }
+
+    pub struct SplitOperator;
+    impl SplitRule for SplitOperator {
+        fn split(&self, c: char, rest: &mut Peekable<Chars>) -> Outcome {
+            fn is_valid_char(c: &char) -> bool {
+                matches!(
+                    c,
+                    '~' | '`'
+                        | '!'
+                        | '@'
+                        | '#'
+                        | '$'
+                        | '%'
+                        | '^'
+                        | '&'
+                        | '*'
+                        | '-'
+                        | '+'
+                        | '_'
+                        | ':'
+                        | ';'
+                        | '"'
+                        | '\''
+                        | '|'
+                        | '\\'
+                        | '?'
+                        | '.'
+                        | '<'
+                        | '>'
+                        | '/'
+                        | '='
+                        | ','
+                )
+            }
+
+            match c {
+                _ if is_valid_char(&c) => {
+                    let mut temp = String::new();
+                    temp.push(c);
+
+                    while let Some(c) = rest.next_if(is_valid_char) {
+                        temp.push(c);
+                    }
+
+                    Outcome::Data(temp)
+                }
+                _ => Outcome::Continue,
+            }
+        }
+    }
+
+    pub struct SplitWithOperatorsBuilder {
+        operators: HashSet<char>,
+    }
+    impl SplitWithOperatorsBuilder {
+        pub fn new() -> Self {
+            let operators = HashSet::from([
+                '~', '`', '!', '@', '#', '$', '%', '^', '&', '*', '-', '+', '_', ':', ';', '"',
+                '\'', '|', '\\', '?', '.', '<', '>', '/', '=', ',',
+            ]);
+
+            SplitWithOperatorsBuilder { operators }
         }
 
-        match c {
-            _ if is_valid_char(&c) => {
+        pub fn empty() -> Self {
+            SplitWithOperatorsBuilder { operators: HashSet::new() }
+        }
+
+        pub fn add_operator(&mut self, operator: char) -> &mut Self {
+            self.operators.insert(operator);
+            self
+        }
+
+        pub fn except(mut self, operator: char) -> Self {
+            self.operators.remove(&operator);
+            self
+        }
+
+        pub fn build(self) -> SplitWithOperators {
+            SplitWithOperators {
+                operators: self.operators,
+            }
+        }
+    }
+
+    pub struct SplitWithOperators {
+        operators: HashSet<char>,
+    }
+    impl SplitWithOperators {
+        pub fn new() -> Self {
+            SplitWithOperatorsBuilder::new().build()
+        }
+
+        pub fn builder() -> SplitWithOperatorsBuilder {
+            SplitWithOperatorsBuilder::new()
+        }
+
+        pub fn is_valid(&self, c: &char) -> bool {
+            self.operators.contains(c)
+        }
+    }
+    impl SplitRule for SplitWithOperators {
+        fn split(&self, c: char, rest: &mut Peekable<Chars>) -> Outcome {
+            match c {
+                _ if self.is_valid(&c) => {
+                    let mut temp = String::new();
+                    temp.push(c);
+
+                    while let Some(c) = rest.next_if(|c| self.is_valid(c)) {
+                        temp.push(c);
+                    }
+
+                    Outcome::Data(temp)
+                }
+                _ => Outcome::Continue,
+            }
+        }
+    }
+
+    pub struct SkipWhitespace;
+    impl SplitRule for SkipWhitespace {
+        fn split(&self, c: char, _: &mut Peekable<Chars>) -> Outcome {
+            if c.is_whitespace() {
+                return Outcome::Skip;
+            }
+
+            Outcome::Continue
+        }
+    }
+
+    #[cfg(feature = "binary")]
+    pub struct SplitBinary;
+
+    #[cfg(feature = "binary")]
+    impl SplitRule for SplitBinary {
+        fn split(&self, c: char, rest: &mut Peekable<Chars>) -> Outcome {
+            fn is_next_binary(chars: &mut Peekable<Chars>) -> bool {
+                chars.peek() == Some(&'1') || chars.peek() == Some(&'0')
+            }
+
+            if c == 'b' && is_next_binary(rest) {
                 let mut temp = String::new();
                 temp.push(c);
-
-                while let Some(c) = rest.next_if(is_valid_char) {
-                    temp.push(c);
+                while let Some(c) = rest.peek() {
+                    if c.is_ascii_digit() {
+                        temp.push(*c);
+                        rest.next();
+                    } else {
+                        break;
+                    }
                 }
 
                 Outcome::Data(temp)
+            } else {
+                Outcome::Continue
             }
-            _ => Outcome::Continue,
         }
-    }
-
-    pub fn skip_whitespace(c: char, _: &mut Peekable<Chars>) -> Outcome {
-        if c.is_whitespace() {
-            return Outcome::Skip;
-        }
-
-        Outcome::Continue
     }
 }
 

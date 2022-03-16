@@ -1,4 +1,3 @@
-use crate::context::{Binary, binary_number_splitter, BinaryContext};
 use crate::models::{EvalExpression, EvalResult, NumberType};
 use once_cell::sync::Lazy;
 use prexel::complex;
@@ -7,6 +6,7 @@ use prexel::tokenizer::Tokenizer;
 use prexel::{context::Context, context::DefaultContext, decimal::Decimal, evaluator::Evaluator};
 use std::str::FromStr;
 use std::string::ToString;
+use prexel::binary::{Binary, binary_number_splitter};
 
 static CONFIG: Lazy<Config> = Lazy::new(|| {
     Config::default()

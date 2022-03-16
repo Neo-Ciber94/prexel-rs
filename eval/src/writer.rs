@@ -1,174 +1,156 @@
 use std::fmt::Display;
 use std::io::Write;
-use termcolor::{ColorSpec, StandardStream, WriteColor};
-
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum Color {
-    Red,
-    Green,
-    Blue,
-    Yellow,
-    Cyan,
-    Magenta,
-    White,
-    Black,
-}
-
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum Intense {
-    Yes,
-    No,
-}
-
-impl From<Intense> for bool {
-    fn from(intense: Intense) -> Self {
-        match intense {
-            Intense::Yes => true,
-            Intense::No => false,
-        }
-    }
-}
-
-impl Color {
-    pub fn into_color(self) -> termcolor::Color {
-        match self {
-            Color::Red => termcolor::Color::Red,
-            Color::Green => termcolor::Color::Green,
-            Color::Blue => termcolor::Color::Blue,
-            Color::Yellow => termcolor::Color::Yellow,
-            Color::Cyan => termcolor::Color::Cyan,
-            Color::Magenta => termcolor::Color::Magenta,
-            Color::White => termcolor::Color::White,
-            Color::Black => termcolor::Color::Black,
-        }
-    }
-}
-
-pub struct ColorWriter {
-    stdout: StandardStream,
-    stderr: StandardStream,
-}
-
-#[allow(dead_code)]
-impl ColorWriter {
-    pub fn new(use_color: bool) -> Self {
-        let color_choice = if use_color {
-            termcolor::ColorChoice::Auto
-        } else {
-            termcolor::ColorChoice::Never
-        };
-        let stdout = StandardStream::stdout(color_choice);
-        let stderr = StandardStream::stderr(color_choice);
-
-        ColorWriter { stdout, stderr }
-    }
-
-    pub fn new_colored() -> Self {
-        Self::new(true)
-    }
-
-    pub fn writeln(&mut self) {
-        writeln!(self.stdout).unwrap();
-    }
-
-    pub fn write<S: Display>(&mut self, color: Color, intense: Intense, s: S) {
-        self.stdout
-            .set_color(
-                ColorSpec::new()
-                    .set_fg(Some(color.into_color()))
-                    .set_intense(intense.into()),
-            )
-            .unwrap();
-
-        write!(self.stdout, "{}", s).unwrap();
-        self.stdout.flush().unwrap();
-        self.stdout.reset().unwrap();
-    }
-
-    pub fn write_err<S: Display>(&mut self, color: Color, intense: Intense, s: S) {
-        self.stderr
-            .set_color(
-                ColorSpec::new()
-                    .set_fg(Some(color.into_color()))
-                    .set_intense(intense.into()),
-            )
-            .unwrap();
-
-        write!(self.stderr, "{}", s).unwrap();
-        self.stderr.flush().unwrap();
-        self.stderr.reset().unwrap();
-    }
-
-    pub fn write_red<S: Display>(&mut self, intense: Intense, s: S) {
-        self.write(Color::Red, intense, s);
-    }
-
-    pub fn write_green<S: Display>(&mut self, intense: Intense, s: S) {
-        self.write(Color::Green, intense, s);
-    }
-
-    pub fn write_blue<S: Display>(&mut self, intense: Intense, s: S) {
-        self.write(Color::Blue, intense, s);
-    }
-
-    pub fn write_yellow<S: Display>(&mut self, intense: Intense, s: S) {
-        self.write(Color::Yellow, intense, s);
-    }
-
-    pub fn write_cyan<S: Display>(&mut self, intense: Intense, s: S) {
-        self.write(Color::Cyan, intense, s);
-    }
-
-    pub fn write_magenta<S: Display>(&mut self, intense: Intense, s: S) {
-        self.write(Color::Magenta, intense, s);
-    }
-
-    pub fn write_white<S: Display>(&mut self, intense: Intense, s: S) {
-        self.write(Color::White, intense, s);
-    }
-
-    pub fn write_black<S: Display>(&mut self, intense: Intense, s: S) {
-        self.write(Color::Black, intense, s);
-    }
-
-    pub fn write_err_red<S: Display>(&mut self, intense: Intense, s: S) {
-        self.write_err(Color::Red, intense, s);
-    }
-
-    pub fn write_err_green<S: Display>(&mut self, intense: Intense, s: S) {
-        self.write_err(Color::Green, intense, s);
-    }
-
-    pub fn write_err_blue<S: Display>(&mut self, intense: Intense, s: S) {
-        self.write_err(Color::Blue, intense, s);
-    }
-
-    pub fn write_err_yellow<S: Display>(&mut self, intense: Intense, s: S) {
-        self.write_err(Color::Yellow, intense, s);
-    }
-
-    pub fn write_err_cyan<S: Display>(&mut self, intense: Intense, s: S) {
-        self.write_err(Color::Cyan, intense, s);
-    }
-
-    pub fn write_err_magenta<S: Display>(&mut self, intense: Intense, s: S) {
-        self.write_err(Color::Magenta, intense, s);
-    }
-
-    pub fn write_err_white<S: Display>(&mut self, intense: Intense, s: S) {
-        self.write_err(Color::White, intense, s);
-    }
-
-    pub fn write_err_black<S: Display>(&mut self, intense: Intense, s: S) {
-        self.write_err(Color::Black, intense, s);
-    }
-}
+use std::sync::atomic::{AtomicBool, Ordering};
+use crossterm::style::{Color, StyledContent, Stylize};
+use crate::style::TextStyling;
 
 #[macro_export]
-macro_rules! readln {
-    () => {{
-        let mut buf = String::new();
-        std::io::stdin().read_line(&mut buf).unwrap();
-        buf
-    }};
+macro_rules! impl_colored_methods {
+    ($($source_method:tt $method_name:tt $color:ident),* $(,)?) => {
+        $(
+            pub fn $method_name(&mut self) -> &mut Self {
+                self.$source_method(Some(Color::$color))
+            }
+        )*
+    }
+}
+
+/// Whether if use or not colored output.
+static USE_COLORS : AtomicBool = AtomicBool::new(true);
+
+pub fn use_colors() -> bool {
+    USE_COLORS.load(Ordering::SeqCst)
+}
+
+pub fn set_use_colors(value: bool) {
+    USE_COLORS.store(value, Ordering::SeqCst);
+}
+
+#[derive(Debug, Clone)]
+pub struct ColorWriter {
+    pub(crate) fg: Option<Color>,
+    pub(crate) bg: Option<Color>
+}
+
+#[allow(unused)]
+impl ColorWriter {
+    pub fn new() -> Self {
+        ColorWriter {
+            fg: None,
+            bg: None
+        }
+    }
+
+    pub fn flush(&self) {
+        std::io::stdout().flush().unwrap();
+        std::io::stderr().flush().unwrap();
+    }
+
+    pub fn fg(&mut self, color: Option<Color>) -> &mut Self {
+        self.fg = color;
+        self
+    }
+
+    pub fn bg(&mut self, color: Option<Color>) -> &mut Self {
+        self.bg = color;
+        self
+    }
+
+    pub fn styled(&mut self, styling: TextStyling) -> &mut Self {
+        self.fg(styling.fg);
+        self.bg(styling.bg);
+        self
+    }
+
+    pub fn write<D: Display>(&mut self, data: D) {
+        if !use_colors() {
+            print!("{}", data);
+        } else {
+            let mut styled = StyledContent::new(Default::default(), data);
+
+            if let Some(fg) = self.fg {
+                styled = styled.with(fg);
+            }
+
+            if let Some(bg) = self.bg {
+                styled = styled.on(bg);
+            }
+
+            print!("{}", styled);
+            self.reset();
+        }
+    }
+
+    pub fn writeln<D: Display>(&mut self, data: D) {
+        self.write(data);
+        self.write("\n");
+    }
+
+    pub fn write_err<D: Display>(&mut self, data: D) {
+        if !use_colors() {
+            eprint!("{}", data);
+        } else {
+            let mut styled = StyledContent::new(Default::default(), data);
+
+            if let Some(fg) = self.fg {
+                styled = styled.with(fg);
+            }
+
+            if let Some(bg) = self.bg {
+                styled = styled.on(bg);
+            }
+
+            eprint!("{}", styled);
+            self.reset();
+        }
+    }
+
+    pub fn writeln_err<D: Display>(&mut self, data: D) {
+        self.write_err(data);
+        self.write_err("\n");
+    }
+
+    pub fn reset(&mut self) -> &mut Self {
+        self.fg = None;
+        self.bg = None;
+        self
+    }
+
+    impl_colored_methods! {
+        // Foreground Colors
+        fg red Red,
+        fg green Green,
+        fg yellow Yellow,
+        fg blue Blue,
+        fg magenta Magenta,
+        fg cyan Cyan,
+        fg white White,
+        fg gray Grey,
+        fg black Black,
+        fg dark_red DarkRed,
+        fg dark_green DarkGreen,
+        fg dark_yellow DarkYellow,
+        fg dark_blue DarkBlue,
+        fg dark_magenta DarkMagenta,
+        fg dark_cyan DarkCyan,
+        fg dark_gray DarkGrey,
+
+        // Foreground Colors
+        bg on_red Red,
+        bg on_green Green,
+        bg on_yellow Yellow,
+        bg on_blue Blue,
+        bg on_magenta Magenta,
+        bg on_cyan Cyan,
+        bg on_white White,
+        bg on_gray Grey,
+        bg on_black Black,
+        bg on_dark_red DarkRed,
+        bg on_dark_green DarkGreen,
+        bg on_dark_yellow DarkYellow,
+        bg on_dark_blue DarkBlue,
+        bg on_dark_magenta DarkMagenta,
+        bg on_dark_cyan DarkCyan,
+        bg on_dark_gray DarkGrey,
+    }
 }

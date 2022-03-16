@@ -4,7 +4,7 @@ use crate::num::unchecked::UncheckedNum;
 use crate::ops::math::*;
 use crate::utils::ignore_case_str::eq_ignore_case;
 use crate::utils::ignore_case_string::IgnoreCaseString;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::rc::Rc;
 use crate::error::{Error, ErrorKind};
 
@@ -77,19 +77,27 @@ pub trait Context<'a, N> {
     }
 }
 
+// Maps used for store the variables, constants and functions.
+
+#[cfg(feature="linked-hashmap")]
+type Map<K, V> =  ritelinked::LinkedHashMap<K, V>;
+
+#[cfg(not(feature="linked-hashmap"))]
+type Map<K, V> = std::collections::HashMap<K, V>;
+
 /// Provides a default implementation of a math `Context`.
 #[derive(Clone)]
 pub struct DefaultContext<'a, N> {
     /// The variables.
-    variables: HashMap<String, N>,
+    variables: Map<String, N>,
     /// The constants.
-    constants: HashMap<IgnoreCaseString, N>,
+    constants: Map<IgnoreCaseString, N>,
     /// The functions.
-    functions: HashMap<IgnoreCaseString, Rc<dyn Function<N> + 'a>>,
+    functions: Map<IgnoreCaseString, Rc<dyn Function<N> + 'a>>,
     /// The unary functions.
-    unary_functions: HashMap<IgnoreCaseString, Rc<dyn UnaryFunction<N> + 'a>>,
+    unary_functions: Map<IgnoreCaseString, Rc<dyn UnaryFunction<N> + 'a>>,
     /// The binary functions.
-    binary_functions: HashMap<IgnoreCaseString, Rc<dyn BinaryFunction<N> + 'a>>,
+    binary_functions: Map<IgnoreCaseString, Rc<dyn BinaryFunction<N> + 'a>>,
     /// Additional information about this context
     config: Config,
 }
@@ -125,31 +133,31 @@ impl<'a, N> DefaultContext<'a, N> {
 
     /// Gets a reference to the variable values of this context.
     #[inline]
-    pub fn variables(&self) -> &HashMap<String, N> {
+    pub fn variables(&self) -> &Map<String, N> {
         &self.variables
     }
 
     /// Gets a reference to the constant values of this context.
     #[inline]
-    pub fn constants(&self) -> &HashMap<IgnoreCaseString, N> {
+    pub fn constants(&self) -> &Map<IgnoreCaseString, N> {
         &self.constants
     }
 
     /// Gets a reference to the functions of this context.
     #[inline]
-    pub fn functions(&self) -> &HashMap<IgnoreCaseString, Rc<dyn Function<N> + 'a>> {
+    pub fn functions(&self) -> &Map<IgnoreCaseString, Rc<dyn Function<N> + 'a>> {
         &self.functions
     }
 
     /// Gets a reference to the unary functions of this context.
     #[inline]
-    pub fn unary_functions(&self) -> &HashMap<IgnoreCaseString, Rc<dyn UnaryFunction<N> + 'a>> {
+    pub fn unary_functions(&self) -> &Map<IgnoreCaseString, Rc<dyn UnaryFunction<N> + 'a>> {
         &self.unary_functions
     }
 
     /// Gets a reference to the binary functions of this context.
     #[inline]
-    pub fn binary_functions(&self) -> &HashMap<IgnoreCaseString, Rc<dyn BinaryFunction<N> + 'a>> {
+    pub fn binary_functions(&self) -> &Map<IgnoreCaseString, Rc<dyn BinaryFunction<N> + 'a>> {
         &self.binary_functions
     }
 
