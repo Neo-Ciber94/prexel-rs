@@ -1,7 +1,6 @@
 mod endpoints;
 mod services;
 mod models;
-mod context;
 
 use actix_ratelimit::{MemoryStore, MemoryStoreActor, RateLimiter};
 use actix_web::middleware::Logger;
