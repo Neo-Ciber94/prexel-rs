@@ -1,11 +1,12 @@
-use std::ops::ControlFlow;
-use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::time::Duration;
-use crossterm::event;
-use crossterm::event::{Event, KeyCode};
 use crate::collections::carray::CircularArray;
 use crate::repl::repl_writer::ReplWriter;
+use crossterm::event;
+use crossterm::event::{Event, KeyCode};
+use crossterm::style::Color;
+use std::ops::ControlFlow;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+use std::time::Duration;
 
 pub struct Repl {
     writer: ReplWriter,
@@ -31,8 +32,9 @@ impl Repl {
         .expect("Error setting Ctrl-C handler");
 
         let mut buf = String::new();
+
         if let Some(pre_text) = self.pre_text {
-            self.writer.write_start_text(&pre_text);
+            self.writer.green().writeln(&pre_text);
         } else {
             self.writer.write_prompt_prefix();
         }
@@ -57,6 +59,7 @@ impl Repl {
                     KeyCode::Enter => {
                         let s = buf.drain(..).collect::<String>();
                         self.writer.writeln("");
+                        self.writer.flush();
 
                         match f(s.clone(), &mut self.writer) {
                             Some(ControlFlow::Break(_)) => {
@@ -99,16 +102,7 @@ impl Repl {
                     KeyCode::Right => {}
                     KeyCode::Char(c) => {
                         buf.push(c);
-
-                        // if let Some(style) = &self.text {
-                        //     self.writer.fg(style.fg).bg(style.bg).write(c);
-                        // } else {
-                        //     self.writer.write(c);
-                        // }
-
-                        let mut char_buf = [0; 4];
-                        let char_str = c.encode_utf8(&mut char_buf);
-                        self.writer.write_prompt(char_str);
+                        self.writer.write(c);
                     }
                     KeyCode::Esc => {
                         break;
@@ -123,31 +117,30 @@ impl Repl {
         }
 
         if let Some(exit_text) = self.exit_text {
-            self.writer.write_exit_text(&exit_text);
+            self.writer.fg(Some(Color::Yellow)).rewrite(&exit_text);
         }
     }
 }
 
 pub struct ReplBuilder {
-    writer: Option<ReplWriter>,
+    prompt_prefix: Option<String>,
     history_size: Option<usize>,
     pre_text: Option<String>,
     exit_text: Option<String>,
 }
 
-#[allow(unused)]
 impl ReplBuilder {
     pub fn new() -> Self {
         ReplBuilder {
-            writer: None,
+            prompt_prefix: None,
             history_size: None,
             pre_text: None,
             exit_text: None,
         }
     }
 
-    pub fn writer(mut self, writer: ReplWriter) -> Self {
-        self.writer = Some(writer);
+    pub fn prompt_prefix(mut self, prefix: &str) -> Self {
+        self.prompt_prefix = Some(prefix.to_string());
         self
     }
 
@@ -167,14 +160,26 @@ impl ReplBuilder {
     }
 
     pub fn build(self) -> Repl {
-        let mut writer = self.writer.unwrap_or_else(|| ReplWriter::new());
-        let history_size = self.history_size.unwrap_or(100);
+        let ReplBuilder {
+            history_size,
+            prompt_prefix,
+            pre_text,
+            exit_text,
+        } = self;
+
+        let history_size = history_size.unwrap_or(100);
+
+        let writer = if let Some(prefix) = prompt_prefix {
+            ReplWriter::with_prompt_prefix(prefix)
+        } else {
+            ReplWriter::new()
+        };
 
         Repl {
             writer,
             history_size,
-            pre_text: self.pre_text,
-            exit_text: self.exit_text,
+            pre_text,
+            exit_text,
         }
     }
 }

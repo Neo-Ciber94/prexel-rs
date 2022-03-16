@@ -127,21 +127,21 @@ impl<'a> DefaultSplitterBuilder<'a> {
     pub fn new() -> Self {
         DefaultSplitterBuilder {
             rules: Vec::new(),
-            whitespace_option: None
+            whitespace_option: None,
         }
     }
 
     pub fn insert_rule<F: 'a>(mut self, index: usize, rule: F) -> Self
-        where
-            F: SplitRule + 'a,
+    where
+        F: SplitRule + 'a,
     {
         self.rules.insert(index, Box::new(rule));
         self
     }
 
     pub fn rule<F: 'a>(mut self, rule: F) -> Self
-        where
-            F: SplitRule + 'a,
+    where
+        F: SplitRule + 'a,
     {
         self.rules.push(Box::new(rule));
         self
@@ -178,6 +178,7 @@ impl Default for DefaultSplitterBuilder<'_> {
 }
 
 pub mod rules {
+    use std::collections::HashSet;
     use std::iter::Peekable;
     use std::str::Chars;
 
@@ -258,33 +259,33 @@ pub mod rules {
         fn split(&self, c: char, rest: &mut Peekable<Chars>) -> Outcome {
             fn is_valid_char(c: &char) -> bool {
                 matches!(
-                c,
-                '~' | '`'
-                    | '!'
-                    | '@'
-                    | '#'
-                    | '$'
-                    | '%'
-                    | '^'
-                    | '&'
-                    | '*'
-                    | '-'
-                    | '+'
-                    | '_'
-                    | ':'
-                    | ';'
-                    | '"'
-                    | '\''
-                    | '|'
-                    | '\\'
-                    | '?'
-                    | '.'
-                    | '<'
-                    | '>'
-                    | '/'
-                    | '='
-                    | ','
-            )
+                    c,
+                    '~' | '`'
+                        | '!'
+                        | '@'
+                        | '#'
+                        | '$'
+                        | '%'
+                        | '^'
+                        | '&'
+                        | '*'
+                        | '-'
+                        | '+'
+                        | '_'
+                        | ':'
+                        | ';'
+                        | '"'
+                        | '\''
+                        | '|'
+                        | '\\'
+                        | '?'
+                        | '.'
+                        | '<'
+                        | '>'
+                        | '/'
+                        | '='
+                        | ','
+                )
             }
 
             match c {
@@ -303,6 +304,66 @@ pub mod rules {
         }
     }
 
+    pub struct SplitWithOperatorsBuilder {
+        operators: HashSet<char>,
+    }
+    impl SplitWithOperatorsBuilder {
+        pub fn new() -> Self {
+            SplitWithOperatorsBuilder {
+                operators: HashSet::new(),
+            }
+        }
+
+        pub fn with_default_operators() -> Self {
+            let operators = HashSet::from([
+                '~', '`', '!', '@', '#', '$', '%', '^', '&', '*', '-', '+', '_', ':', ';', '"',
+                '\'', '|', '\\', '?', '.', '<', '>', '/', '=', ',',
+            ]);
+            SplitWithOperatorsBuilder { operators }
+        }
+
+        pub fn except(mut self, operator: char) -> Self {
+            self.operators.remove(&operator);
+            self
+        }
+
+        pub fn build(self) -> SplitWithOperators {
+            SplitWithOperators {
+                operators: self.operators,
+            }
+        }
+    }
+
+    pub struct SplitWithOperators {
+        operators: HashSet<char>,
+    }
+    impl SplitWithOperators {
+        pub fn new() -> Self {
+            SplitWithOperatorsBuilder::with_default_operators().build()
+        }
+
+        pub fn is_valid(&self, c: &char) -> bool {
+            self.operators.contains(c)
+        }
+    }
+    impl SplitRule for SplitWithOperators {
+        fn split(&self, c: char, rest: &mut Peekable<Chars>) -> Outcome {
+            match c {
+                _ if self.is_valid(&c) => {
+                    let mut temp = String::new();
+                    temp.push(c);
+
+                    while let Some(c) = rest.next_if(|c| self.is_valid(c)) {
+                        temp.push(c);
+                    }
+
+                    Outcome::Data(temp)
+                }
+                _ => Outcome::Continue,
+            }
+        }
+    }
+
     pub struct SkipWhitespace;
     impl SplitRule for SkipWhitespace {
         fn split(&self, c: char, _: &mut Peekable<Chars>) -> Outcome {
@@ -311,28 +372,6 @@ pub mod rules {
             }
 
             Outcome::Continue
-        }
-    }
-
-    pub struct IgnoreCharSplit<F> {
-        pub ignore_char: char,
-        pub rule: F,
-    }
-    impl<F: SplitRule> IgnoreCharSplit<F> {
-        pub fn new(c: char, f: F) -> Self {
-            Self {
-                ignore_char: c,
-                rule: f,
-            }
-        }
-    }
-    impl<F: SplitRule> SplitRule for IgnoreCharSplit<F> {
-        fn split(&self, c: char, rest: &mut Peekable<Chars>) -> Outcome {
-            if c == self.ignore_char {
-                return Outcome::Continue;
-            }
-
-            self.rule.split(c, rest)
         }
     }
 

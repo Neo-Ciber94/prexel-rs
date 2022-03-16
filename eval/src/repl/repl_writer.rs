@@ -1,16 +1,14 @@
-use crate::style::{ColoredText, TextStyling};
+use crate::style::TextStyling;
 use crate::{impl_colored_methods, ColorWriter};
 use crossterm::cursor::MoveLeft;
 use crossterm::execute;
 use crossterm::style::Color;
 use crossterm::terminal::{Clear, ClearType};
 use std::fmt::Display;
-use crate::repl::theme::ReplTheme;
 
 pub struct ReplWriter {
     writer: ColorWriter,
-    theme: Option<Box<dyn ReplTheme>>,
-    prompt: Option<ColoredText<String>>,
+    prompt_prefix: Option<String>
 }
 
 #[allow(unused)]
@@ -20,75 +18,17 @@ impl ReplWriter {
 
         ReplWriter {
             writer,
-            theme: None,
-            prompt: None,
+            prompt_prefix: None,
         }
     }
 
-    pub fn with_theme<T: ReplTheme + 'static>(writer: ColorWriter, theme: T) -> Self {
+    pub fn with_prompt_prefix<S: Into<String>>(prefix: S) -> Self {
+        let writer = ColorWriter::new();
+
         ReplWriter {
             writer,
-            theme: Some(Box::new(theme)),
-            prompt: None,
+            prompt_prefix: Some(prefix.into()),
         }
-    }
-
-    pub fn write_prompt_prefix(&mut self) {
-        if let Some(theme) = &mut self.theme {
-            theme.write_prompt_prefix(&mut self.writer);
-        }
-    }
-
-    pub fn write_prompt(&mut self, text: &str) {
-        if let Some(theme) = &mut self.theme {
-            theme.write_prompt(&mut self.writer, text);
-        } else {
-            self.writer.write(text);
-        }
-    }
-
-    pub fn write_error(&mut self, text: &str) {
-        if let Some(theme) = &mut self.theme {
-            theme.write_error(&mut self.writer, text);
-        } else {
-            self.writer.write_err(text);
-        }
-    }
-
-    pub fn write_start_text(&mut self, text: &str) {
-        if let Some(theme) = &mut self.theme {
-            theme.write_start_text(&mut self.writer, text);
-        } else {
-            self.writer.writeln(text);
-        }
-    }
-
-    pub fn write_exit_text(&mut self, text: &str) {
-        if let Some(theme) = &mut self.theme {
-            theme.write_exit_text(&mut self.writer, text);
-        } else {
-            self.writer.writeln(text);
-        }
-    }
-
-    pub fn writeln_prompt(&mut self, text: &str) {
-        if let Some(theme) = &mut self.theme {
-            theme.write_prompt(&mut self.writer, text);
-        } else {
-            self.writer.write(text);
-        }
-    }
-
-    pub fn writeln_error(&mut self, text: &str) {
-        if let Some(theme) = &mut self.theme {
-            theme.write_error(&mut self.writer, text);
-        } else {
-            self.writer.write_err(text);
-        }
-    }
-
-    pub fn set_prompt(&mut self, prompt: Option<ColoredText<String>>) {
-        self.prompt = prompt;
     }
 
     pub fn fg(&mut self, color: Option<Color>) -> &mut Self {
@@ -108,6 +48,12 @@ impl ReplWriter {
 
     pub fn flush(&self) {
         self.writer.flush();
+    }
+
+    pub fn write_prompt_prefix(&mut self) {
+        if let Some(prefix) = self.prompt_prefix.clone() {
+            self.cyan().write(prefix);
+        }
     }
 
     pub fn write<D: Display>(&mut self, data: D) {

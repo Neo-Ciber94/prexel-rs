@@ -12,7 +12,6 @@ use prexel::utils::splitter::rules::{self, Outcome, SplitRule};
 use crate::eval_expr::CONFIG;
 use crate::EvalType;
 use crate::repl::repl::ReplBuilder;
-use crate::repl::repl_writer::ReplWriter;
 
 pub mod repl;
 pub mod repl_writer;
@@ -73,10 +72,10 @@ fn eval_loop<'a, N, F>(config: ReplConfig, factory: F)
     let mut evaluator = Evaluator::with_context_and_tokenizer(context, tokenizer);
 
     let repl = ReplBuilder::new()
+        .prompt_prefix(">>> ")
         .pre_text("Press CTRL+C or type 'exit' to Exit")
         .exit_text("Bye bye!")
         .history_size(history_size)
-        .writer(ReplWriter::new())
         .build();
 
     repl.run(|s, writer| {
@@ -96,18 +95,18 @@ fn eval_loop<'a, N, F>(config: ReplConfig, factory: F)
                     .collect::<Vec<_>>();
 
                 if parts.len() != 2 {
-                    writer.writeln_error("Invalid assignment");
+                    writer.red().writeln_err("Invalid assignment");
                 } else {
                     let variable = &parts[0];
                     match N::from_str(&parts[1]) {
                         Ok(value) => {
                             if let Err(err) = evaluator.mut_context().set_variable(variable, value)
                             {
-                                writer.writeln_error(&err.to_string());
+                                writer.red().writeln_err(err);
                             }
                         }
                         Err(err) => {
-                            writer.writeln_error(&err.to_string());
+                            writer.red().writeln_err(err);
                         }
                     }
                 }
@@ -118,11 +117,11 @@ fn eval_loop<'a, N, F>(config: ReplConfig, factory: F)
                 Ok(result) => {
                     writer.green().writeln(&result);
                     if let Err(err) = evaluator.mut_context().set_variable(RESULT, result) {
-                        writer.writeln_error(&err.to_string());
+                        writer.red().writeln_err(err);
                     }
                 }
                 Err(err) => {
-                    writer.writeln_error(&err.to_string());
+                    writer.red().writeln_err(err);
                 }
             },
         }

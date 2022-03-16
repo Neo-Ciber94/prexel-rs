@@ -8,6 +8,12 @@ use crate::Result;
 use std::marker::PhantomData;
 use std::str::FromStr;
 
+/*
+trait TokenizeRule {
+   split_string(c: char, rest: Peekable<String>) -> Outcome;
+}
+*/
+
 /// The default `Tokenizer`.
 ///
 /// # Example
