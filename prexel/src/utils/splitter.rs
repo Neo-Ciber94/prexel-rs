@@ -309,17 +309,21 @@ pub mod rules {
     }
     impl SplitWithOperatorsBuilder {
         pub fn new() -> Self {
-            SplitWithOperatorsBuilder {
-                operators: HashSet::new(),
-            }
-        }
-
-        pub fn with_default_operators() -> Self {
             let operators = HashSet::from([
                 '~', '`', '!', '@', '#', '$', '%', '^', '&', '*', '-', '+', '_', ':', ';', '"',
                 '\'', '|', '\\', '?', '.', '<', '>', '/', '=', ',',
             ]);
+
             SplitWithOperatorsBuilder { operators }
+        }
+
+        pub fn empty() -> Self {
+            SplitWithOperatorsBuilder { operators: HashSet::new() }
+        }
+
+        pub fn add_operator(&mut self, operator: char) -> &mut Self {
+            self.operators.insert(operator);
+            self
         }
 
         pub fn except(mut self, operator: char) -> Self {
@@ -339,7 +343,11 @@ pub mod rules {
     }
     impl SplitWithOperators {
         pub fn new() -> Self {
-            SplitWithOperatorsBuilder::with_default_operators().build()
+            SplitWithOperatorsBuilder::new().build()
+        }
+
+        pub fn builder() -> SplitWithOperatorsBuilder {
+            SplitWithOperatorsBuilder::new()
         }
 
         pub fn is_valid(&self, c: &char) -> bool {

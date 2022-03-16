@@ -162,7 +162,7 @@ fn repl_tokenizer<'a, N>(is_binary: bool) -> Tokenizer<'a, N>
         .rule(SplitRepl)
         .rule(rules::SplitNumeric)
         .rule(rules::SplitIdentifier)
-        .rule(rules::SplitWithOperatorsBuilder::with_default_operators().except('$').build())
+        .rule(rules::SplitWithOperators::builder().except('$').build())
         .whitespace(SplitWhitespaceOption::Remove);
 
     if is_binary {
