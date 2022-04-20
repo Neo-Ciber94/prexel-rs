@@ -16,7 +16,7 @@ static CONFIG: Lazy<Config> = Lazy::new(|| {
 });
 
 pub fn eval_expression(expression: EvalExpression) -> EvalResult {
-    let r#type = expression.r#type.clone().unwrap_or(NumberType::Decimal);
+    let r#type = expression.r#type.unwrap_or(NumberType::Decimal);
 
     match r#type {
         NumberType::Decimal => eval_decimal_expression(expression),
